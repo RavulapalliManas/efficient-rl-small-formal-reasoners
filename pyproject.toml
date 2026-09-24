@@ -1,0 +1,10 @@
+[project]
+name = "formal-rl"
+version = "0.0.0"
+description = "Research workspace for efficient reinforcement learning with Lean verification"
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+dependencies = []
+
+[dependency-groups]
+dev = ["pre-commit>=4,<5"]

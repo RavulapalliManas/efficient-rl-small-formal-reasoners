@@ -1,0 +1,17 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+.DS_Store
+*.egg-info/
+build/
+dist/
+.lake/
+artifacts/**
+!artifacts/.gitkeep
+reports/**
+!reports/.gitkeep
+notebooks/**
+!notebooks/.gitkeep

@@ -1,0 +1,1066 @@
+{
+  "version": "mathematical_grader_calibration_v1",
+  "created_on": "2026-10-06",
+  "grading_config": "configs/eval/mathematical_grading_v1.json",
+  "scope": "Authored development controls only. Never final evaluation, training examples, policy reward, or untouched benchmark evidence. Gold labels require independent blinded review before reporting calibration performance.",
+  "provenance": "New worked instances and controlled corruptions derived from source definitions and proofs; not copied benchmark solutions. Exact checks are finite arithmetic checks, not universal proof certificates.",
+  "review_status": "author_labels_pending_independent_blinded_review",
+  "blind_export_contract": "Export each grader_input with a new opaque review_id. Never expose any sibling field, gold, case_id, control tag, source mapping, balance, or label to reviewers. Independently permute order for each reviewer and keep the map private.",
+  "source_records": [
+    {
+      "id": "aata_integers",
+      "url": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html",
+      "checked_on": "2026-10-06",
+      "locator": "Theorem 2.2.1; divisibility definition; Theorem 2.2.2 and its proof; Corollary 2.2.3; Euclidean algorithm",
+      "evidence_quote": "where \\(0 \\leq r \\lt b\\text{.}\\)",
+      "use": "Positive-divisor Euclidean division; divisibility witnesses; linear combinations; positive gcd and Bezout. All worked instances are authored."
+    },
+    {
+      "id": "aata_modular",
+      "url": "https://twjudson.github.io/aata-files/aata-html/groups-section-mod-n-sym.html",
+      "checked_on": "2026-10-06",
+      "locator": "Subsection 3.1.1; Examples 3.1.1 and 3.1.2; Proposition 3.1.4(6) and proof",
+      "evidence_quote": "it is not necessarily true that there is a multiplicative inverse",
+      "use": "Congruence via divisibility, zero divisors, and inverse criterion. Cancellation cases derive from Bezout."
+    },
+    {
+      "id": "aata_cancellation",
+      "url": "https://twjudson.github.io/aata-files/aata-html/rings-section-domains-and-fields.html",
+      "checked_on": "2026-10-06",
+      "locator": "Proposition 16.2.4, Cancellation Law, and proof",
+      "evidence_quote": "Then \\(a(b - c) =0\\text{.}\\)",
+      "use": "Cancellation requires a nonzero factor in an integral domain."
+    }
+  ],
+  "cases": [
+    {
+      "case_id": "mgc_001",
+      "split": "grader_calibration_development",
+      "representation": "numeric",
+      "family": "divisibility_witness",
+      "control_tags": [
+        "signed_witness"
+      ],
+      "grader_input": {
+        "prompt": "Give an integer k such that -30=6k, with a check.",
+        "reference": "k=-5, since 6(-5)=-30.",
+        "response": "1. Choose k=-5.\n2. 6(-5)=-30."
+      },
+      "gold": {
+        "label": "valid",
+        "review": {
+          "fact_correct": null,
+          "conditions_correct": true,
+          "operations_correct": true,
+          "conclusion_correct": true,
+          "core_score": 3,
+          "full_correct": true,
+          "ancillary_error": false,
+          "first_error_step": null,
+          "first_error_status": "none",
+          "error_category": "none",
+          "uncertain": false,
+          "not_applicable_dimensions": [
+            "fact_correct"
+          ],
+          "unknown_dimensions": [],
+          "reason": "The signed witness satisfies the requested equality.",
+          "evidence": "Choose k=-5."
+        },
+        "exact_checks": [
+          "6*(-5)==-30"
+        ]
+      },
+      "source_ids": [
+        "aata_integers"
+      ]
+    },
+    {
+      "case_id": "mgc_002",
+      "split": "grader_calibration_development",
+      "representation": "numeric",
+      "family": "linear_combination",
+      "control_tags": [
+        "alternate_method"
+      ],
+      "grader_input": {
+        "prompt": "Given 18=3*6 and 30=3*10, construct k with 2*18-30=3k.",
+        "reference": "k=2*6-10=2.",
+        "response": "1. 2*18-30=6.\n2. Take k=2, since 3*2=6."
+      },
+      "gold": {
+        "label": "valid",
+        "review": {
+          "fact_correct": null,
+          "conditions_correct": true,
+          "operations_correct": true,
+          "conclusion_correct": true,
+          "core_score": 3,
+          "full_correct": true,
+          "ancillary_error": false,
+          "first_error_step": null,
+          "first_error_status": "none",
+          "error_category": "none",
+          "uncertain": false,
+          "not_applicable_dimensions": [
+            "fact_correct"
+          ],
+          "unknown_dimensions": [],
+          "reason": "Direct arithmetic is a valid alternative to symbolic substitution.",
+          "evidence": "2*18-30=6."
+        },
+        "exact_checks": [
+          "2*18-30==3*2"
+        ]
+      },
+      "source_ids": [
+        "aata_integers"
+      ]
+    },
+    {
+      "case_id": "mgc_003",
+      "split": "grader_calibration_development",
+      "representation": "numeric",
+      "family": "euclidean_division",
+      "control_tags": [
+        "negative_dividend"
+      ],
+      "grader_input": {
+        "prompt": "Find integers q,r with -17=5q+r and 0<=r<5. Verify both conditions.",
+        "reference": "q=-4,r=3.",
+        "response": "1. -17=5(-4)+3.\n2. 0<=3<5, so q=-4 and r=3."
+      },
+      "gold": {
+        "label": "valid",
+        "review": {
+          "fact_correct": null,
+          "conditions_correct": true,
+          "operations_correct": true,
+          "conclusion_correct": true,
+          "core_score": 3,
+          "full_correct": true,
+          "ancillary_error": false,
+          "first_error_step": null,
+          "first_error_status": "none",
+          "error_category": "none",
+          "uncertain": false,
+          "not_applicable_dimensions": [
+            "fact_correct"
+          ],
+          "unknown_dimensions": [],
+          "reason": "The identity and remainder bounds hold.",
+          "evidence": "-17=5(-4)+3."
+        },
+        "exact_checks": [
+          "-17==5*(-4)+3",
+          "0<=3<5"
+        ]
+      },
+      "source_ids": [
+        "aata_integers"
+      ]
+    },
+    {
+      "case_id": "mgc_004",
+      "split": "grader_calibration_development",
+      "representation": "numeric",
+      "family": "gcd_bezout",
+      "control_tags": [
+        "alternate_method",
+        "alternate_bezout_pair"
+      ],
+      "grader_input": {
+        "prompt": "Find gcd(30,18) and integers u,v with 30u+18v=gcd(30,18). Explain.",
+        "reference": "30=18+12 and 18=12+6; gcd=6=2*18-30, so (-1,2) works.",
+        "response": "1. 6 divides both 30 and 18.\n2. 30*2+18*(-3)=6, so every common divisor divides 6.\n3. Thus gcd(30,18)=6; choose u=2,v=-3."
+      },
+      "gold": {
+        "label": "valid",
+        "review": {
+          "fact_correct": null,
+          "conditions_correct": true,
+          "operations_correct": true,
+          "conclusion_correct": true,
+          "core_score": 3,
+          "full_correct": true,
+          "ancillary_error": false,
+          "first_error_step": null,
+          "first_error_status": "none",
+          "error_category": "none",
+          "uncertain": false,
+          "not_applicable_dimensions": [
+            "fact_correct"
+          ],
+          "unknown_dimensions": [],
+          "reason": "The alternate Bezout pair proves maximality by divisibility.",
+          "evidence": "6 divides both 30 and 18."
+        },
+        "exact_checks": [
+          "30%6==0 and 18%6==0",
+          "30*2+18*(-3)==6"
+        ]
+      },
+      "source_ids": [
+        "aata_integers"
+      ]
+    },
+    {
+      "case_id": "mgc_005",
+      "split": "grader_calibration_development",
+      "representation": "numeric",
+      "family": "modular_inverse",
+      "control_tags": [
+        "alternate_method",
+        "negative_representative"
+      ],
+      "grader_input": {
+        "prompt": "Find any integer inverse of 3 modulo 7 and justify it.",
+        "reference": "3*5=15=1+2*7, so 5 is one representative.",
+        "response": "1. Take -2.\n2. 3(-2)=-6=1-7, so 3(-2) is congruent to 1 modulo 7."
+      },
+      "gold": {
+        "label": "valid",
+        "review": {
+          "fact_correct": null,
+          "conditions_correct": true,
+          "operations_correct": true,
+          "conclusion_correct": true,
+          "core_score": 3,
+          "full_correct": true,
+          "ancillary_error": false,
+          "first_error_step": null,
+          "first_error_status": "none",
+          "error_category": "none",
+          "uncertain": false,
+          "not_applicable_dimensions": [
+            "fact_correct"
+          ],
+          "unknown_dimensions": [],
+          "reason": "A negative representative is a valid inverse.",
+          "evidence": "Take -2."
+        },
+        "exact_checks": [
+          "(3*(-2)-1)%7==0"
+        ]
+      },
+      "source_ids": [
+        "aata_modular"
+      ]
+    },
+    {
+      "case_id": "mgc_006",
+      "split": "grader_calibration_development",
+      "representation": "numeric",
+      "family": "modular_inverse",
+      "control_tags": [
+        "inverse_nonexistence",
+        "alternate_method"
+      ],
+      "grader_input": {
+        "prompt": "Does 6 have a multiplicative inverse modulo 9? Justify your answer.",
+        "reference": "No. gcd(6,9)=3; an inverse would make 6x-9k=1.",
+        "response": "1. No: if 6x=1+9k for integers x,k, then 3 divides 1.\n2. That is impossible."
+      },
+      "gold": {
+        "label": "valid",
+        "review": {
+          "fact_correct": null,
+          "conditions_correct": true,
+          "operations_correct": true,
+          "conclusion_correct": true,
+          "core_score": 3,
+          "full_correct": true,
+          "ancillary_error": false,
+          "first_error_step": null,
+          "first_error_status": "none",
+          "error_category": "none",
+          "uncertain": false,
+          "not_applicable_dimensions": [
+            "fact_correct"
+          ],
+          "unknown_dimensions": [],
+          "reason": "The common factor contradicts the inverse equation.",
+          "evidence": "No: if 6x=1+9k for integers x,k, then 3 divides 1."
+        },
+        "exact_checks": [
+          "__import__(\"math\").gcd(6,9)==3",
+          "all((6*x)%9!=1 for x in range(9))"
+        ]
+      },
+      "source_ids": [
+        "aata_modular"
+      ]
+    },
+    {
+      "case_id": "mgc_007",
+      "split": "grader_calibration_development",
+      "representation": "numeric",
+      "family": "divisibility_witness",
+      "control_tags": [
+        "sign_error"
+      ],
+      "grader_input": {
+        "prompt": "Give an integer k such that -30=6k, with a check.",
+        "reference": "k=-5.",
+        "response": "1. Choose k=5.\n2. 6*5=-30."
+      },
+      "gold": {
+        "label": "invalid",
+        "review": {
+          "fact_correct": null,
+          "conditions_correct": true,
+          "operations_correct": false,
+          "conclusion_correct": false,
+          "core_score": 0,
+          "full_correct": false,
+          "ancillary_error": false,
+          "first_error_step": 1,
+          "first_error_status": "located",
+          "error_category": "sign_error",
+          "uncertain": false,
+          "not_applicable_dimensions": [
+            "fact_correct"
+          ],
+          "unknown_dimensions": [],
+          "reason": "The proposed witness has the wrong sign; 6*5=30.",
+          "evidence": "Choose k=5."
+        },
+        "exact_checks": [
+          "6*5!= -30"
+        ]
+      },
+      "source_ids": [
+        "aata_integers"
+      ]
+    },
+    {
+      "case_id": "mgc_008",
+      "split": "grader_calibration_development",
+      "representation": "numeric",
+      "family": "euclidean_division",
+      "control_tags": [
+        "missing_remainder_bound"
+      ],
+      "grader_input": {
+        "prompt": "Find integers q,r with -17=5q+r and 0<=r<5. Verify both conditions.",
+        "reference": "q=-4,r=3.",
+        "response": "1. -17=5(-3)-2.\n2. The remainder is r=-2 because -2<5; take q=-3."
+      },
+      "gold": {
+        "label": "invalid",
+        "review": {
+          "fact_correct": null,
+          "conditions_correct": false,
+          "operations_correct": false,
+          "conclusion_correct": false,
+          "core_score": 1,
+          "full_correct": false,
+          "ancillary_error": false,
+          "first_error_step": 2,
+          "first_error_status": "located",
+          "error_category": "missing_hypothesis",
+          "uncertain": false,
+          "not_applicable_dimensions": [
+            "fact_correct"
+          ],
+          "unknown_dimensions": [],
+          "reason": "The identity holds, but the response ignores the required nonnegative remainder.",
+          "evidence": "The remainder is r=-2 because -2<5; take q=-3."
+        },
+        "exact_checks": [
+          "-17==5*(-3)-2",
+          "not (0<=-2<5)"
+        ]
+      },
+      "source_ids": [
+        "aata_integers"
+      ]
+    },
+    {
+      "case_id": "mgc_009",
+      "split": "grader_calibration_development",
+      "representation": "numeric",
+      "family": "gcd_bezout",
+      "control_tags": [
+        "sign_error",
+        "earliest_error"
+      ],
+      "grader_input": {
+        "prompt": "Find integers u,v satisfying 30u+18v=6. Explain.",
+        "reference": "u=-1,v=2 works.",
+        "response": "1. 30=18+12 and 18=12+6.\n2. Thus 6=30-2*18.\n3. Choose u=1,v=-2."
+      },
+      "gold": {
+        "label": "invalid",
+        "review": {
+          "fact_correct": null,
+          "conditions_correct": true,
+          "operations_correct": false,
+          "conclusion_correct": false,
+          "core_score": 1,
+          "full_correct": false,
+          "ancillary_error": false,
+          "first_error_step": 2,
+          "first_error_status": "located",
+          "error_category": "sign_error",
+          "uncertain": false,
+          "not_applicable_dimensions": [
+            "fact_correct"
+          ],
+          "unknown_dimensions": [],
+          "reason": "Back-substitution reverses the sign: 30-36=-6.",
+          "evidence": "Thus 6=30-2*18."
+        },
+        "exact_checks": [
+          "30==18+12 and 18==12+6",
+          "30-2*18==-6"
+        ]
+      },
+      "source_ids": [
+        "aata_integers"
+      ]
+    },
+    {
+      "case_id": "mgc_010",
+      "split": "grader_calibration_development",
+      "representation": "numeric",
+      "family": "gcd_bezout",
+      "control_tags": [
+        "correct_conclusion_invalid_reasoning",
+        "earliest_error"
+      ],
+      "grader_input": {
+        "prompt": "Compute gcd(30,18) using justified Euclidean steps.",
+        "reference": "30=18+12; 18=12+6; 12=2*6. Thus gcd=6.",
+        "response": "1. 30=18+12.\n2. 18=2*12+6.\n3. Therefore gcd(30,18)=6."
+      },
+      "gold": {
+        "label": "invalid",
+        "review": {
+          "fact_correct": null,
+          "conditions_correct": true,
+          "operations_correct": false,
+          "conclusion_correct": true,
+          "core_score": 1,
+          "full_correct": false,
+          "ancillary_error": false,
+          "first_error_step": 2,
+          "first_error_status": "located",
+          "error_category": "arithmetic_error",
+          "uncertain": false,
+          "not_applicable_dimensions": [
+            "fact_correct"
+          ],
+          "unknown_dimensions": [],
+          "reason": "The final gcd is true, but the central division equation is false.",
+          "evidence": "18=2*12+6."
+        },
+        "exact_checks": [
+          "30==18+12",
+          "18!=2*12+6",
+          "__import__(\"math\").gcd(30,18)==6"
+        ]
+      },
+      "source_ids": [
+        "aata_integers"
+      ]
+    },
+    {
+      "case_id": "mgc_011",
+      "split": "grader_calibration_development",
+      "representation": "numeric",
+      "family": "modular_inverse",
+      "control_tags": [
+        "inverse_nonexistence",
+        "earliest_error"
+      ],
+      "grader_input": {
+        "prompt": "Does 6 have an inverse modulo 9? If so, give one and justify it.",
+        "reference": "No inverse exists because gcd(6,9)=3.",
+        "response": "1. Since 6 is nonzero modulo 9, it has an inverse.\n2. The inverse is 2 because 6*2 is congruent to 1 modulo 9."
+      },
+      "gold": {
+        "label": "invalid",
+        "review": {
+          "fact_correct": false,
+          "conditions_correct": false,
+          "operations_correct": false,
+          "conclusion_correct": false,
+          "core_score": 0,
+          "full_correct": false,
+          "ancillary_error": false,
+          "first_error_step": 1,
+          "first_error_status": "located",
+          "error_category": "inverse_nonexistence",
+          "uncertain": false,
+          "not_applicable_dimensions": [],
+          "unknown_dimensions": [],
+          "reason": "Nonzero residues need not be units; 12 has remainder 3.",
+          "evidence": "Since 6 is nonzero modulo 9, it has an inverse."
+        },
+        "exact_checks": [
+          "6%9!=0",
+          "(6*2)%9==3",
+          "all((6*x)%9!=1 for x in range(9))"
+        ]
+      },
+      "source_ids": [
+        "aata_modular"
+      ]
+    },
+    {
+      "case_id": "mgc_012",
+      "split": "grader_calibration_development",
+      "representation": "numeric",
+      "family": "modular_cancellation",
+      "control_tags": [
+        "zero_divisor",
+        "invalid_cancellation"
+      ],
+      "grader_input": {
+        "prompt": "Decide whether 2*1 congruent to 2*4 modulo 6 implies 1 congruent to 4 modulo 6. Justify.",
+        "reference": "No: the premise holds but 1-4=-3 is not divisible by 6.",
+        "response": "1. 2*1 is congruent to 2*4 modulo 6.\n2. Cancel the nonzero residue 2 to obtain 1 congruent to 4 modulo 6."
+      },
+      "gold": {
+        "label": "invalid",
+        "review": {
+          "fact_correct": null,
+          "conditions_correct": false,
+          "operations_correct": false,
+          "conclusion_correct": false,
+          "core_score": 1,
+          "full_correct": false,
+          "ancillary_error": false,
+          "first_error_step": 2,
+          "first_error_status": "located",
+          "error_category": "zero_divisor",
+          "uncertain": false,
+          "not_applicable_dimensions": [
+            "fact_correct"
+          ],
+          "unknown_dimensions": [],
+          "reason": "2 is a zero divisor modulo 6, and the proposed conclusion is false.",
+          "evidence": "Cancel the nonzero residue 2 to obtain 1 congruent to 4 modulo 6."
+        },
+        "exact_checks": [
+          "(2*1-2*4)%6==0",
+          "(1-4)%6!=0",
+          "2*3%6==0"
+        ]
+      },
+      "source_ids": [
+        "aata_modular"
+      ]
+    },
+    {
+      "case_id": "mgc_013",
+      "split": "grader_calibration_development",
+      "representation": "symbolic",
+      "family": "divisibility_transitivity",
+      "control_tags": [
+        "implicit_elementary_step",
+        "zero_allowed"
+      ],
+      "grader_input": {
+        "prompt": "For integers a,b,c, prove that a divides b and b divides c imply a divides c. Allow zero.",
+        "reference": "Write b=ax and c=by; then c=a(xy), with integer xy.",
+        "response": "1. Write b=ax and c=by for integers x,y.\n2. Then c=a(xy), so a divides c."
+      },
+      "gold": {
+        "label": "valid",
+        "review": {
+          "fact_correct": null,
+          "conditions_correct": true,
+          "operations_correct": true,
+          "conclusion_correct": true,
+          "core_score": 3,
+          "full_correct": true,
+          "ancillary_error": false,
+          "first_error_step": null,
+          "first_error_status": "none",
+          "error_category": "none",
+          "uncertain": false,
+          "not_applicable_dimensions": [
+            "fact_correct"
+          ],
+          "unknown_dimensions": [],
+          "reason": "Substitution composes the witnesses without dividing by a.",
+          "evidence": "Write b=ax and c=by for integers x,y."
+        },
+        "exact_checks": [
+          "all(a*(x*y)==(a*x)*y for a in [-2,0,3] for x in [-1,0,2] for y in [-2,0,4])"
+        ]
+      },
+      "source_ids": [
+        "aata_integers"
+      ]
+    },
+    {
+      "case_id": "mgc_014",
+      "split": "grader_calibration_development",
+      "representation": "symbolic",
+      "family": "linear_combination",
+      "control_tags": [
+        "implicit_elementary_step"
+      ],
+      "grader_input": {
+        "prompt": "Let a,b,d,m,n be integers. If d divides a and b, prove d divides ma+nb.",
+        "reference": "a=dx,b=dy implies ma+nb=d(mx+ny).",
+        "response": "1. For integers x,y, write a=dx and b=dy.\n2. ma+nb=d(mx+ny), which gives the required integer witness."
+      },
+      "gold": {
+        "label": "valid",
+        "review": {
+          "fact_correct": null,
+          "conditions_correct": true,
+          "operations_correct": true,
+          "conclusion_correct": true,
+          "core_score": 3,
+          "full_correct": true,
+          "ancillary_error": false,
+          "first_error_step": null,
+          "first_error_status": "none",
+          "error_category": "none",
+          "uncertain": false,
+          "not_applicable_dimensions": [
+            "fact_correct"
+          ],
+          "unknown_dimensions": [],
+          "reason": "Integer closure and distributivity are conventional implicit steps.",
+          "evidence": "For integers x,y, write a=dx and b=dy."
+        },
+        "exact_checks": [
+          "all(m*(d*x)+n*(d*y)==d*(m*x+n*y) for d in [-2,0,3] for x in [-1,2] for y in [0,3] for m in [-2,1] for n in [-1,2])"
+        ]
+      },
+      "source_ids": [
+        "aata_integers"
+      ]
+    },
+    {
+      "case_id": "mgc_015",
+      "split": "grader_calibration_development",
+      "representation": "symbolic",
+      "family": "integer_cancellation",
+      "control_tags": [
+        "nonzero_condition"
+      ],
+      "grader_input": {
+        "prompt": "Let a,b,c be integers with a nonzero and ab=ac. Prove b=c.",
+        "reference": "a(b-c)=0; integers have no zero divisors and a is nonzero.",
+        "response": "1. Subtract ac to obtain a(b-c)=0.\n2. The integers have no zero divisors; since a is nonzero, b-c=0.\n3. Thus b=c."
+      },
+      "gold": {
+        "label": "valid",
+        "review": {
+          "fact_correct": true,
+          "conditions_correct": true,
+          "operations_correct": true,
+          "conclusion_correct": true,
+          "core_score": 3,
+          "full_correct": true,
+          "ancillary_error": false,
+          "first_error_step": null,
+          "first_error_status": "none",
+          "error_category": "none",
+          "uncertain": false,
+          "not_applicable_dimensions": [],
+          "unknown_dimensions": [],
+          "reason": "The nonzero hypothesis permits cancellation in the integer domain.",
+          "evidence": "Subtract ac to obtain a(b-c)=0."
+        },
+        "exact_checks": [
+          "all(not(a*b==a*c) or b==c for a in [-3,-1,1,2] for b in [-2,0,3] for c in [-2,0,3])"
+        ]
+      },
+      "source_ids": [
+        "aata_cancellation"
+      ]
+    },
+    {
+      "case_id": "mgc_016",
+      "split": "grader_calibration_development",
+      "representation": "symbolic",
+      "family": "euclidean_division",
+      "control_tags": [
+        "alternate_method",
+        "implicit_elementary_step"
+      ],
+      "grader_input": {
+        "prompt": "Let a,b,q,qprime,r,rprime be integers, b>0, a=bq+r=bqprime+rprime, and 0<=r,rprime<b. Prove q=qprime and r=rprime.",
+        "reference": "b(q-qprime)=rprime-r with absolute value below b; therefore the multiple is zero.",
+        "response": "1. If q<qprime, then bq+r<b(q+1)<=bqprime<=bqprime+rprime, a contradiction.\n2. Interchanging the two representations also rules out qprime<q.\n3. Thus q=qprime; substituting gives r=rprime."
+      },
+      "gold": {
+        "label": "valid",
+        "review": {
+          "fact_correct": null,
+          "conditions_correct": true,
+          "operations_correct": true,
+          "conclusion_correct": true,
+          "core_score": 3,
+          "full_correct": true,
+          "ancillary_error": false,
+          "first_error_step": null,
+          "first_error_status": "none",
+          "error_category": "none",
+          "uncertain": false,
+          "not_applicable_dimensions": [
+            "fact_correct"
+          ],
+          "unknown_dimensions": [],
+          "reason": "Order bounds provide a valid alternative uniqueness proof.",
+          "evidence": "If q<qprime, then bq+r<b(q+1)<=bqprime<=bqprime+rprime, a contradiction."
+        },
+        "exact_checks": [
+          "all(b*q+r < b*(q+1) for b in [1,2,5] for q in [-2,0,3] for r in range(b))"
+        ]
+      },
+      "source_ids": [
+        "aata_integers"
+      ]
+    },
+    {
+      "case_id": "mgc_017",
+      "split": "grader_calibration_development",
+      "representation": "symbolic",
+      "family": "gcd_remainder",
+      "control_tags": [
+        "zero_remainder_allowed"
+      ],
+      "grader_input": {
+        "prompt": "Let a,b,q,r be integers with b>0 and a=bq+r. Prove gcd(a,b)=gcd(b,r).",
+        "reference": "For every integer d, d divides a,b exactly when d divides b,r; the positive gcds coincide.",
+        "response": "1. Any common divisor of a and b divides r=a-bq.\n2. Any common divisor of b and r divides a=bq+r.\n3. The common divisors coincide, so their greatest positive divisors coincide."
+      },
+      "gold": {
+        "label": "valid",
+        "review": {
+          "fact_correct": null,
+          "conditions_correct": true,
+          "operations_correct": true,
+          "conclusion_correct": true,
+          "core_score": 3,
+          "full_correct": true,
+          "ancillary_error": false,
+          "first_error_step": null,
+          "first_error_status": "none",
+          "error_category": "none",
+          "uncertain": false,
+          "not_applicable_dimensions": [
+            "fact_correct"
+          ],
+          "unknown_dimensions": [],
+          "reason": "Both implications establish equality of common-divisor sets.",
+          "evidence": "Any common divisor of a and b divides r=a-bq."
+        },
+        "exact_checks": [
+          "all(__import__(\"math\").gcd(b*q+r,b)==__import__(\"math\").gcd(b,r) for b in [1,2,5] for q in [-2,0,3] for r in [-3,0,4])"
+        ]
+      },
+      "source_ids": [
+        "aata_integers"
+      ]
+    },
+    {
+      "case_id": "mgc_018",
+      "split": "grader_calibration_development",
+      "representation": "symbolic",
+      "family": "modular_cancellation",
+      "control_tags": [
+        "alternate_method",
+        "coprime_condition"
+      ],
+      "grader_input": {
+        "prompt": "Let a,b,c,n be integers, n>1, gcd(a,n)=1, and ab congruent to ac modulo n. Prove b congruent to c modulo n.",
+        "reference": "Choose u,v with ua+vn=1. Since n divides a(b-c), it divides (ua+vn)(b-c)=b-c.",
+        "response": "1. Choose integers u,v with ua+vn=1.\n2. Multiply by b-c: b-c=u*a*(b-c)+v*n*(b-c).\n3. Both terms on the right are divisible by n; therefore b is congruent to c modulo n."
+      },
+      "gold": {
+        "label": "valid",
+        "review": {
+          "fact_correct": null,
+          "conditions_correct": true,
+          "operations_correct": true,
+          "conclusion_correct": true,
+          "core_score": 3,
+          "full_correct": true,
+          "ancillary_error": false,
+          "first_error_step": null,
+          "first_error_status": "none",
+          "error_category": "none",
+          "uncertain": false,
+          "not_applicable_dimensions": [
+            "fact_correct"
+          ],
+          "unknown_dimensions": [],
+          "reason": "Bezout and divisibility justify cancellation under coprimality.",
+          "evidence": "Choose integers u,v with ua+vn=1."
+        },
+        "exact_checks": [
+          "all(not((a*b-a*c)%n==0) or (b-c)%n==0 for n in [2,4,6,7] for a in range(1,n) if __import__(\"math\").gcd(a,n)==1 for b in range(n) for c in range(n))"
+        ]
+      },
+      "source_ids": [
+        "aata_modular"
+      ]
+    },
+    {
+      "case_id": "mgc_019",
+      "split": "grader_calibration_development",
+      "representation": "symbolic",
+      "family": "integer_cancellation",
+      "control_tags": [
+        "missing_hypothesis",
+        "zero_case",
+        "earliest_error"
+      ],
+      "grader_input": {
+        "prompt": "For integers a,b,c, decide whether ab=ac always implies b=c. Explain.",
+        "reference": "No. a=0,b=1,c=2 is a counterexample.",
+        "response": "1. From ab=ac obtain a(b-c)=0.\n2. Cancel a, so b-c=0.\n3. Therefore b=c for all such integers."
+      },
+      "gold": {
+        "label": "invalid",
+        "review": {
+          "fact_correct": null,
+          "conditions_correct": false,
+          "operations_correct": false,
+          "conclusion_correct": false,
+          "core_score": 1,
+          "full_correct": false,
+          "ancillary_error": false,
+          "first_error_step": 2,
+          "first_error_status": "located",
+          "error_category": "missing_hypothesis",
+          "uncertain": false,
+          "not_applicable_dimensions": [
+            "fact_correct"
+          ],
+          "unknown_dimensions": [],
+          "reason": "The task gives no nonzero hypothesis; a=0 defeats cancellation.",
+          "evidence": "Cancel a, so b-c=0."
+        },
+        "exact_checks": [
+          "0*1==0*2 and 1!=2"
+        ]
+      },
+      "source_ids": [
+        "aata_cancellation"
+      ]
+    },
+    {
+      "case_id": "mgc_020",
+      "split": "grader_calibration_development",
+      "representation": "symbolic",
+      "family": "divisibility_witness",
+      "control_tags": [
+        "noninteger_witness"
+      ],
+      "grader_input": {
+        "prompt": "Define a divides b for integers a,b. Does a divides b imply b divides a? Justify.",
+        "reference": "It means b=ak for an integer k. The converse implication fails, for example 2 divides 6 but 6 does not divide 2.",
+        "response": "1. a divides b means b=ak for some integer k.\n2. Then a=b/k, so b divides a."
+      },
+      "gold": {
+        "label": "invalid",
+        "review": {
+          "fact_correct": true,
+          "conditions_correct": false,
+          "operations_correct": false,
+          "conclusion_correct": false,
+          "core_score": 1,
+          "full_correct": false,
+          "ancillary_error": false,
+          "first_error_step": 2,
+          "first_error_status": "located",
+          "error_category": "invalid_witness",
+          "uncertain": false,
+          "not_applicable_dimensions": [],
+          "unknown_dimensions": [],
+          "reason": "The quotient 1/k need not be an integer and k can be zero.",
+          "evidence": "Then a=b/k, so b divides a."
+        },
+        "exact_checks": [
+          "6%2==0 and 2%6!=0"
+        ]
+      },
+      "source_ids": [
+        "aata_integers"
+      ]
+    },
+    {
+      "case_id": "mgc_021",
+      "split": "grader_calibration_development",
+      "representation": "symbolic",
+      "family": "divisibility_transitivity",
+      "control_tags": [
+        "correct_conclusion_invalid_reasoning",
+        "earliest_error"
+      ],
+      "grader_input": {
+        "prompt": "For integers a,b,c, prove that a divides b and b divides c imply a divides c.",
+        "reference": "b=ax and c=by give c=a(xy).",
+        "response": "1. Choose integers x,y with b=ax and c=by.\n2. Substitute to obtain c=a(x+y).\n3. Thus a divides c."
+      },
+      "gold": {
+        "label": "invalid",
+        "review": {
+          "fact_correct": null,
+          "conditions_correct": true,
+          "operations_correct": false,
+          "conclusion_correct": true,
+          "core_score": 1,
+          "full_correct": false,
+          "ancillary_error": false,
+          "first_error_step": 2,
+          "first_error_status": "located",
+          "error_category": "invalid_witness",
+          "uncertain": false,
+          "not_applicable_dimensions": [
+            "fact_correct"
+          ],
+          "unknown_dimensions": [],
+          "reason": "The witness must be xy; x+y need not work. The final theorem remains true.",
+          "evidence": "Substitute to obtain c=a(x+y)."
+        },
+        "exact_checks": [
+          "2*3*4!=2*(3+4)"
+        ]
+      },
+      "source_ids": [
+        "aata_integers"
+      ]
+    },
+    {
+      "case_id": "mgc_022",
+      "split": "grader_calibration_development",
+      "representation": "symbolic",
+      "family": "euclidean_division",
+      "control_tags": [
+        "missing_hypothesis",
+        "zero_divisor_parameter"
+      ],
+      "grader_input": {
+        "prompt": "State the Euclidean division theorem for an integer a and a divisor b, including the condition on b.",
+        "reference": "For integer a and integer b>0, there are unique integers q,r with a=bq+r and 0<=r<b.",
+        "response": "1. For any integers a,b, including b=0, unique integers q,r satisfy a=bq+r and 0<=r<b."
+      },
+      "gold": {
+        "label": "invalid",
+        "review": {
+          "fact_correct": false,
+          "conditions_correct": false,
+          "operations_correct": null,
+          "conclusion_correct": false,
+          "core_score": 1,
+          "full_correct": false,
+          "ancillary_error": false,
+          "first_error_step": 1,
+          "first_error_status": "located",
+          "error_category": "missing_hypothesis",
+          "uncertain": false,
+          "not_applicable_dimensions": [
+            "operations_correct"
+          ],
+          "unknown_dimensions": [],
+          "reason": "The required positive-divisor condition is absent; the bounds are impossible when b=0.",
+          "evidence": "For any integers a,b, including b=0, unique integers q,r satisfy a=bq+r and 0<=r<b."
+        },
+        "exact_checks": [
+          "not (0<=0<0)"
+        ]
+      },
+      "source_ids": [
+        "aata_integers"
+      ]
+    },
+    {
+      "case_id": "mgc_023",
+      "split": "grader_calibration_development",
+      "representation": "symbolic",
+      "family": "gcd_bezout",
+      "control_tags": [
+        "false_definition"
+      ],
+      "grader_input": {
+        "prompt": "Let a,b,d be positive integers with d dividing a and b. Does this force d=gcd(a,b)? Explain.",
+        "reference": "No. A common divisor need not be greatest: a=6,b=10,d=1 is a counterexample.",
+        "response": "1. By definition, the gcd is any positive common divisor.\n2. Since d divides both inputs, d=gcd(a,b)."
+      },
+      "gold": {
+        "label": "invalid",
+        "review": {
+          "fact_correct": false,
+          "conditions_correct": false,
+          "operations_correct": false,
+          "conclusion_correct": false,
+          "core_score": 0,
+          "full_correct": false,
+          "ancillary_error": false,
+          "first_error_step": 1,
+          "first_error_status": "located",
+          "error_category": "false_fact",
+          "uncertain": false,
+          "not_applicable_dimensions": [],
+          "unknown_dimensions": [],
+          "reason": "The claimed definition omits maximality; the proposed general conclusion is false.",
+          "evidence": "By definition, the gcd is any positive common divisor."
+        },
+        "exact_checks": [
+          "6%1==0 and 10%1==0",
+          "__import__(\"math\").gcd(6,10)!=1"
+        ]
+      },
+      "source_ids": [
+        "aata_integers"
+      ]
+    },
+    {
+      "case_id": "mgc_024",
+      "split": "grader_calibration_development",
+      "representation": "symbolic",
+      "family": "congruence",
+      "control_tags": [
+        "correct_conclusion_invalid_reasoning",
+        "earliest_error"
+      ],
+      "grader_input": {
+        "prompt": "Let a,b,c,n be integers with n>1. If a is congruent to b and b to c modulo n, prove a is congruent to c.",
+        "reference": "a-b=nu and b-c=nv imply a-c=n(u+v).",
+        "response": "1. Write a-b=nu and b-c=nv for integers u,v.\n2. Adding gives a-c=n(u-v).\n3. Thus a is congruent to c modulo n."
+      },
+      "gold": {
+        "label": "invalid",
+        "review": {
+          "fact_correct": null,
+          "conditions_correct": true,
+          "operations_correct": false,
+          "conclusion_correct": true,
+          "core_score": 1,
+          "full_correct": false,
+          "ancillary_error": false,
+          "first_error_step": 2,
+          "first_error_status": "located",
+          "error_category": "sign_error",
+          "uncertain": false,
+          "not_applicable_dimensions": [
+            "fact_correct"
+          ],
+          "unknown_dimensions": [],
+          "reason": "Adding differences requires u+v. The conclusion is true but this derivation is invalid.",
+          "evidence": "Adding gives a-c=n(u-v)."
+        },
+        "exact_checks": [
+          "(8-5)==3*1 and (5-2)==3*1",
+          "8-2!=3*(1-1)",
+          "(8-2)%3==0"
+        ]
+      },
+      "source_ids": [
+        "aata_modular"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "checkpoint": "Qwen/Qwen2.5-0.5B-Instruct",
+  "revision": "7ae557604adf67be50417f59c2c2f167def9a775",
+  "trl_version": "0.24.0",
+  "seed": 20261004,
+  "arms": [
+    "random",
+    "curriculum"
+  ],
+  "max_steps_per_arm": 48,
+  "save_steps": 48,
+  "save_total_limit": 1,
+  "readiness_probe": true,
+  "readiness_assistance": [
+    "full"
+  ],
+  "assistance_passes": [
+    "full",
+    "names",
+    "none"
+  ],
+  "num_generations": 4,
+  "max_prompt_tokens": 2048,
+  "max_completion_tokens": 256,
+  "temperature": 0.6,
+  "top_p": 0.9,
+  "top_k": 0,
+  "learning_rate": 1e-06,
+  "beta": 0.0,
+  "loss_type": "grpo",
+  "max_generated_tokens": 139264,
+  "max_physical_lean_calls": 570,
+  "max_wall_seconds": 3000,
+  "cuda_memory_gib": 24,
+  "budget_usd": 64,
+  "instance_max_price_usd_hour": 1.5,
+  "instance_runtime_seconds": 3600,
+  "reward": "1 for accepted original proof; 0 for rejected proof; abort on verifier infrastructure failure",
+  "scope": "syntax-assisted prerequisite retry; generic Lean 4 forms supplied during full assistance; original failed probe preserved; same checker, TRL settings, premises and unassisted evaluation; no SFT or CPT"
+}

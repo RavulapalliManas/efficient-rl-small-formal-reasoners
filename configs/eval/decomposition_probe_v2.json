@@ -1,0 +1,748 @@
+{
+  "scope": "Authored portion of the operational decomposition study. The frozen resolved remote config appends the separately pinned public subset; see docs/decisions.md and its source manifest. Informal mathematics, not Lean acceptance.",
+  "checkpoints": {
+    "original": "Qwen/Qwen2.5-0.5B-Instruct",
+    "revision": "7ae557604adf67be50417f59c2c2f167def9a775",
+    "early": "primitive_rlp_20261005/runtime/out/policy/checkpoint-118",
+    "final": "primitive_rlp_20261005/runtime/out/policy_final"
+  },
+  "seed": 20261005,
+  "cpu_threads": 8,
+  "memory_limit_gib": 8,
+  "max_wall_seconds_per_model": 5400,
+  "batch_size": 4,
+  "max_prompt_tokens": 2048,
+  "max_new_tokens": 1024,
+  "length_views": [
+    256,
+    512,
+    1024
+  ],
+  "external_subset": {
+    "tasks": 8,
+    "source_manifest": "cpu-angad:/mnt/data/manasvenkatasairavulapalli/formal_rl/decomposition_eval_v2/sources/public_selection/source_manifest.json",
+    "resolved_config": "cpu-angad:/mnt/data/manasvenkatasairavulapalli/formal_rl/decomposition_eval_v2/code/decomposition_probe_v2.json"
+  },
+  "tasks": [
+    {
+      "id": "divisibility_recall",
+      "family": "divisibility",
+      "category": "acquisition",
+      "condition": "recall",
+      "prompt": "Define a|b for integers a,b. Does 0 divide 0? Explain using the definition. Explain briefly.",
+      "rubric": "Judge mathematical content, not wording or notation. Correct requires all requested content with valid assumptions and no substantive false claim. Partial means sound but incomplete; incorrect means a substantive false claim or invalid inference; unassessable means no substantive answer. Accept any mathematically valid alternative solution. Do not reward merely naming a theorem. a|b means b=ak for some integer k. Yes, 0|0 because 0=0*k, for example k=0. Both the integer witness and direction are required.",
+      "reference": "a|b means b=ak for some integer k. Yes, 0|0 because 0=0*k, for example k=0. Both the integer witness and direction are required.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "divisibility_application",
+      "family": "divisibility",
+      "category": "acquisition",
+      "condition": "application",
+      "prompt": "For integer t, does 9 divide 27t-18? Give an integer witness or explain why none exists.",
+      "rubric": "Judge mathematical content, not wording or notation. Correct requires all requested content with valid assumptions and no substantive false claim. Partial means sound but incomplete; incorrect means a substantive false claim or invalid inference; unassessable means no substantive answer. Accept any mathematically valid alternative solution. Do not reward merely naming a theorem. Yes: 27t-18=9(3t-2), and 3t-2 is an integer. A universal witness is required, not a few numerical examples.",
+      "reference": "Yes: 27t-18=9(3t-2), and 3t-2 is an integer. A universal witness is required, not a few numerical examples.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "divisibility_step_check",
+      "family": "divisibility",
+      "category": "semantics",
+      "condition": "step_check",
+      "prompt": "Rule: d|z means z=dk for some integer k. Assume integers d,x,y satisfy d|x and d|y. (1) Write x=du and y=dv for integers u,v. (2) Then 4x-7y=d(4u-7v). (3) Therefore d|(4x-7y). Identify the earliest invalid numbered step, or state that all steps are valid. Explain your judgment.",
+      "rubric": "Judge mathematical content, not wording or notation. Correct requires all requested content with valid assumptions and no substantive false claim. Partial means sound but incomplete; incorrect means a substantive false claim or invalid inference; unassessable means no substantive answer. Accept any mathematically valid alternative solution. Do not reward merely naming a theorem. A correct verdict without the requested mathematical explanation is partial. For an invalid proof, require the earliest invalid step; identifying a later step as the first error is incorrect. All valid. The witnesses exist by the definition, substitution gives the identity, and 4u-7v is an integer.",
+      "reference": "All valid. The witnesses exist by the definition, substitution gives the identity, and 4u-7v is an integer.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "divisibility_unaided",
+      "family": "divisibility",
+      "category": "strategy",
+      "condition": "unaided",
+      "prompt": "Prove that for integers a,b,c, if a|b and b|c, then a|c.\nGive a complete elementary proof, including the mathematical steps.",
+      "rubric": "Judge mathematical content, not wording or notation. Correct requires all requested content with valid assumptions and no substantive false claim. Partial means sound but incomplete; incorrect means a substantive false claim or invalid inference; unassessable means no substantive answer. Accept any mathematically valid alternative solution. Do not reward merely naming a theorem. A proof must establish the full quantified conclusion from the stated assumptions. Merely repeating the plan, asserting the target, or checking examples is incomplete. Alternate valid proof strategies are accepted even in the assisted conditions. Take integers u,v with b=au and c=bv. Substitution gives c=a(uv). Since uv is an integer, a|c. No positivity or nonzero assumption is needed.",
+      "reference": "Take integers u,v with b=au and c=bv. Substitution gives c=a(uv). Since uv is an integer, a|c. No positivity or nonzero assumption is needed.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "divisibility_facts",
+      "family": "divisibility",
+      "category": "strategy",
+      "condition": "facts",
+      "prompt": "Prove that for integers a,b,c, if a|b and b|c, then a|c.\nAvailable facts: Definition: d|z means z=dk for some integer k. Products of integers are integers.\nGive a complete elementary proof, including the mathematical steps.",
+      "rubric": "Judge mathematical content, not wording or notation. Correct requires all requested content with valid assumptions and no substantive false claim. Partial means sound but incomplete; incorrect means a substantive false claim or invalid inference; unassessable means no substantive answer. Accept any mathematically valid alternative solution. Do not reward merely naming a theorem. A proof must establish the full quantified conclusion from the stated assumptions. Merely repeating the plan, asserting the target, or checking examples is incomplete. Alternate valid proof strategies are accepted even in the assisted conditions. Take integers u,v with b=au and c=bv. Substitution gives c=a(uv). Since uv is an integer, a|c. No positivity or nonzero assumption is needed.",
+      "reference": "Take integers u,v with b=au and c=bv. Substitution gives c=a(uv). Since uv is an integer, a|c. No positivity or nonzero assumption is needed.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "divisibility_facts_plan",
+      "family": "divisibility",
+      "category": "strategy",
+      "condition": "facts_plan",
+      "prompt": "Prove that for integers a,b,c, if a|b and b|c, then a|c.\nAvailable facts: Definition: d|z means z=dk for some integer k. Products of integers are integers.\nSuggested plan: Introduce a witness for each hypothesis, substitute one equality into the other, and exhibit a witness for the conclusion.\nGive a complete elementary proof, including the mathematical steps.",
+      "rubric": "Judge mathematical content, not wording or notation. Correct requires all requested content with valid assumptions and no substantive false claim. Partial means sound but incomplete; incorrect means a substantive false claim or invalid inference; unassessable means no substantive answer. Accept any mathematically valid alternative solution. Do not reward merely naming a theorem. A proof must establish the full quantified conclusion from the stated assumptions. Merely repeating the plan, asserting the target, or checking examples is incomplete. Alternate valid proof strategies are accepted even in the assisted conditions. Take integers u,v with b=au and c=bv. Substitution gives c=a(uv). Since uv is an integer, a|c. No positivity or nonzero assumption is needed.",
+      "reference": "Take integers u,v with b=au and c=bv. Substitution gives c=a(uv). Since uv is an integer, a|c. No positivity or nonzero assumption is needed.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "division_recall",
+      "family": "division",
+      "category": "acquisition",
+      "condition": "recall",
+      "prompt": "State the division algorithm for integer n and positive integer d. Include existence, uniqueness, and the remainder bounds. Explain briefly.",
+      "rubric": "Judge mathematical content, not wording or notation. Correct requires all requested content with valid assumptions and no substantive false claim. Partial means sound but incomplete; incorrect means a substantive false claim or invalid inference; unassessable means no substantive answer. Accept any mathematically valid alternative solution. Do not reward merely naming a theorem. There are unique integers q,r with n=dq+r and 0<=r<d. The quotient may be negative. All requested parts are required.",
+      "reference": "There are unique integers q,r with n=dq+r and 0<=r<d. The quotient may be negative. All requested parts are required.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "division_application",
+      "family": "division",
+      "category": "acquisition",
+      "condition": "application",
+      "prompt": "Find the Euclidean quotient and remainder when -74 is divided by 9. Explain why the remainder is permitted.",
+      "rubric": "Judge mathematical content, not wording or notation. Correct requires all requested content with valid assumptions and no substantive false claim. Partial means sound but incomplete; incorrect means a substantive false claim or invalid inference; unassessable means no substantive answer. Accept any mathematically valid alternative solution. Do not reward merely naming a theorem. q=-9, r=7, because -74=9*(-9)+7 and 0<=7<9. Both numbers and the bounds are required.",
+      "reference": "q=-9, r=7, because -74=9*(-9)+7 and 0<=7<9. Both numbers and the bounds are required.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "division_step_check",
+      "family": "division",
+      "category": "semantics",
+      "condition": "step_check",
+      "prompt": "Rule: the Euclidean remainder in n=dq+r must satisfy 0<=r<d when d>0. (1) -38=6*(-6)-2. (2) Thus q=-6,r=-2 is a Euclidean quotient-remainder pair. (3) By uniqueness, this is the only Euclidean pair. Identify the earliest invalid numbered step, or state that all steps are valid. Explain your judgment.",
+      "rubric": "Judge mathematical content, not wording or notation. Correct requires all requested content with valid assumptions and no substantive false claim. Partial means sound but incomplete; incorrect means a substantive false claim or invalid inference; unassessable means no substantive answer. Accept any mathematically valid alternative solution. Do not reward merely naming a theorem. A correct verdict without the requested mathematical explanation is partial. For an invalid proof, require the earliest invalid step; identifying a later step as the first error is incorrect. Earliest invalid step 2. Step 1 is arithmetically true, but -2 violates r>=0. The correct pair is q=-7,r=4. Step 3 applies uniqueness to an inadmissible pair.",
+      "reference": "Earliest invalid step 2. Step 1 is arithmetically true, but -2 violates r>=0. The correct pair is q=-7,r=4. Step 3 applies uniqueness to an inadmissible pair.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "division_unaided",
+      "family": "division",
+      "category": "strategy",
+      "condition": "unaided",
+      "prompt": "Let d be a positive integer. Suppose n=dq+r=dq2+r2, where q,q2,r,r2 are integers and 0<=r<d, 0<=r2<d. Prove q=q2 and r=r2.\nGive a complete elementary proof, including the mathematical steps.",
+      "rubric": "Judge mathematical content, not wording or notation. Correct requires all requested content with valid assumptions and no substantive false claim. Partial means sound but incomplete; incorrect means a substantive false claim or invalid inference; unassessable means no substantive answer. Accept any mathematically valid alternative solution. Do not reward merely naming a theorem. A proof must establish the full quantified conclusion from the stated assumptions. Merely repeating the plan, asserting the target, or checking examples is incomplete. Alternate valid proof strategies are accepted even in the assisted conditions. Subtracting gives d(q-q2)=r2-r. The bounds give |r2-r|<d. Therefore the multiple of d is zero, so r2=r. Then d(q-q2)=0 and d>0 give q=q2.",
+      "reference": "Subtracting gives d(q-q2)=r2-r. The bounds give |r2-r|<d. Therefore the multiple of d is zero, so r2=r. Then d(q-q2)=0 and d>0 give q=q2.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "division_facts",
+      "family": "division",
+      "category": "strategy",
+      "condition": "facts",
+      "prompt": "Let d be a positive integer. Suppose n=dq+r=dq2+r2, where q,q2,r,r2 are integers and 0<=r<d, 0<=r2<d. Prove q=q2 and r=r2.\nAvailable facts: A nonzero integer multiple of d has absolute value at least d. Ordinary integer algebra may be used.\nGive a complete elementary proof, including the mathematical steps.",
+      "rubric": "Judge mathematical content, not wording or notation. Correct requires all requested content with valid assumptions and no substantive false claim. Partial means sound but incomplete; incorrect means a substantive false claim or invalid inference; unassessable means no substantive answer. Accept any mathematically valid alternative solution. Do not reward merely naming a theorem. A proof must establish the full quantified conclusion from the stated assumptions. Merely repeating the plan, asserting the target, or checking examples is incomplete. Alternate valid proof strategies are accepted even in the assisted conditions. Subtracting gives d(q-q2)=r2-r. The bounds give |r2-r|<d. Therefore the multiple of d is zero, so r2=r. Then d(q-q2)=0 and d>0 give q=q2.",
+      "reference": "Subtracting gives d(q-q2)=r2-r. The bounds give |r2-r|<d. Therefore the multiple of d is zero, so r2=r. Then d(q-q2)=0 and d>0 give q=q2.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "division_facts_plan",
+      "family": "division",
+      "category": "strategy",
+      "condition": "facts_plan",
+      "prompt": "Let d be a positive integer. Suppose n=dq+r=dq2+r2, where q,q2,r,r2 are integers and 0<=r<d, 0<=r2<d. Prove q=q2 and r=r2.\nAvailable facts: A nonzero integer multiple of d has absolute value at least d. Ordinary integer algebra may be used.\nSuggested plan: Subtract the two representations. Bound the difference of the remainders and compare that bound with a nonzero multiple of d.\nGive a complete elementary proof, including the mathematical steps.",
+      "rubric": "Judge mathematical content, not wording or notation. Correct requires all requested content with valid assumptions and no substantive false claim. Partial means sound but incomplete; incorrect means a substantive false claim or invalid inference; unassessable means no substantive answer. Accept any mathematically valid alternative solution. Do not reward merely naming a theorem. A proof must establish the full quantified conclusion from the stated assumptions. Merely repeating the plan, asserting the target, or checking examples is incomplete. Alternate valid proof strategies are accepted even in the assisted conditions. Subtracting gives d(q-q2)=r2-r. The bounds give |r2-r|<d. Therefore the multiple of d is zero, so r2=r. Then d(q-q2)=0 and d>0 give q=q2.",
+      "reference": "Subtracting gives d(q-q2)=r2-r. The bounds give |r2-r|<d. Therefore the multiple of d is zero, so r2=r. Then d(q-q2)=0 and d>0 give q=q2.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "gcd_recall",
+      "family": "gcd",
+      "category": "acquisition",
+      "condition": "recall",
+      "prompt": "Define gcd(a,b) for positive integers a,b. State the relation between any common divisor and the gcd. Explain briefly.",
+      "rubric": "Judge mathematical content, not wording or notation. Correct requires all requested content with valid assumptions and no substantive false claim. Partial means sound but incomplete; incorrect means a substantive false claim or invalid inference; unassessable means no substantive answer. Accept any mathematically valid alternative solution. Do not reward merely naming a theorem. The gcd is the greatest positive integer dividing both a and b. Every common divisor divides the gcd. Require positivity, common-divisor property, and the requested divisibility relation.",
+      "reference": "The gcd is the greatest positive integer dividing both a and b. Every common divisor divides the gcd. Require positivity, common-divisor property, and the requested divisibility relation.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "gcd_application",
+      "family": "gcd",
+      "category": "acquisition",
+      "condition": "application",
+      "prompt": "Find gcd(154,238). Show a short Euclidean-algorithm calculation.",
+      "rubric": "Judge mathematical content, not wording or notation. Correct requires all requested content with valid assumptions and no substantive false claim. Partial means sound but incomplete; incorrect means a substantive false claim or invalid inference; unassessable means no substantive answer. Accept any mathematically valid alternative solution. Do not reward merely naming a theorem. 238=154+84, 154=84+70, 84=70+14, 70=5*14. Thus gcd=14. Equivalent correct remainder chains are accepted.",
+      "reference": "238=154+84, 154=84+70, 84=70+14, 70=5*14. Thus gcd=14. Equivalent correct remainder chains are accepted.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "gcd_step_check",
+      "family": "gcd",
+      "category": "semantics",
+      "condition": "step_check",
+      "prompt": "Rule: for positive integers a,b with a=qb+r, gcd(a,b)=gcd(b,r); also gcd(b,0)=b. (1) 221=187+34. (2) 187=5*34+17. (3) 34=2*17, so gcd(221,187)=17. Identify the earliest invalid numbered step, or state that all steps are valid. Explain your judgment.",
+      "rubric": "Judge mathematical content, not wording or notation. Correct requires all requested content with valid assumptions and no substantive false claim. Partial means sound but incomplete; incorrect means a substantive false claim or invalid inference; unassessable means no substantive answer. Accept any mathematically valid alternative solution. Do not reward merely naming a theorem. A correct verdict without the requested mathematical explanation is partial. For an invalid proof, require the earliest invalid step; identifying a later step as the first error is incorrect. All valid. Each division equality is true and repeated use of the supplied rule ends with gcd(17,0)=17.",
+      "reference": "All valid. Each division equality is true and repeated use of the supplied rule ends with gcd(17,0)=17.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "gcd_unaided",
+      "family": "gcd",
+      "category": "strategy",
+      "condition": "unaided",
+      "prompt": "For positive integers a,b and integer k with a+kb>0, prove gcd(a,b)=gcd(a+kb,b).\nGive a complete elementary proof, including the mathematical steps.",
+      "rubric": "Judge mathematical content, not wording or notation. Correct requires all requested content with valid assumptions and no substantive false claim. Partial means sound but incomplete; incorrect means a substantive false claim or invalid inference; unassessable means no substantive answer. Accept any mathematically valid alternative solution. Do not reward merely naming a theorem. A proof must establish the full quantified conclusion from the stated assumptions. Merely repeating the plan, asserting the target, or checking examples is incomplete. Alternate valid proof strategies are accepted even in the assisted conditions. If d divides a and b, it divides a+kb and b. Conversely, if d divides a+kb and b, it divides (a+kb)-kb=a. The sets of positive common divisors coincide, so their greatest elements coincide.",
+      "reference": "If d divides a and b, it divides a+kb and b. Conversely, if d divides a+kb and b, it divides (a+kb)-kb=a. The sets of positive common divisors coincide, so their greatest elements coincide.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "gcd_facts",
+      "family": "gcd",
+      "category": "strategy",
+      "condition": "facts",
+      "prompt": "For positive integers a,b and integer k with a+kb>0, prove gcd(a,b)=gcd(a+kb,b).\nAvailable facts: The gcd is the greatest positive common divisor. If d divides u and v, it divides every integer linear combination of u and v.\nGive a complete elementary proof, including the mathematical steps.",
+      "rubric": "Judge mathematical content, not wording or notation. Correct requires all requested content with valid assumptions and no substantive false claim. Partial means sound but incomplete; incorrect means a substantive false claim or invalid inference; unassessable means no substantive answer. Accept any mathematically valid alternative solution. Do not reward merely naming a theorem. A proof must establish the full quantified conclusion from the stated assumptions. Merely repeating the plan, asserting the target, or checking examples is incomplete. Alternate valid proof strategies are accepted even in the assisted conditions. If d divides a and b, it divides a+kb and b. Conversely, if d divides a+kb and b, it divides (a+kb)-kb=a. The sets of positive common divisors coincide, so their greatest elements coincide.",
+      "reference": "If d divides a and b, it divides a+kb and b. Conversely, if d divides a+kb and b, it divides (a+kb)-kb=a. The sets of positive common divisors coincide, so their greatest elements coincide.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "gcd_facts_plan",
+      "family": "gcd",
+      "category": "strategy",
+      "condition": "facts_plan",
+      "prompt": "For positive integers a,b and integer k with a+kb>0, prove gcd(a,b)=gcd(a+kb,b).\nAvailable facts: The gcd is the greatest positive common divisor. If d divides u and v, it divides every integer linear combination of u and v.\nSuggested plan: Show that each pair has exactly the same positive common divisors, by using a linear combination in each direction.\nGive a complete elementary proof, including the mathematical steps.",
+      "rubric": "Judge mathematical content, not wording or notation. Correct requires all requested content with valid assumptions and no substantive false claim. Partial means sound but incomplete; incorrect means a substantive false claim or invalid inference; unassessable means no substantive answer. Accept any mathematically valid alternative solution. Do not reward merely naming a theorem. A proof must establish the full quantified conclusion from the stated assumptions. Merely repeating the plan, asserting the target, or checking examples is incomplete. Alternate valid proof strategies are accepted even in the assisted conditions. If d divides a and b, it divides a+kb and b. Conversely, if d divides a+kb and b, it divides (a+kb)-kb=a. The sets of positive common divisors coincide, so their greatest elements coincide.",
+      "reference": "If d divides a and b, it divides a+kb and b. Conversely, if d divides a+kb and b, it divides (a+kb)-kb=a. The sets of positive common divisors coincide, so their greatest elements coincide.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "bezout_recall",
+      "family": "bezout",
+      "category": "acquisition",
+      "condition": "recall",
+      "prompt": "State Bezout’s identity for nonzero integers a,b. Must the coefficients be positive? Is the right-hand side always 1? Explain briefly.",
+      "rubric": "Judge mathematical content, not wording or notation. Correct requires all requested content with valid assumptions and no substantive false claim. Partial means sound but incomplete; incorrect means a substantive false claim or invalid inference; unassessable means no substantive answer. Accept any mathematically valid alternative solution. Do not reward merely naming a theorem. Integers x,y exist with ax+by=gcd(a,b). Coefficients need not be positive. The right side is 1 exactly when a,b are coprime, not in general.",
+      "reference": "Integers x,y exist with ax+by=gcd(a,b). Coefficients need not be positive. The right side is 1 exactly when a,b are coprime, not in general.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "bezout_application",
+      "family": "bezout",
+      "category": "acquisition",
+      "condition": "application",
+      "prompt": "Find integers x,y with 29x+41y=1. Verify your pair.",
+      "rubric": "Judge mathematical content, not wording or notation. Correct requires all requested content with valid assumptions and no substantive false claim. Partial means sound but incomplete; incorrect means a substantive false claim or invalid inference; unassessable means no substantive answer. Accept any mathematically valid alternative solution. Do not reward merely naming a theorem. One pair is x=17,y=-12, since 29*17-41*12=493-492=1. Any verified integer solution is correct.",
+      "reference": "One pair is x=17,y=-12, since 29*17-41*12=493-492=1. Any verified integer solution is correct.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "bezout_step_check",
+      "family": "bezout",
+      "category": "semantics",
+      "condition": "step_check",
+      "prompt": "Rule: Bezout’s identity gives integers x,y with ax+by=gcd(a,b). (1) gcd(14,21)=7. (2) Therefore Bezout’s identity guarantees integers x,y with 14x+21y=1. (3) Hence 14 has a multiplicative inverse modulo 21. Identify the earliest invalid numbered step, or state that all steps are valid. Explain your judgment.",
+      "rubric": "Judge mathematical content, not wording or notation. Correct requires all requested content with valid assumptions and no substantive false claim. Partial means sound but incomplete; incorrect means a substantive false claim or invalid inference; unassessable means no substantive answer. Accept any mathematically valid alternative solution. Do not reward merely naming a theorem. A correct verdict without the requested mathematical explanation is partial. For an invalid proof, require the earliest invalid step; identifying a later step as the first error is incorrect. Earliest invalid step 2. Bezout guarantees a combination equal to 7, not 1. Every such combination is divisible by 7, so equality to 1 is impossible.",
+      "reference": "Earliest invalid step 2. Bezout guarantees a combination equal to 7, not 1. Every such combination is divisible by 7, so equality to 1 is impossible.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "bezout_unaided",
+      "family": "bezout",
+      "category": "strategy",
+      "condition": "unaided",
+      "prompt": "Let a,b be positive integers. Prove that if ax+by=1 for some integers x,y, then gcd(a,b)=1.\nGive a complete elementary proof, including the mathematical steps.",
+      "rubric": "Judge mathematical content, not wording or notation. Correct requires all requested content with valid assumptions and no substantive false claim. Partial means sound but incomplete; incorrect means a substantive false claim or invalid inference; unassessable means no substantive answer. Accept any mathematically valid alternative solution. Do not reward merely naming a theorem. A proof must establish the full quantified conclusion from the stated assumptions. Merely repeating the plan, asserting the target, or checking examples is incomplete. Alternate valid proof strategies are accepted even in the assisted conditions. Let d=gcd(a,b). Since d|a and d|b, d|(ax+by)=1. As d is positive and divides 1, d=1.",
+      "reference": "Let d=gcd(a,b). Since d|a and d|b, d|(ax+by)=1. As d is positive and divides 1, d=1.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "bezout_facts",
+      "family": "bezout",
+      "category": "strategy",
+      "condition": "facts",
+      "prompt": "Let a,b be positive integers. Prove that if ax+by=1 for some integers x,y, then gcd(a,b)=1.\nAvailable facts: A common divisor of a,b divides every integer linear combination ax+by. The only positive divisor of 1 is 1.\nGive a complete elementary proof, including the mathematical steps.",
+      "rubric": "Judge mathematical content, not wording or notation. Correct requires all requested content with valid assumptions and no substantive false claim. Partial means sound but incomplete; incorrect means a substantive false claim or invalid inference; unassessable means no substantive answer. Accept any mathematically valid alternative solution. Do not reward merely naming a theorem. A proof must establish the full quantified conclusion from the stated assumptions. Merely repeating the plan, asserting the target, or checking examples is incomplete. Alternate valid proof strategies are accepted even in the assisted conditions. Let d=gcd(a,b). Since d|a and d|b, d|(ax+by)=1. As d is positive and divides 1, d=1.",
+      "reference": "Let d=gcd(a,b). Since d|a and d|b, d|(ax+by)=1. As d is positive and divides 1, d=1.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "bezout_facts_plan",
+      "family": "bezout",
+      "category": "strategy",
+      "condition": "facts_plan",
+      "prompt": "Let a,b be positive integers. Prove that if ax+by=1 for some integers x,y, then gcd(a,b)=1.\nAvailable facts: A common divisor of a,b divides every integer linear combination ax+by. The only positive divisor of 1 is 1.\nSuggested plan: Take the gcd as a common divisor, apply it to the given combination, and use positivity.\nGive a complete elementary proof, including the mathematical steps.",
+      "rubric": "Judge mathematical content, not wording or notation. Correct requires all requested content with valid assumptions and no substantive false claim. Partial means sound but incomplete; incorrect means a substantive false claim or invalid inference; unassessable means no substantive answer. Accept any mathematically valid alternative solution. Do not reward merely naming a theorem. A proof must establish the full quantified conclusion from the stated assumptions. Merely repeating the plan, asserting the target, or checking examples is incomplete. Alternate valid proof strategies are accepted even in the assisted conditions. Let d=gcd(a,b). Since d|a and d|b, d|(ax+by)=1. As d is positive and divides 1, d=1.",
+      "reference": "Let d=gcd(a,b). Since d|a and d|b, d|(ax+by)=1. As d is positive and divides 1, d=1.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "coprime_recall",
+      "family": "coprime",
+      "category": "acquisition",
+      "condition": "recall",
+      "prompt": "Define coprime positive integers. Must each of two coprime integers be prime? Give a counterexample if not. Explain briefly.",
+      "rubric": "Judge mathematical content, not wording or notation. Correct requires all requested content with valid assumptions and no substantive false claim. Partial means sound but incomplete; incorrect means a substantive false claim or invalid inference; unassessable means no substantive answer. Accept any mathematically valid alternative solution. Do not reward merely naming a theorem. Coprime means gcd=1. Neither integer needs to be prime; for example 8 and 9 are composite and coprime. Any valid pair and explanation are accepted.",
+      "reference": "Coprime means gcd=1. Neither integer needs to be prime; for example 8 and 9 are composite and coprime. Any valid pair and explanation are accepted.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "coprime_application",
+      "family": "coprime",
+      "category": "acquisition",
+      "condition": "application",
+      "prompt": "Are 49 and 88 coprime? Explain with common prime factors or the Euclidean algorithm.",
+      "rubric": "Judge mathematical content, not wording or notation. Correct requires all requested content with valid assumptions and no substantive false claim. Partial means sound but incomplete; incorrect means a substantive false claim or invalid inference; unassessable means no substantive answer. Accept any mathematically valid alternative solution. Do not reward merely naming a theorem. Yes. 49=7^2 and 88=2^3*11 have no common prime factor, so gcd=1. A correct Euclidean chain is equally acceptable.",
+      "reference": "Yes. 49=7^2 and 88=2^3*11 have no common prime factor, so gcd=1. A correct Euclidean chain is equally acceptable.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "coprime_step_check",
+      "family": "coprime",
+      "category": "semantics",
+      "condition": "step_check",
+      "prompt": "Rules: gcd(a,b)=1 means no positive common divisor exceeds 1; any common divisor divides integer linear combinations. Let n be positive. (1) If d>0 divides n and n+1, then d divides (n+1)-n. (2) Therefore d|1, so d=1. (3) Hence gcd(n,n+1)=1. Identify the earliest invalid numbered step, or state that all steps are valid. Explain your judgment.",
+      "rubric": "Judge mathematical content, not wording or notation. Correct requires all requested content with valid assumptions and no substantive false claim. Partial means sound but incomplete; incorrect means a substantive false claim or invalid inference; unassessable means no substantive answer. Accept any mathematically valid alternative solution. Do not reward merely naming a theorem. A correct verdict without the requested mathematical explanation is partial. For an invalid proof, require the earliest invalid step; identifying a later step as the first error is incorrect. All valid. The difference is 1; its only positive divisor is 1, establishing the required gcd.",
+      "reference": "All valid. The difference is 1; its only positive divisor is 1, establishing the required gcd.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "coprime_unaided",
+      "family": "coprime",
+      "category": "strategy",
+      "condition": "unaided",
+      "prompt": "Let a,b be positive coprime integers and c any integer. Prove that if a|bc then a|c.\nGive a complete elementary proof, including the mathematical steps.",
+      "rubric": "Judge mathematical content, not wording or notation. Correct requires all requested content with valid assumptions and no substantive false claim. Partial means sound but incomplete; incorrect means a substantive false claim or invalid inference; unassessable means no substantive answer. Accept any mathematically valid alternative solution. Do not reward merely naming a theorem. A proof must establish the full quantified conclusion from the stated assumptions. Merely repeating the plan, asserting the target, or checking examples is incomplete. Alternate valid proof strategies are accepted even in the assisted conditions. Take x,y with ax+by=1. Then c=acx+bcy. The first term is divisible by a; the second is divisible by a because a|bc. Therefore a|c.",
+      "reference": "Take x,y with ax+by=1. Then c=acx+bcy. The first term is divisible by a; the second is divisible by a because a|bc. Therefore a|c.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "coprime_facts",
+      "family": "coprime",
+      "category": "strategy",
+      "condition": "facts",
+      "prompt": "Let a,b be positive coprime integers and c any integer. Prove that if a|bc then a|c.\nAvailable facts: Bezout: if gcd(a,b)=1, some integers x,y satisfy ax+by=1. If a divides two integers, it divides their sum and their integer multiples.\nGive a complete elementary proof, including the mathematical steps.",
+      "rubric": "Judge mathematical content, not wording or notation. Correct requires all requested content with valid assumptions and no substantive false claim. Partial means sound but incomplete; incorrect means a substantive false claim or invalid inference; unassessable means no substantive answer. Accept any mathematically valid alternative solution. Do not reward merely naming a theorem. A proof must establish the full quantified conclusion from the stated assumptions. Merely repeating the plan, asserting the target, or checking examples is incomplete. Alternate valid proof strategies are accepted even in the assisted conditions. Take x,y with ax+by=1. Then c=acx+bcy. The first term is divisible by a; the second is divisible by a because a|bc. Therefore a|c.",
+      "reference": "Take x,y with ax+by=1. Then c=acx+bcy. The first term is divisible by a; the second is divisible by a because a|bc. Therefore a|c.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "coprime_facts_plan",
+      "family": "coprime",
+      "category": "strategy",
+      "condition": "facts_plan",
+      "prompt": "Let a,b be positive coprime integers and c any integer. Prove that if a|bc then a|c.\nAvailable facts: Bezout: if gcd(a,b)=1, some integers x,y satisfy ax+by=1. If a divides two integers, it divides their sum and their integer multiples.\nSuggested plan: Use Bezout for a,b, multiply the identity by c, then show each term is divisible by a.\nGive a complete elementary proof, including the mathematical steps.",
+      "rubric": "Judge mathematical content, not wording or notation. Correct requires all requested content with valid assumptions and no substantive false claim. Partial means sound but incomplete; incorrect means a substantive false claim or invalid inference; unassessable means no substantive answer. Accept any mathematically valid alternative solution. Do not reward merely naming a theorem. A proof must establish the full quantified conclusion from the stated assumptions. Merely repeating the plan, asserting the target, or checking examples is incomplete. Alternate valid proof strategies are accepted even in the assisted conditions. Take x,y with ax+by=1. Then c=acx+bcy. The first term is divisible by a; the second is divisible by a because a|bc. Therefore a|c.",
+      "reference": "Take x,y with ax+by=1. Then c=acx+bcy. The first term is divisible by a; the second is divisible by a because a|bc. Therefore a|c.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "congruence_recall",
+      "family": "congruence",
+      "category": "acquisition",
+      "condition": "recall",
+      "prompt": "Define a congruent to b modulo positive integer m. Does this imply a=b as integers? Give a counterexample if not. Explain briefly.",
+      "rubric": "Judge mathematical content, not wording or notation. Correct requires all requested content with valid assumptions and no substantive false claim. Partial means sound but incomplete; incorrect means a substantive false claim or invalid inference; unassessable means no substantive answer. Accept any mathematically valid alternative solution. Do not reward merely naming a theorem. It means m|(a-b), equivalently equal Euclidean remainders. It need not imply equality: for example 2 and 9 are congruent modulo 7 but unequal.",
+      "reference": "It means m|(a-b), equivalently equal Euclidean remainders. It need not imply equality: for example 2 and 9 are congruent modulo 7 but unequal.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/groups-section-mod-n-sym.html"
+    },
+    {
+      "id": "congruence_application",
+      "family": "congruence",
+      "category": "acquisition",
+      "condition": "application",
+      "prompt": "For every integer t, is 12t+5 congruent to 5 modulo 4? Explain using divisibility.",
+      "rubric": "Judge mathematical content, not wording or notation. Correct requires all requested content with valid assumptions and no substantive false claim. Partial means sound but incomplete; incorrect means a substantive false claim or invalid inference; unassessable means no substantive answer. Accept any mathematically valid alternative solution. Do not reward merely naming a theorem. Yes: (12t+5)-5=12t=4*(3t), so the difference is divisible by 4 for every integer t.",
+      "reference": "Yes: (12t+5)-5=12t=4*(3t), so the difference is divisible by 4 for every integer t.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/groups-section-mod-n-sym.html"
+    },
+    {
+      "id": "congruence_step_check",
+      "family": "congruence",
+      "category": "semantics",
+      "condition": "step_check",
+      "prompt": "Rule: a is congruent to b modulo m precisely when m divides a-b. (1) 50-8=42, and 7|42. (2) Hence 50 is congruent to 8 modulo 7. (3) Therefore 50=8 as integers. Identify the earliest invalid numbered step, or state that all steps are valid. Explain your judgment.",
+      "rubric": "Judge mathematical content, not wording or notation. Correct requires all requested content with valid assumptions and no substantive false claim. Partial means sound but incomplete; incorrect means a substantive false claim or invalid inference; unassessable means no substantive answer. Accept any mathematically valid alternative solution. Do not reward merely naming a theorem. A correct verdict without the requested mathematical explanation is partial. For an invalid proof, require the earliest invalid step; identifying a later step as the first error is incorrect. Earliest invalid step 3. Congruence does not imply integer equality; steps 1 and 2 correctly show a difference divisible by 7.",
+      "reference": "Earliest invalid step 3. Congruence does not imply integer equality; steps 1 and 2 correctly show a difference divisible by 7.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/groups-section-mod-n-sym.html"
+    },
+    {
+      "id": "congruence_unaided",
+      "family": "congruence",
+      "category": "strategy",
+      "condition": "unaided",
+      "prompt": "For integers a,b,c and positive integer m, prove that a congruent to b modulo m and b congruent to c modulo m imply a congruent to c modulo m.\nGive a complete elementary proof, including the mathematical steps.",
+      "rubric": "Judge mathematical content, not wording or notation. Correct requires all requested content with valid assumptions and no substantive false claim. Partial means sound but incomplete; incorrect means a substantive false claim or invalid inference; unassessable means no substantive answer. Accept any mathematically valid alternative solution. Do not reward merely naming a theorem. A proof must establish the full quantified conclusion from the stated assumptions. Merely repeating the plan, asserting the target, or checking examples is incomplete. Alternate valid proof strategies are accepted even in the assisted conditions. Write a-b=mr and b-c=ms for integers r,s. Adding gives a-c=m(r+s). Thus m|(a-c), which is the required congruence.",
+      "reference": "Write a-b=mr and b-c=ms for integers r,s. Adding gives a-c=m(r+s). Thus m|(a-c), which is the required congruence.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/groups-section-mod-n-sym.html"
+    },
+    {
+      "id": "congruence_facts",
+      "family": "congruence",
+      "category": "strategy",
+      "condition": "facts",
+      "prompt": "For integers a,b,c and positive integer m, prove that a congruent to b modulo m and b congruent to c modulo m imply a congruent to c modulo m.\nAvailable facts: Definition: u is congruent to v modulo m when m|(u-v). Sums of integer multiples of m remain multiples of m.\nGive a complete elementary proof, including the mathematical steps.",
+      "rubric": "Judge mathematical content, not wording or notation. Correct requires all requested content with valid assumptions and no substantive false claim. Partial means sound but incomplete; incorrect means a substantive false claim or invalid inference; unassessable means no substantive answer. Accept any mathematically valid alternative solution. Do not reward merely naming a theorem. A proof must establish the full quantified conclusion from the stated assumptions. Merely repeating the plan, asserting the target, or checking examples is incomplete. Alternate valid proof strategies are accepted even in the assisted conditions. Write a-b=mr and b-c=ms for integers r,s. Adding gives a-c=m(r+s). Thus m|(a-c), which is the required congruence.",
+      "reference": "Write a-b=mr and b-c=ms for integers r,s. Adding gives a-c=m(r+s). Thus m|(a-c), which is the required congruence.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/groups-section-mod-n-sym.html"
+    },
+    {
+      "id": "congruence_facts_plan",
+      "family": "congruence",
+      "category": "strategy",
+      "condition": "facts_plan",
+      "prompt": "For integers a,b,c and positive integer m, prove that a congruent to b modulo m and b congruent to c modulo m imply a congruent to c modulo m.\nAvailable facts: Definition: u is congruent to v modulo m when m|(u-v). Sums of integer multiples of m remain multiples of m.\nSuggested plan: Write the two differences as multiples of m, add them, and interpret the resulting difference.\nGive a complete elementary proof, including the mathematical steps.",
+      "rubric": "Judge mathematical content, not wording or notation. Correct requires all requested content with valid assumptions and no substantive false claim. Partial means sound but incomplete; incorrect means a substantive false claim or invalid inference; unassessable means no substantive answer. Accept any mathematically valid alternative solution. Do not reward merely naming a theorem. A proof must establish the full quantified conclusion from the stated assumptions. Merely repeating the plan, asserting the target, or checking examples is incomplete. Alternate valid proof strategies are accepted even in the assisted conditions. Write a-b=mr and b-c=ms for integers r,s. Adding gives a-c=m(r+s). Thus m|(a-c), which is the required congruence.",
+      "reference": "Write a-b=mr and b-c=ms for integers r,s. Adding gives a-c=m(r+s). Thus m|(a-c), which is the required congruence.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/groups-section-mod-n-sym.html"
+    },
+    {
+      "id": "inverse_recall",
+      "family": "inverse",
+      "category": "acquisition",
+      "condition": "recall",
+      "prompt": "For integer a and modulus m>1, state the necessary and sufficient condition for a multiplicative inverse modulo m. Define what an inverse must satisfy. Explain briefly.",
+      "rubric": "Judge mathematical content, not wording or notation. Correct requires all requested content with valid assumptions and no substantive false claim. Partial means sound but incomplete; incorrect means a substantive false claim or invalid inference; unassessable means no substantive answer. Accept any mathematically valid alternative solution. Do not reward merely naming a theorem. An inverse exists exactly when gcd(a,m)=1. An inverse is an integer u with au congruent to 1 modulo m. Both the condition and defining congruence are required.",
+      "reference": "An inverse exists exactly when gcd(a,m)=1. An inverse is an integer u with au congruent to 1 modulo m. Both the condition and defining congruence are required.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/groups-section-mod-n-sym.html"
+    },
+    {
+      "id": "inverse_application",
+      "family": "inverse",
+      "category": "acquisition",
+      "condition": "application",
+      "prompt": "Does 14 have a multiplicative inverse modulo 25? If yes, find the least positive inverse and verify it.",
+      "rubric": "Judge mathematical content, not wording or notation. Correct requires all requested content with valid assumptions and no substantive false claim. Partial means sound but incomplete; incorrect means a substantive false claim or invalid inference; unassessable means no substantive answer. Accept any mathematically valid alternative solution. Do not reward merely naming a theorem. Yes; the inverse is 9 because 14*9=126=5*25+1. Its residue 9 lies between 1 and 24. Verification of the congruence suffices to establish existence.",
+      "reference": "Yes; the inverse is 9 because 14*9=126=5*25+1. Its residue 9 lies between 1 and 24. Verification of the congruence suffices to establish existence.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/groups-section-mod-n-sym.html"
+    },
+    {
+      "id": "inverse_step_check",
+      "family": "inverse",
+      "category": "semantics",
+      "condition": "step_check",
+      "prompt": "Rules: u is an inverse of a modulo m when au is congruent to 1 modulo m; a congruence holds when m divides the difference. (1) 8*13=104. (2) 104-1=103. (3) Therefore 13 is an inverse of 8 modulo 103. Identify the earliest invalid numbered step, or state that all steps are valid. Explain your judgment.",
+      "rubric": "Judge mathematical content, not wording or notation. Correct requires all requested content with valid assumptions and no substantive false claim. Partial means sound but incomplete; incorrect means a substantive false claim or invalid inference; unassessable means no substantive answer. Accept any mathematically valid alternative solution. Do not reward merely naming a theorem. A correct verdict without the requested mathematical explanation is partial. For an invalid proof, require the earliest invalid step; identifying a later step as the first error is incorrect. All valid. The product differs from 1 by one multiple of 103, which is exactly the inverse condition.",
+      "reference": "All valid. The product differs from 1 by one multiple of 103, which is exactly the inverse condition.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/groups-section-mod-n-sym.html"
+    },
+    {
+      "id": "inverse_unaided",
+      "family": "inverse",
+      "category": "strategy",
+      "condition": "unaided",
+      "prompt": "Let m>1 and let u and v both be multiplicative inverses of integer a modulo m. Prove u is congruent to v modulo m.\nGive a complete elementary proof, including the mathematical steps.",
+      "rubric": "Judge mathematical content, not wording or notation. Correct requires all requested content with valid assumptions and no substantive false claim. Partial means sound but incomplete; incorrect means a substantive false claim or invalid inference; unassessable means no substantive answer. Accept any mathematically valid alternative solution. Do not reward merely naming a theorem. A proof must establish the full quantified conclusion from the stated assumptions. Merely repeating the plan, asserting the target, or checking examples is incomplete. Alternate valid proof strategies are accepted even in the assisted conditions. From av congruent to 1, multiply by u to get uav congruent to u. From au congruent to 1, multiply by v to get vau congruent to v. The products are equal, hence u congruent to v.",
+      "reference": "From av congruent to 1, multiply by u to get uav congruent to u. From au congruent to 1, multiply by v to get vau congruent to v. The products are equal, hence u congruent to v.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/groups-section-mod-n-sym.html"
+    },
+    {
+      "id": "inverse_facts",
+      "family": "inverse",
+      "category": "strategy",
+      "condition": "facts",
+      "prompt": "Let m>1 and let u and v both be multiplicative inverses of integer a modulo m. Prove u is congruent to v modulo m.\nAvailable facts: The hypotheses mean au and av are congruent to 1 modulo m. Multiplication respects congruence; integer multiplication is associative and commutative.\nGive a complete elementary proof, including the mathematical steps.",
+      "rubric": "Judge mathematical content, not wording or notation. Correct requires all requested content with valid assumptions and no substantive false claim. Partial means sound but incomplete; incorrect means a substantive false claim or invalid inference; unassessable means no substantive answer. Accept any mathematically valid alternative solution. Do not reward merely naming a theorem. A proof must establish the full quantified conclusion from the stated assumptions. Merely repeating the plan, asserting the target, or checking examples is incomplete. Alternate valid proof strategies are accepted even in the assisted conditions. From av congruent to 1, multiply by u to get uav congruent to u. From au congruent to 1, multiply by v to get vau congruent to v. The products are equal, hence u congruent to v.",
+      "reference": "From av congruent to 1, multiply by u to get uav congruent to u. From au congruent to 1, multiply by v to get vau congruent to v. The products are equal, hence u congruent to v.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/groups-section-mod-n-sym.html"
+    },
+    {
+      "id": "inverse_facts_plan",
+      "family": "inverse",
+      "category": "strategy",
+      "condition": "facts_plan",
+      "prompt": "Let m>1 and let u and v both be multiplicative inverses of integer a modulo m. Prove u is congruent to v modulo m.\nAvailable facts: The hypotheses mean au and av are congruent to 1 modulo m. Multiplication respects congruence; integer multiplication is associative and commutative.\nSuggested plan: Multiply one inverse congruence by the other inverse, and compare the two expressions for the same product.\nGive a complete elementary proof, including the mathematical steps.",
+      "rubric": "Judge mathematical content, not wording or notation. Correct requires all requested content with valid assumptions and no substantive false claim. Partial means sound but incomplete; incorrect means a substantive false claim or invalid inference; unassessable means no substantive answer. Accept any mathematically valid alternative solution. Do not reward merely naming a theorem. A proof must establish the full quantified conclusion from the stated assumptions. Merely repeating the plan, asserting the target, or checking examples is incomplete. Alternate valid proof strategies are accepted even in the assisted conditions. From av congruent to 1, multiply by u to get uav congruent to u. From au congruent to 1, multiply by v to get vau congruent to v. The products are equal, hence u congruent to v.",
+      "reference": "From av congruent to 1, multiply by u to get uav congruent to u. From au congruent to 1, multiply by v to get vau congruent to v. The products are equal, hence u congruent to v.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/groups-section-mod-n-sym.html"
+    },
+    {
+      "id": "prime_euclid_recall",
+      "family": "prime_euclid",
+      "category": "acquisition",
+      "condition": "recall",
+      "prompt": "State Euclid’s lemma for a prime dividing a product. Can the primality assumption be replaced by d>1? Give a counterexample if not. Explain briefly.",
+      "rubric": "Judge mathematical content, not wording or notation. Correct requires all requested content with valid assumptions and no substantive false claim. Partial means sound but incomplete; incorrect means a substantive false claim or invalid inference; unassessable means no substantive answer. Accept any mathematically valid alternative solution. Do not reward merely naming a theorem. For prime p and integers a,b, p|ab implies p|a or p|b. A composite divisor can fail: 6|2*3 but 6 divides neither 2 nor 3. Require the disjunction and a verified counterexample.",
+      "reference": "For prime p and integers a,b, p|ab implies p|a or p|b. A composite divisor can fail: 6|2*3 but 6 divides neither 2 nor 3. Require the disjunction and a verified counterexample.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "prime_euclid_application",
+      "family": "prime_euclid",
+      "category": "acquisition",
+      "condition": "application",
+      "prompt": "The prime 19 divides 57z for integer z. Does this force 19|z? Explain or give a counterexample.",
+      "rubric": "Judge mathematical content, not wording or notation. Correct requires all requested content with valid assumptions and no substantive false claim. Partial means sound but incomplete; incorrect means a substantive false claim or invalid inference; unassessable means no substantive answer. Accept any mathematically valid alternative solution. Do not reward merely naming a theorem. No. Since 19|57, the hypothesis holds for every z. Taking z=1 gives 19|57 but 19 does not divide 1. Accept a complete explanation that the premise imposes no restriction on z, or a verified counterexample.",
+      "reference": "No. Since 19|57, the hypothesis holds for every z. Taking z=1 gives 19|57 but 19 does not divide 1. Accept a complete explanation that the premise imposes no restriction on z, or a verified counterexample.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "prime_euclid_step_check",
+      "family": "prime_euclid",
+      "category": "semantics",
+      "condition": "step_check",
+      "prompt": "Rule: if p is prime and p|ab, then p|a or p|b. (1) 10 divides 2*5. (2) Applying the rule with p=10 gives 10|2 or 10|5. (3) Therefore one of 2 or 5 is a multiple of 10. Identify the earliest invalid numbered step, or state that all steps are valid. Explain your judgment.",
+      "rubric": "Judge mathematical content, not wording or notation. Correct requires all requested content with valid assumptions and no substantive false claim. Partial means sound but incomplete; incorrect means a substantive false claim or invalid inference; unassessable means no substantive answer. Accept any mathematically valid alternative solution. Do not reward merely naming a theorem. A correct verdict without the requested mathematical explanation is partial. For an invalid proof, require the earliest invalid step; identifying a later step as the first error is incorrect. Earliest invalid step 2. Ten is composite, so the supplied rule does not apply; in fact neither disjunct holds.",
+      "reference": "Earliest invalid step 2. Ten is composite, so the supplied rule does not apply; in fact neither disjunct holds.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "prime_euclid_unaided",
+      "family": "prime_euclid",
+      "category": "strategy",
+      "condition": "unaided",
+      "prompt": "Let p be prime and n an integer. Prove that if p|n^2, then p|n.\nGive a complete elementary proof, including the mathematical steps.",
+      "rubric": "Judge mathematical content, not wording or notation. Correct requires all requested content with valid assumptions and no substantive false claim. Partial means sound but incomplete; incorrect means a substantive false claim or invalid inference; unassessable means no substantive answer. Accept any mathematically valid alternative solution. Do not reward merely naming a theorem. A proof must establish the full quantified conclusion from the stated assumptions. Merely repeating the plan, asserting the target, or checking examples is incomplete. Alternate valid proof strategies are accepted even in the assisted conditions. Since n^2=n*n, Euclid’s lemma gives p|n or p|n. Either alternative is the desired conclusion.",
+      "reference": "Since n^2=n*n, Euclid’s lemma gives p|n or p|n. Either alternative is the desired conclusion.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "prime_euclid_facts",
+      "family": "prime_euclid",
+      "category": "strategy",
+      "condition": "facts",
+      "prompt": "Let p be prime and n an integer. Prove that if p|n^2, then p|n.\nAvailable facts: Euclid’s lemma: for prime p and integers x,y, p|xy implies p|x or p|y.\nGive a complete elementary proof, including the mathematical steps.",
+      "rubric": "Judge mathematical content, not wording or notation. Correct requires all requested content with valid assumptions and no substantive false claim. Partial means sound but incomplete; incorrect means a substantive false claim or invalid inference; unassessable means no substantive answer. Accept any mathematically valid alternative solution. Do not reward merely naming a theorem. A proof must establish the full quantified conclusion from the stated assumptions. Merely repeating the plan, asserting the target, or checking examples is incomplete. Alternate valid proof strategies are accepted even in the assisted conditions. Since n^2=n*n, Euclid’s lemma gives p|n or p|n. Either alternative is the desired conclusion.",
+      "reference": "Since n^2=n*n, Euclid’s lemma gives p|n or p|n. Either alternative is the desired conclusion.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "prime_euclid_facts_plan",
+      "family": "prime_euclid",
+      "category": "strategy",
+      "condition": "facts_plan",
+      "prompt": "Let p be prime and n an integer. Prove that if p|n^2, then p|n.\nAvailable facts: Euclid’s lemma: for prime p and integers x,y, p|xy implies p|x or p|y.\nSuggested plan: Express the square as a product and apply the prime-divisor rule to its two factors.\nGive a complete elementary proof, including the mathematical steps.",
+      "rubric": "Judge mathematical content, not wording or notation. Correct requires all requested content with valid assumptions and no substantive false claim. Partial means sound but incomplete; incorrect means a substantive false claim or invalid inference; unassessable means no substantive answer. Accept any mathematically valid alternative solution. Do not reward merely naming a theorem. A proof must establish the full quantified conclusion from the stated assumptions. Merely repeating the plan, asserting the target, or checking examples is incomplete. Alternate valid proof strategies are accepted even in the assisted conditions. Since n^2=n*n, Euclid’s lemma gives p|n or p|n. Either alternative is the desired conclusion.",
+      "reference": "Since n^2=n*n, Euclid’s lemma gives p|n or p|n. Either alternative is the desired conclusion.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "cancellation_recall",
+      "family": "cancellation",
+      "category": "acquisition",
+      "condition": "recall",
+      "prompt": "For m>1, give the condition on c that permits cancellation from ca congruent to cb modulo m for all integers a,b. Show why c nonzero alone is insufficient. Explain briefly.",
+      "rubric": "Judge mathematical content, not wording or notation. Correct requires all requested content with valid assumptions and no substantive false claim. Partial means sound but incomplete; incorrect means a substantive false claim or invalid inference; unassessable means no substantive answer. Accept any mathematically valid alternative solution. Do not reward merely naming a theorem. The necessary and sufficient condition is gcd(c,m)=1. For example, 2*0 is congruent to 2*3 modulo 6, but 0 is not congruent to 3 modulo 6, although c=2 is nonzero. Any valid counterexample is accepted.",
+      "reference": "The necessary and sufficient condition is gcd(c,m)=1. For example, 2*0 is congruent to 2*3 modulo 6, but 0 is not congruent to 3 modulo 6, although c=2 is nonzero. Any valid counterexample is accepted.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/groups-section-mod-n-sym.html"
+    },
+    {
+      "id": "cancellation_application",
+      "family": "cancellation",
+      "category": "acquisition",
+      "condition": "application",
+      "prompt": "From 8x congruent to 8y modulo 14, must x be congruent to y modulo 14? Give a numerical counterexample or a proof.",
+      "rubric": "Judge mathematical content, not wording or notation. Correct requires all requested content with valid assumptions and no substantive false claim. Partial means sound but incomplete; incorrect means a substantive false claim or invalid inference; unassessable means no substantive answer. Accept any mathematically valid alternative solution. Do not reward merely naming a theorem. No: x=0,y=7 yields 0 and 56 congruent modulo 14, but 0 and 7 are not congruent modulo 14. Any verified counterexample is correct.",
+      "reference": "No: x=0,y=7 yields 0 and 56 congruent modulo 14, but 0 and 7 are not congruent modulo 14. Any verified counterexample is correct.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/groups-section-mod-n-sym.html"
+    },
+    {
+      "id": "cancellation_step_check",
+      "family": "cancellation",
+      "category": "semantics",
+      "condition": "step_check",
+      "prompt": "Rule: if gcd(c,m)=1 and ca is congruent to cb modulo m, then a is congruent to b modulo m. (1) gcd(5,12)=1 because 12=2*5+2 and 5=2*2+1. (2) Assume 5x is congruent to 5y modulo 12. (3) Therefore x is congruent to y modulo 12. Identify the earliest invalid numbered step, or state that all steps are valid. Explain your judgment.",
+      "rubric": "Judge mathematical content, not wording or notation. Correct requires all requested content with valid assumptions and no substantive false claim. Partial means sound but incomplete; incorrect means a substantive false claim or invalid inference; unassessable means no substantive answer. Accept any mathematically valid alternative solution. Do not reward merely naming a theorem. A correct verdict without the requested mathematical explanation is partial. For an invalid proof, require the earliest invalid step; identifying a later step as the first error is incorrect. All valid. The Euclidean calculation establishes the coprimality condition, and step 3 applies the rule with c=5,m=12.",
+      "reference": "All valid. The Euclidean calculation establishes the coprimality condition, and step 3 applies the rule with c=5,m=12.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/groups-section-mod-n-sym.html"
+    },
+    {
+      "id": "cancellation_unaided",
+      "family": "cancellation",
+      "category": "strategy",
+      "condition": "unaided",
+      "prompt": "Let m>1 and gcd(c,m)=1. Prove that ca congruent to cb modulo m implies a congruent to b modulo m.\nGive a complete elementary proof, including the mathematical steps.",
+      "rubric": "Judge mathematical content, not wording or notation. Correct requires all requested content with valid assumptions and no substantive false claim. Partial means sound but incomplete; incorrect means a substantive false claim or invalid inference; unassessable means no substantive answer. Accept any mathematically valid alternative solution. Do not reward merely naming a theorem. A proof must establish the full quantified conclusion from the stated assumptions. Merely repeating the plan, asserting the target, or checking examples is incomplete. Alternate valid proof strategies are accepted even in the assisted conditions. Choose u with uc congruent to 1 modulo m. Multiplying ca congruent to cb by u gives (uc)a congruent to (uc)b. Substitute uc congruent to 1 to obtain a congruent to b.",
+      "reference": "Choose u with uc congruent to 1 modulo m. Multiplying ca congruent to cb by u gives (uc)a congruent to (uc)b. Substitute uc congruent to 1 to obtain a congruent to b.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/groups-section-mod-n-sym.html"
+    },
+    {
+      "id": "cancellation_facts",
+      "family": "cancellation",
+      "category": "strategy",
+      "condition": "facts",
+      "prompt": "Let m>1 and gcd(c,m)=1. Prove that ca congruent to cb modulo m implies a congruent to b modulo m.\nAvailable facts: If gcd(c,m)=1, there is an integer u with uc congruent to 1 modulo m. Multiplication respects congruence.\nGive a complete elementary proof, including the mathematical steps.",
+      "rubric": "Judge mathematical content, not wording or notation. Correct requires all requested content with valid assumptions and no substantive false claim. Partial means sound but incomplete; incorrect means a substantive false claim or invalid inference; unassessable means no substantive answer. Accept any mathematically valid alternative solution. Do not reward merely naming a theorem. A proof must establish the full quantified conclusion from the stated assumptions. Merely repeating the plan, asserting the target, or checking examples is incomplete. Alternate valid proof strategies are accepted even in the assisted conditions. Choose u with uc congruent to 1 modulo m. Multiplying ca congruent to cb by u gives (uc)a congruent to (uc)b. Substitute uc congruent to 1 to obtain a congruent to b.",
+      "reference": "Choose u with uc congruent to 1 modulo m. Multiplying ca congruent to cb by u gives (uc)a congruent to (uc)b. Substitute uc congruent to 1 to obtain a congruent to b.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/groups-section-mod-n-sym.html"
+    },
+    {
+      "id": "cancellation_facts_plan",
+      "family": "cancellation",
+      "category": "strategy",
+      "condition": "facts_plan",
+      "prompt": "Let m>1 and gcd(c,m)=1. Prove that ca congruent to cb modulo m implies a congruent to b modulo m.\nAvailable facts: If gcd(c,m)=1, there is an integer u with uc congruent to 1 modulo m. Multiplication respects congruence.\nSuggested plan: Choose an inverse of c, multiply the given congruence by it, and simplify both sides modulo m.\nGive a complete elementary proof, including the mathematical steps.",
+      "rubric": "Judge mathematical content, not wording or notation. Correct requires all requested content with valid assumptions and no substantive false claim. Partial means sound but incomplete; incorrect means a substantive false claim or invalid inference; unassessable means no substantive answer. Accept any mathematically valid alternative solution. Do not reward merely naming a theorem. A proof must establish the full quantified conclusion from the stated assumptions. Merely repeating the plan, asserting the target, or checking examples is incomplete. Alternate valid proof strategies are accepted even in the assisted conditions. Choose u with uc congruent to 1 modulo m. Multiplying ca congruent to cb by u gives (uc)a congruent to (uc)b. Substitute uc congruent to 1 to obtain a congruent to b.",
+      "reference": "Choose u with uc congruent to 1 modulo m. Multiplying ca congruent to cb by u gives (uc)a congruent to (uc)b. Substitute uc congruent to 1 to obtain a congruent to b.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/groups-section-mod-n-sym.html"
+    },
+    {
+      "id": "factorization_recall",
+      "family": "factorization",
+      "category": "acquisition",
+      "condition": "recall",
+      "prompt": "State the fundamental theorem of arithmetic for n>1. Explain whether repeated prime factors are allowed and what uniqueness means. Explain briefly.",
+      "rubric": "Judge mathematical content, not wording or notation. Correct requires all requested content with valid assumptions and no substantive false claim. Partial means sound but incomplete; incorrect means a substantive false claim or invalid inference; unassessable means no substantive answer. Accept any mathematically valid alternative solution. Do not reward merely naming a theorem. Every integer n>1 is a finite product of primes. Repetition is allowed; the list including multiplicities is unique up to reordering. A uniqueness claim for a set without multiplicity is insufficient.",
+      "reference": "Every integer n>1 is a finite product of primes. Repetition is allowed; the list including multiplicities is unique up to reordering. A uniqueness claim for a set without multiplicity is insufficient.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "factorization_application",
+      "family": "factorization",
+      "category": "acquisition",
+      "condition": "application",
+      "prompt": "Write 242 in prime-factorized form. How many distinct prime factors does it have, and how many factors counting multiplicity?",
+      "rubric": "Judge mathematical content, not wording or notation. Correct requires all requested content with valid assumptions and no substantive false claim. Partial means sound but incomplete; incorrect means a substantive false claim or invalid inference; unassessable means no substantive answer. Accept any mathematically valid alternative solution. Do not reward merely naming a theorem. 242=2*11^2. There are 2 distinct prime factors and 3 factors counting multiplicity. Both counts and the factorization are required.",
+      "reference": "242=2*11^2. There are 2 distinct prime factors and 3 factors counting multiplicity. Both counts and the factorization are required.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "factorization_step_check",
+      "family": "factorization",
+      "category": "semantics",
+      "condition": "step_check",
+      "prompt": "Rule: prime factorization is unique up to order, with repeated factors permitted; the exponents are fixed. (1) 72=2^3*3^2. (2) The set of its prime factors is {2,3}. (3) Therefore 72=2*3, because uniqueness lets us drop repeated factors. Identify the earliest invalid numbered step, or state that all steps are valid. Explain your judgment.",
+      "rubric": "Judge mathematical content, not wording or notation. Correct requires all requested content with valid assumptions and no substantive false claim. Partial means sound but incomplete; incorrect means a substantive false claim or invalid inference; unassessable means no substantive answer. Accept any mathematically valid alternative solution. Do not reward merely naming a theorem. A correct verdict without the requested mathematical explanation is partial. For an invalid proof, require the earliest invalid step; identifying a later step as the first error is incorrect. Earliest invalid step 3. Uniqueness preserves multiplicities; it does not permit dropping repeated factors. Steps 1 and 2 are correct, while 2*3=6, not 72.",
+      "reference": "Earliest invalid step 3. Uniqueness preserves multiplicities; it does not permit dropping repeated factors. Steps 1 and 2 are correct, while 2*3=6, not 72.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "factorization_unaided",
+      "family": "factorization",
+      "category": "strategy",
+      "condition": "unaided",
+      "prompt": "Prove that a positive integer which is a perfect square has even exponents in its prime factorization.\nGive a complete elementary proof, including the mathematical steps.",
+      "rubric": "Judge mathematical content, not wording or notation. Correct requires all requested content with valid assumptions and no substantive false claim. Partial means sound but incomplete; incorrect means a substantive false claim or invalid inference; unassessable means no substantive answer. Accept any mathematically valid alternative solution. Do not reward merely naming a theorem. A proof must establish the full quantified conclusion from the stated assumptions. Merely repeating the plan, asserting the target, or checking examples is incomplete. Alternate valid proof strategies are accepted even in the assisted conditions. Write N=t^2 with positive t. If t=1, N=1 has no prime exponents and the claim is vacuous. Otherwise let t=product of p_i^e_i over distinct primes. Then N=product of p_i^(2e_i). Uniqueness identifies these as the prime exponents of N, all even.",
+      "reference": "Write N=t^2 with positive t. If t=1, N=1 has no prime exponents and the claim is vacuous. Otherwise let t=product of p_i^e_i over distinct primes. Then N=product of p_i^(2e_i). Uniqueness identifies these as the prime exponents of N, all even.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "factorization_facts",
+      "family": "factorization",
+      "category": "strategy",
+      "condition": "facts",
+      "prompt": "Prove that a positive integer which is a perfect square has even exponents in its prime factorization.\nAvailable facts: Every integer greater than 1 has a prime factorization unique up to order. Multiplying powers of the same prime adds their exponents. The integer 1 has the empty prime factorization.\nGive a complete elementary proof, including the mathematical steps.",
+      "rubric": "Judge mathematical content, not wording or notation. Correct requires all requested content with valid assumptions and no substantive false claim. Partial means sound but incomplete; incorrect means a substantive false claim or invalid inference; unassessable means no substantive answer. Accept any mathematically valid alternative solution. Do not reward merely naming a theorem. A proof must establish the full quantified conclusion from the stated assumptions. Merely repeating the plan, asserting the target, or checking examples is incomplete. Alternate valid proof strategies are accepted even in the assisted conditions. Write N=t^2 with positive t. If t=1, N=1 has no prime exponents and the claim is vacuous. Otherwise let t=product of p_i^e_i over distinct primes. Then N=product of p_i^(2e_i). Uniqueness identifies these as the prime exponents of N, all even.",
+      "reference": "Write N=t^2 with positive t. If t=1, N=1 has no prime exponents and the claim is vacuous. Otherwise let t=product of p_i^e_i over distinct primes. Then N=product of p_i^(2e_i). Uniqueness identifies these as the prime exponents of N, all even.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "factorization_facts_plan",
+      "family": "factorization",
+      "category": "strategy",
+      "condition": "facts_plan",
+      "prompt": "Prove that a positive integer which is a perfect square has even exponents in its prime factorization.\nAvailable facts: Every integer greater than 1 has a prime factorization unique up to order. Multiplying powers of the same prime adds their exponents. The integer 1 has the empty prime factorization.\nSuggested plan: Write the integer as the square of a positive integer. Factor that integer, square the product, and handle 1.\nGive a complete elementary proof, including the mathematical steps.",
+      "rubric": "Judge mathematical content, not wording or notation. Correct requires all requested content with valid assumptions and no substantive false claim. Partial means sound but incomplete; incorrect means a substantive false claim or invalid inference; unassessable means no substantive answer. Accept any mathematically valid alternative solution. Do not reward merely naming a theorem. A proof must establish the full quantified conclusion from the stated assumptions. Merely repeating the plan, asserting the target, or checking examples is incomplete. Alternate valid proof strategies are accepted even in the assisted conditions. Write N=t^2 with positive t. If t=1, N=1 has no prime exponents and the claim is vacuous. Otherwise let t=product of p_i^e_i over distinct primes. Then N=product of p_i^(2e_i). Uniqueness identifies these as the prime exponents of N, all even.",
+      "reference": "Write N=t^2 with positive t. If t=1, N=1 has no prime exponents and the claim is vacuous. Otherwise let t=product of p_i^e_i over distinct primes. Then N=product of p_i^(2e_i). Uniqueness identifies these as the prime exponents of N, all even.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "induction_recall",
+      "family": "induction",
+      "category": "acquisition",
+      "condition": "recall",
+      "prompt": "State the principle of induction for a claim P(n) on integers n>=n0. Is proving P(k) implies P(k+1) without a base case sufficient? Explain briefly.",
+      "rubric": "Judge mathematical content, not wording or notation. Correct requires all requested content with valid assumptions and no substantive false claim. Partial means sound but incomplete; incorrect means a substantive false claim or invalid inference; unassessable means no substantive answer. Accept any mathematically valid alternative solution. Do not reward merely naming a theorem. Require P(n0) and for every k>=n0 the implication P(k)=>P(k+1). Then P(n) holds for all n>=n0. Without the base case this is insufficient; a false claim at every n can satisfy the implication.",
+      "reference": "Require P(n0) and for every k>=n0 the implication P(k)=>P(k+1). Then P(n) holds for all n>=n0. Without the base case this is insufficient; a false claim at every n can satisfy the implication.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-math-induction.html"
+    },
+    {
+      "id": "induction_application",
+      "family": "induction",
+      "category": "acquisition",
+      "condition": "application",
+      "prompt": "A sequence is defined by u_0=5 and u_(n+1)=u_n+4 for n>=0. State a formula for u_n and verify its base case and successor relation.",
+      "rubric": "Judge mathematical content, not wording or notation. Correct requires all requested content with valid assumptions and no substantive false claim. Partial means sound but incomplete; incorrect means a substantive false claim or invalid inference; unassessable means no substantive answer. Accept any mathematically valid alternative solution. Do not reward merely naming a theorem. u_n=5+4n. At n=0 it gives 5. Replacing u_n by 5+4n in the recurrence gives 5+4n+4=5+4(n+1), verifying the successor relation.",
+      "reference": "u_n=5+4n. At n=0 it gives 5. Replacing u_n by 5+4n in the recurrence gives 5+4n+4=5+4(n+1), verifying the successor relation.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-math-induction.html"
+    },
+    {
+      "id": "induction_step_check",
+      "family": "induction",
+      "category": "semantics",
+      "condition": "step_check",
+      "prompt": "Rule: P(0) and P(k)=>P(k+1) for every k>=0 prove P(n) for every n>=0. Claim: 4 divides 5^n-1. (1) At n=0, 5^0-1=0, divisible by 4. (2) Suppose 5^k-1=4t for some integer t; then 5^(k+1)-1=5*(5^k-1)+4=4*(5t+1). (3) Therefore the claim holds for all n>=0 by induction. Identify the earliest invalid numbered step, or state that all steps are valid. Explain your judgment.",
+      "rubric": "Judge mathematical content, not wording or notation. Correct requires all requested content with valid assumptions and no substantive false claim. Partial means sound but incomplete; incorrect means a substantive false claim or invalid inference; unassessable means no substantive answer. Accept any mathematically valid alternative solution. Do not reward merely naming a theorem. A correct verdict without the requested mathematical explanation is partial. For an invalid proof, require the earliest invalid step; identifying a later step as the first error is incorrect. All valid. The base case is established, the algebra yields an integer witness for the successor, and the induction rule covers all nonnegative n.",
+      "reference": "All valid. The base case is established, the algebra yields an integer witness for the successor, and the induction rule covers all nonnegative n.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-math-induction.html"
+    },
+    {
+      "id": "induction_unaided",
+      "family": "induction",
+      "category": "strategy",
+      "condition": "unaided",
+      "prompt": "Prove that 3 divides 4^n-1 for every integer n>=0.\nGive a complete elementary proof, including the mathematical steps.",
+      "rubric": "Judge mathematical content, not wording or notation. Correct requires all requested content with valid assumptions and no substantive false claim. Partial means sound but incomplete; incorrect means a substantive false claim or invalid inference; unassessable means no substantive answer. Accept any mathematically valid alternative solution. Do not reward merely naming a theorem. A proof must establish the full quantified conclusion from the stated assumptions. Merely repeating the plan, asserting the target, or checking examples is incomplete. Alternate valid proof strategies are accepted even in the assisted conditions. Base n=0 gives 4^0-1=0. Assume 4^k-1=3t for an integer t. Then 4^(k+1)-1=4*(4^k-1)+3=12t+3=3*(4t+1). The successor holds, so induction proves the claim.",
+      "reference": "Base n=0 gives 4^0-1=0. Assume 4^k-1=3t for an integer t. Then 4^(k+1)-1=4*(4^k-1)+3=12t+3=3*(4t+1). The successor holds, so induction proves the claim.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-math-induction.html"
+    },
+    {
+      "id": "induction_facts",
+      "family": "induction",
+      "category": "strategy",
+      "condition": "facts",
+      "prompt": "Prove that 3 divides 4^n-1 for every integer n>=0.\nAvailable facts: Induction on nonnegative integers requires a base case and an arbitrary successor step. Divisibility by 3 means being 3 times an integer.\nGive a complete elementary proof, including the mathematical steps.",
+      "rubric": "Judge mathematical content, not wording or notation. Correct requires all requested content with valid assumptions and no substantive false claim. Partial means sound but incomplete; incorrect means a substantive false claim or invalid inference; unassessable means no substantive answer. Accept any mathematically valid alternative solution. Do not reward merely naming a theorem. A proof must establish the full quantified conclusion from the stated assumptions. Merely repeating the plan, asserting the target, or checking examples is incomplete. Alternate valid proof strategies are accepted even in the assisted conditions. Base n=0 gives 4^0-1=0. Assume 4^k-1=3t for an integer t. Then 4^(k+1)-1=4*(4^k-1)+3=12t+3=3*(4t+1). The successor holds, so induction proves the claim.",
+      "reference": "Base n=0 gives 4^0-1=0. Assume 4^k-1=3t for an integer t. Then 4^(k+1)-1=4*(4^k-1)+3=12t+3=3*(4t+1). The successor holds, so induction proves the claim.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-math-induction.html"
+    },
+    {
+      "id": "induction_facts_plan",
+      "family": "induction",
+      "category": "strategy",
+      "condition": "facts_plan",
+      "prompt": "Prove that 3 divides 4^n-1 for every integer n>=0.\nAvailable facts: Induction on nonnegative integers requires a base case and an arbitrary successor step. Divisibility by 3 means being 3 times an integer.\nSuggested plan: Use induction. In the successor step, relate 4^(k+1)-1 to 4^k-1 and exhibit an integer multiple of 3.\nGive a complete elementary proof, including the mathematical steps.",
+      "rubric": "Judge mathematical content, not wording or notation. Correct requires all requested content with valid assumptions and no substantive false claim. Partial means sound but incomplete; incorrect means a substantive false claim or invalid inference; unassessable means no substantive answer. Accept any mathematically valid alternative solution. Do not reward merely naming a theorem. A proof must establish the full quantified conclusion from the stated assumptions. Merely repeating the plan, asserting the target, or checking examples is incomplete. Alternate valid proof strategies are accepted even in the assisted conditions. Base n=0 gives 4^0-1=0. Assume 4^k-1=3t for an integer t. Then 4^(k+1)-1=4*(4^k-1)+3=12t+3=3*(4t+1). The successor holds, so induction proves the claim.",
+      "reference": "Base n=0 gives 4^0-1=0. Assume 4^k-1=3t for an integer t. Then 4^(k+1)-1=4*(4^k-1)+3=12t+3=3*(4t+1). The successor holds, so induction proves the claim.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-math-induction.html"
+    },
+    {
+      "id": "contradiction_recall",
+      "family": "contradiction",
+      "category": "acquisition",
+      "condition": "recall",
+      "prompt": "Explain proof by contradiction for an implication H=>C. What do you assume, and what must you derive before concluding C? Explain briefly.",
+      "rubric": "Judge mathematical content, not wording or notation. Correct requires all requested content with valid assumptions and no substantive false claim. Partial means sound but incomplete; incorrect means a substantive false claim or invalid inference; unassessable means no substantive answer. Accept any mathematically valid alternative solution. Do not reward merely naming a theorem. Assume H and the negation of C. Derive an actual contradiction with a valid premise or logical fact. Then under H the negation of C is impossible, so C follows. Merely restating C or finding one example is insufficient.",
+      "reference": "Assume H and the negation of C. Derive an actual contradiction with a valid premise or logical fact. Then under H the negation of C is impossible, so C follows. Merely restating C or finding one example is insufficient.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/sets-section-note-on-proofs.html"
+    },
+    {
+      "id": "contradiction_application",
+      "family": "contradiction",
+      "category": "acquisition",
+      "condition": "application",
+      "prompt": "Let positive integers u,v satisfy u^2=3v^2. Suppose you have established u=3k for an integer k. What equation follows for v^2, and what does primality of 3 then imply about v?",
+      "rubric": "Judge mathematical content, not wording or notation. Correct requires all requested content with valid assumptions and no substantive false claim. Partial means sound but incomplete; incorrect means a substantive false claim or invalid inference; unassessable means no substantive answer. Accept any mathematically valid alternative solution. Do not reward merely naming a theorem. Substitution gives 9k^2=3v^2, so v^2=3k^2. Thus 3|v^2 and Euclid’s lemma with prime 3 gives 3|v. Require both the equation and the justified divisibility conclusion.",
+      "reference": "Substitution gives 9k^2=3v^2, so v^2=3k^2. Thus 3|v^2 and Euclid’s lemma with prime 3 gives 3|v. Require both the equation and the justified divisibility conclusion.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/sets-section-note-on-proofs.html"
+    },
+    {
+      "id": "contradiction_step_check",
+      "family": "contradiction",
+      "category": "semantics",
+      "condition": "step_check",
+      "prompt": "Rules: a contradiction requires a statement incompatible with the assumptions; 2|z means z=2k for some integer k. Claimed proof that no even integer exists: (1) Assume an even integer z exists, so z=2k for some integer k. (2) Then z+2=2(k+1), also even. (3) This is a contradiction, so no even integer exists. Identify the earliest invalid numbered step, or state that all steps are valid. Explain your judgment.",
+      "rubric": "Judge mathematical content, not wording or notation. Correct requires all requested content with valid assumptions and no substantive false claim. Partial means sound but incomplete; incorrect means a substantive false claim or invalid inference; unassessable means no substantive answer. Accept any mathematically valid alternative solution. Do not reward merely naming a theorem. A correct verdict without the requested mathematical explanation is partial. For an invalid proof, require the earliest invalid step; identifying a later step as the first error is incorrect. Earliest invalid step 3. The existence of another even integer is compatible with the assumption, not a contradiction. Steps 1 and 2 are valid.",
+      "reference": "Earliest invalid step 3. The existence of another even integer is compatible with the assumption, not a contradiction. Steps 1 and 2 are valid.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/sets-section-note-on-proofs.html"
+    },
+    {
+      "id": "contradiction_unaided",
+      "family": "contradiction",
+      "category": "strategy",
+      "condition": "unaided",
+      "prompt": "Prove that there are no coprime positive integers u,v satisfying u^2=3v^2.\nGive a complete elementary proof, including the mathematical steps.",
+      "rubric": "Judge mathematical content, not wording or notation. Correct requires all requested content with valid assumptions and no substantive false claim. Partial means sound but incomplete; incorrect means a substantive false claim or invalid inference; unassessable means no substantive answer. Accept any mathematically valid alternative solution. Do not reward merely naming a theorem. A proof must establish the full quantified conclusion from the stated assumptions. Merely repeating the plan, asserting the target, or checking examples is incomplete. Alternate valid proof strategies are accepted even in the assisted conditions. Assume coprime positive u,v satisfy u^2=3v^2. Then 3|u^2, hence 3|u; write u=3k. Substitution and division by 3 give v^2=3k^2, so 3|v^2 and hence 3|v. Thus 3 is a common divisor greater than 1, contradicting coprimality.",
+      "reference": "Assume coprime positive u,v satisfy u^2=3v^2. Then 3|u^2, hence 3|u; write u=3k. Substitution and division by 3 give v^2=3k^2, so 3|v^2 and hence 3|v. Thus 3 is a common divisor greater than 1, contradicting coprimality.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/sets-section-note-on-proofs.html"
+    },
+    {
+      "id": "contradiction_facts",
+      "family": "contradiction",
+      "category": "strategy",
+      "condition": "facts",
+      "prompt": "Prove that there are no coprime positive integers u,v satisfying u^2=3v^2.\nAvailable facts: Euclid’s lemma implies that if a prime divides a square, it divides its base. Coprime positive integers have no common divisor greater than 1. The integer 3 is prime.\nGive a complete elementary proof, including the mathematical steps.",
+      "rubric": "Judge mathematical content, not wording or notation. Correct requires all requested content with valid assumptions and no substantive false claim. Partial means sound but incomplete; incorrect means a substantive false claim or invalid inference; unassessable means no substantive answer. Accept any mathematically valid alternative solution. Do not reward merely naming a theorem. A proof must establish the full quantified conclusion from the stated assumptions. Merely repeating the plan, asserting the target, or checking examples is incomplete. Alternate valid proof strategies are accepted even in the assisted conditions. Assume coprime positive u,v satisfy u^2=3v^2. Then 3|u^2, hence 3|u; write u=3k. Substitution and division by 3 give v^2=3k^2, so 3|v^2 and hence 3|v. Thus 3 is a common divisor greater than 1, contradicting coprimality.",
+      "reference": "Assume coprime positive u,v satisfy u^2=3v^2. Then 3|u^2, hence 3|u; write u=3k. Substitution and division by 3 give v^2=3k^2, so 3|v^2 and hence 3|v. Thus 3 is a common divisor greater than 1, contradicting coprimality.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/sets-section-note-on-proofs.html"
+    },
+    {
+      "id": "contradiction_facts_plan",
+      "family": "contradiction",
+      "category": "strategy",
+      "condition": "facts_plan",
+      "prompt": "Prove that there are no coprime positive integers u,v satisfying u^2=3v^2.\nAvailable facts: Euclid’s lemma implies that if a prime divides a square, it divides its base. Coprime positive integers have no common divisor greater than 1. The integer 3 is prime.\nSuggested plan: Assume such a pair exists. Show that 3 divides one variable, substitute its integer-multiple form, and show that 3 divides the other variable.\nGive a complete elementary proof, including the mathematical steps.",
+      "rubric": "Judge mathematical content, not wording or notation. Correct requires all requested content with valid assumptions and no substantive false claim. Partial means sound but incomplete; incorrect means a substantive false claim or invalid inference; unassessable means no substantive answer. Accept any mathematically valid alternative solution. Do not reward merely naming a theorem. A proof must establish the full quantified conclusion from the stated assumptions. Merely repeating the plan, asserting the target, or checking examples is incomplete. Alternate valid proof strategies are accepted even in the assisted conditions. Assume coprime positive u,v satisfy u^2=3v^2. Then 3|u^2, hence 3|u; write u=3k. Substitution and division by 3 give v^2=3k^2, so 3|v^2 and hence 3|v. Thus 3 is a common divisor greater than 1, contradicting coprimality.",
+      "reference": "Assume coprime positive u,v satisfy u^2=3v^2. Then 3|u^2, hence 3|u; write u=3k. Substitution and division by 3 give v^2=3k^2, so 3|v^2 and hence 3|v. Thus 3 is a common divisor greater than 1, contradicting coprimality.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/sets-section-note-on-proofs.html"
+    }
+  ]
+}

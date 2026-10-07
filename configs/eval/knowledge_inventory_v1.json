@@ -1,0 +1,844 @@
+{
+  "checkpoints": {
+    "original": "Qwen/Qwen2.5-0.5B-Instruct",
+    "revision": "7ae557604adf67be50417f59c2c2f167def9a775",
+    "early": "primitive_rlp_20261005/runtime/out/policy/checkpoint-118",
+    "final": "primitive_rlp_20261005/runtime/out/policy_final"
+  },
+  "seed": 20261005,
+  "cpu_threads": 8,
+  "memory_limit_gib": 8,
+  "max_wall_seconds_per_model": 5400,
+  "batch_size": 4,
+  "max_prompt_tokens": 2048,
+  "max_new_tokens": 1024,
+  "length_views": [
+    256,
+    512,
+    1024
+  ],
+  "scope": "Stage 0 exploratory knowledge/operator inventory. Fresh contexts. Diagnostic task templates may overlap earlier development probes. Not a held-out transfer benchmark.",
+  "primary_checkpoint": "early",
+  "rubric_config": "configs/eval/decomposition_grading_v2.json",
+  "reporting": "Per family and condition: complete core, full correctness, partial scores, capped responses. Recognition rotations are repeated presentations, not independent samples. Do not turn these small counts into mastered/not-mastered labels.",
+  "tasks": [
+    {
+      "id": "divisibility_recall_0",
+      "family": "divisibility",
+      "category": "inventory",
+      "condition": "recall",
+      "prompt": "For integers a,b, define a|b. Specify the domain of the witness. Explain briefly; use mathematical notation as needed.",
+      "reference": "For integers a,b, a|b means that b=a*k for some integer k.",
+      "rubric": "Grade mathematical content using decomposition_grading_v2.json. Accept equivalent definitions, valid alternative proofs and implicit elementary steps. Require the requested explanation. Record core completeness separately from ancillary errors and full correctness. For integers a,b, a|b means that b=a*k for some integer k.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "divisibility_recall_1",
+      "family": "divisibility",
+      "category": "inventory",
+      "condition": "recall",
+      "prompt": "Define d|x over the integers. Explain whether d must be positive or nonzero. Explain briefly; use mathematical notation as needed.",
+      "reference": "For integers a,b, a|b means that b=a*k for some integer k. The divisor need not be positive or nonzero. Zero divides zero and no other integer; negative divisors are permitted.",
+      "rubric": "Grade mathematical content using decomposition_grading_v2.json. Accept equivalent definitions, valid alternative proofs and implicit elementary steps. Require the requested explanation. Record core completeness separately from ancillary errors and full correctness. For integers a,b, a|b means that b=a*k for some integer k. The divisor need not be positive or nonzero. Zero divides zero and no other integer; negative divisors are permitted.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "divisibility_recognition_0",
+      "family": "divisibility",
+      "category": "inventory",
+      "condition": "recognition",
+      "prompt": "Which statement defines a|b over integers?\nA. There is an integer k with b=a*k.\nB. There is an integer k with a=b*k.\nC. There is a real k with b=a*k.\nD. There is an integer k with b=a+k.\nChoose one statement and explain why it is correct. You may quote it instead of giving its letter.",
+      "reference": "Correct choice A: There is an integer k with b=a*k. Explain its mathematical meaning or required conditions; a letter alone is incomplete.",
+      "rubric": "Grade mathematical content using decomposition_grading_v2.json. Accept equivalent definitions, valid alternative proofs and implicit elementary steps. Require the requested explanation. Record core completeness separately from ancillary errors and full correctness. Correct choice A: There is an integer k with b=a*k. Explain its mathematical meaning or required conditions; a letter alone is incomplete.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "divisibility_recognition_1",
+      "family": "divisibility",
+      "category": "inventory",
+      "condition": "recognition",
+      "prompt": "Which statement defines a|b over integers?\nA. There is an integer k with a=b*k.\nB. There is a real k with b=a*k.\nC. There is an integer k with b=a+k.\nD. There is an integer k with b=a*k.\nChoose one statement and explain why it is correct. You may quote it instead of giving its letter.",
+      "reference": "Correct choice D: There is an integer k with b=a*k. Explain its mathematical meaning or required conditions; a letter alone is incomplete.",
+      "rubric": "Grade mathematical content using decomposition_grading_v2.json. Accept equivalent definitions, valid alternative proofs and implicit elementary steps. Require the requested explanation. Record core completeness separately from ancillary errors and full correctness. Correct choice D: There is an integer k with b=a*k. Explain its mathematical meaning or required conditions; a letter alone is incomplete.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "divisibility_recognition_2",
+      "family": "divisibility",
+      "category": "inventory",
+      "condition": "recognition",
+      "prompt": "Which statement defines a|b over integers?\nA. There is a real k with b=a*k.\nB. There is an integer k with b=a+k.\nC. There is an integer k with b=a*k.\nD. There is an integer k with a=b*k.\nChoose one statement and explain why it is correct. You may quote it instead of giving its letter.",
+      "reference": "Correct choice C: There is an integer k with b=a*k. Explain its mathematical meaning or required conditions; a letter alone is incomplete.",
+      "rubric": "Grade mathematical content using decomposition_grading_v2.json. Accept equivalent definitions, valid alternative proofs and implicit elementary steps. Require the requested explanation. Record core completeness separately from ancillary errors and full correctness. Correct choice C: There is an integer k with b=a*k. Explain its mathematical meaning or required conditions; a letter alone is incomplete.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "divisibility_recognition_3",
+      "family": "divisibility",
+      "category": "inventory",
+      "condition": "recognition",
+      "prompt": "Which statement defines a|b over integers?\nA. There is an integer k with b=a+k.\nB. There is an integer k with b=a*k.\nC. There is an integer k with a=b*k.\nD. There is a real k with b=a*k.\nChoose one statement and explain why it is correct. You may quote it instead of giving its letter.",
+      "reference": "Correct choice B: There is an integer k with b=a*k. Explain its mathematical meaning or required conditions; a letter alone is incomplete.",
+      "rubric": "Grade mathematical content using decomposition_grading_v2.json. Accept equivalent definitions, valid alternative proofs and implicit elementary steps. Require the requested explanation. Record core completeness separately from ancillary errors and full correctness. Correct choice B: There is an integer k with b=a*k. Explain its mathematical meaning or required conditions; a letter alone is incomplete.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "divisibility_independent_0",
+      "family": "divisibility",
+      "category": "inventory",
+      "condition": "independent_use",
+      "prompt": "Let a,b,c be integers with a|b and b|c. Prove a|c by constructing a witness. Give the mathematical steps.",
+      "reference": "Witness u*v; c=b*v=(a*u)*v=a*(u*v). Products of integers are integers.",
+      "rubric": "Grade mathematical content using decomposition_grading_v2.json. Accept equivalent definitions, valid alternative proofs and implicit elementary steps. Require the requested explanation. Record core completeness separately from ancillary errors and full correctness. Witness u*v; c=b*v=(a*u)*v=a*(u*v). Products of integers are integers.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "divisibility_supplied_0",
+      "family": "divisibility",
+      "category": "inventory",
+      "condition": "supplied_use",
+      "prompt": "Supplied knowledge and local method: For integers a,b, a|b means that b=a*k for some integer k.\nWrite b=a*u and c=b*v for integers u,v.\nProblem: Let a,b,c be integers with a|b and b|c. Prove a|c by constructing a witness. Give the mathematical steps.",
+      "reference": "Witness u*v; c=b*v=(a*u)*v=a*(u*v). Products of integers are integers.",
+      "rubric": "Grade mathematical content using decomposition_grading_v2.json. Accept equivalent definitions, valid alternative proofs and implicit elementary steps. Require the requested explanation. Record core completeness separately from ancillary errors and full correctness. Witness u*v; c=b*v=(a*u)*v=a*(u*v). Products of integers are integers.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "divisibility_independent_1",
+      "family": "divisibility",
+      "category": "inventory",
+      "condition": "independent_use",
+      "prompt": "Let d,x,y be integers with d|x and d|y. Prove d|(3*x-2*y) by constructing a witness. Give the mathematical steps.",
+      "reference": "Witness 3*u-2*v; 3*x-2*y=d*(3*u-2*v). No division by d or nonzero assumption is needed.",
+      "rubric": "Grade mathematical content using decomposition_grading_v2.json. Accept equivalent definitions, valid alternative proofs and implicit elementary steps. Require the requested explanation. Record core completeness separately from ancillary errors and full correctness. Witness 3*u-2*v; 3*x-2*y=d*(3*u-2*v). No division by d or nonzero assumption is needed.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "divisibility_supplied_1",
+      "family": "divisibility",
+      "category": "inventory",
+      "condition": "supplied_use",
+      "prompt": "Supplied knowledge and local method: For integers a,b, a|b means that b=a*k for some integer k.\nWrite x=d*u and y=d*v for integers u,v.\nProblem: Let d,x,y be integers with d|x and d|y. Prove d|(3*x-2*y) by constructing a witness. Give the mathematical steps.",
+      "reference": "Witness 3*u-2*v; 3*x-2*y=d*(3*u-2*v). No division by d or nonzero assumption is needed.",
+      "rubric": "Grade mathematical content using decomposition_grading_v2.json. Accept equivalent definitions, valid alternative proofs and implicit elementary steps. Require the requested explanation. Record core completeness separately from ancillary errors and full correctness. Witness 3*u-2*v; 3*x-2*y=d*(3*u-2*v). No division by d or nonzero assumption is needed.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "division_recall_0",
+      "family": "division",
+      "category": "inventory",
+      "condition": "recall",
+      "prompt": "State the integer division algorithm, including the divisor restriction and remainder bounds. Explain briefly; use mathematical notation as needed.",
+      "reference": "For every integer a and positive integer b, a=b*q+r for unique integers q,r with 0<=r<b.",
+      "rubric": "Grade mathematical content using decomposition_grading_v2.json. Accept equivalent definitions, valid alternative proofs and implicit elementary steps. Require the requested explanation. Record core completeness separately from ancillary errors and full correctness. For every integer a and positive integer b, a=b*q+r for unique integers q,r with 0<=r<b.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "division_recall_1",
+      "family": "division",
+      "category": "inventory",
+      "condition": "recall",
+      "prompt": "State the allowed quotient and remainder conditions when dividing a negative integer by a positive integer. Explain briefly; use mathematical notation as needed.",
+      "reference": "For every integer a and positive integer b, a=b*q+r for unique integers q,r with 0<=r<b.",
+      "rubric": "Grade mathematical content using decomposition_grading_v2.json. Accept equivalent definitions, valid alternative proofs and implicit elementary steps. Require the requested explanation. Record core completeness separately from ancillary errors and full correctness. For every integer a and positive integer b, a=b*q+r for unique integers q,r with 0<=r<b.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "division_recognition_0",
+      "family": "division",
+      "category": "inventory",
+      "condition": "recognition",
+      "prompt": "Which statement is the integer division algorithm?\nA. For positive b, unique integers q,r satisfy a=b*q+r and 0<=r<b.\nB. For positive b, unique integers q,r satisfy a=b*q+r and 0<r<b.\nC. For positive b, unique integers q,r satisfy a=b*q+r and 0<=r<=b.\nD. For positive b, q and r can be any real numbers satisfying a=b*q+r.\nChoose one statement and explain why it is correct. You may quote it instead of giving its letter.",
+      "reference": "Correct choice A: For positive b, unique integers q,r satisfy a=b*q+r and 0<=r<b. Explain its mathematical meaning or required conditions; a letter alone is incomplete.",
+      "rubric": "Grade mathematical content using decomposition_grading_v2.json. Accept equivalent definitions, valid alternative proofs and implicit elementary steps. Require the requested explanation. Record core completeness separately from ancillary errors and full correctness. Correct choice A: For positive b, unique integers q,r satisfy a=b*q+r and 0<=r<b. Explain its mathematical meaning or required conditions; a letter alone is incomplete.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "division_recognition_1",
+      "family": "division",
+      "category": "inventory",
+      "condition": "recognition",
+      "prompt": "Which statement is the integer division algorithm?\nA. For positive b, unique integers q,r satisfy a=b*q+r and 0<r<b.\nB. For positive b, unique integers q,r satisfy a=b*q+r and 0<=r<=b.\nC. For positive b, q and r can be any real numbers satisfying a=b*q+r.\nD. For positive b, unique integers q,r satisfy a=b*q+r and 0<=r<b.\nChoose one statement and explain why it is correct. You may quote it instead of giving its letter.",
+      "reference": "Correct choice D: For positive b, unique integers q,r satisfy a=b*q+r and 0<=r<b. Explain its mathematical meaning or required conditions; a letter alone is incomplete.",
+      "rubric": "Grade mathematical content using decomposition_grading_v2.json. Accept equivalent definitions, valid alternative proofs and implicit elementary steps. Require the requested explanation. Record core completeness separately from ancillary errors and full correctness. Correct choice D: For positive b, unique integers q,r satisfy a=b*q+r and 0<=r<b. Explain its mathematical meaning or required conditions; a letter alone is incomplete.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "division_recognition_2",
+      "family": "division",
+      "category": "inventory",
+      "condition": "recognition",
+      "prompt": "Which statement is the integer division algorithm?\nA. For positive b, unique integers q,r satisfy a=b*q+r and 0<=r<=b.\nB. For positive b, q and r can be any real numbers satisfying a=b*q+r.\nC. For positive b, unique integers q,r satisfy a=b*q+r and 0<=r<b.\nD. For positive b, unique integers q,r satisfy a=b*q+r and 0<r<b.\nChoose one statement and explain why it is correct. You may quote it instead of giving its letter.",
+      "reference": "Correct choice C: For positive b, unique integers q,r satisfy a=b*q+r and 0<=r<b. Explain its mathematical meaning or required conditions; a letter alone is incomplete.",
+      "rubric": "Grade mathematical content using decomposition_grading_v2.json. Accept equivalent definitions, valid alternative proofs and implicit elementary steps. Require the requested explanation. Record core completeness separately from ancillary errors and full correctness. Correct choice C: For positive b, unique integers q,r satisfy a=b*q+r and 0<=r<b. Explain its mathematical meaning or required conditions; a letter alone is incomplete.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "division_recognition_3",
+      "family": "division",
+      "category": "inventory",
+      "condition": "recognition",
+      "prompt": "Which statement is the integer division algorithm?\nA. For positive b, q and r can be any real numbers satisfying a=b*q+r.\nB. For positive b, unique integers q,r satisfy a=b*q+r and 0<=r<b.\nC. For positive b, unique integers q,r satisfy a=b*q+r and 0<r<b.\nD. For positive b, unique integers q,r satisfy a=b*q+r and 0<=r<=b.\nChoose one statement and explain why it is correct. You may quote it instead of giving its letter.",
+      "reference": "Correct choice B: For positive b, unique integers q,r satisfy a=b*q+r and 0<=r<b. Explain its mathematical meaning or required conditions; a letter alone is incomplete.",
+      "rubric": "Grade mathematical content using decomposition_grading_v2.json. Accept equivalent definitions, valid alternative proofs and implicit elementary steps. Require the requested explanation. Record core completeness separately from ancillary errors and full correctness. Correct choice B: For positive b, unique integers q,r satisfy a=b*q+r and 0<=r<b. Explain its mathematical meaning or required conditions; a letter alone is incomplete.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "division_independent_0",
+      "family": "division",
+      "category": "inventory",
+      "condition": "independent_use",
+      "prompt": "Find the Euclidean quotient and remainder for -38 divided by 7. Verify both defining requirements. Give the mathematical steps.",
+      "reference": "q=-6 and r=4; -38=7*(-6)+4 and 0<=4<7.",
+      "rubric": "Grade mathematical content using decomposition_grading_v2.json. Accept equivalent definitions, valid alternative proofs and implicit elementary steps. Require the requested explanation. Record core completeness separately from ancillary errors and full correctness. q=-6 and r=4; -38=7*(-6)+4 and 0<=4<7.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "division_supplied_0",
+      "family": "division",
+      "category": "inventory",
+      "condition": "supplied_use",
+      "prompt": "Supplied knowledge and local method: For every integer a and positive integer b, a=b*q+r for unique integers q,r with 0<=r<b.\nUse a=b*q+r and 0<=r<b with a=-38 and b=7.\nProblem: Find the Euclidean quotient and remainder for -38 divided by 7. Verify both defining requirements. Give the mathematical steps.",
+      "reference": "q=-6 and r=4; -38=7*(-6)+4 and 0<=4<7.",
+      "rubric": "Grade mathematical content using decomposition_grading_v2.json. Accept equivalent definitions, valid alternative proofs and implicit elementary steps. Require the requested explanation. Record core completeness separately from ancillary errors and full correctness. q=-6 and r=4; -38=7*(-6)+4 and 0<=4<7.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "division_independent_1",
+      "family": "division",
+      "category": "inventory",
+      "condition": "independent_use",
+      "prompt": "Find the Euclidean quotient and remainder for 52 divided by 9. Verify both defining requirements. Give the mathematical steps.",
+      "reference": "q=5 and r=7; 52=9*5+7 and 0<=7<9.",
+      "rubric": "Grade mathematical content using decomposition_grading_v2.json. Accept equivalent definitions, valid alternative proofs and implicit elementary steps. Require the requested explanation. Record core completeness separately from ancillary errors and full correctness. q=5 and r=7; 52=9*5+7 and 0<=7<9.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "division_supplied_1",
+      "family": "division",
+      "category": "inventory",
+      "condition": "supplied_use",
+      "prompt": "Supplied knowledge and local method: For every integer a and positive integer b, a=b*q+r for unique integers q,r with 0<=r<b.\nUse a=b*q+r and 0<=r<b with a=52 and b=9.\nProblem: Find the Euclidean quotient and remainder for 52 divided by 9. Verify both defining requirements. Give the mathematical steps.",
+      "reference": "q=5 and r=7; 52=9*5+7 and 0<=7<9.",
+      "rubric": "Grade mathematical content using decomposition_grading_v2.json. Accept equivalent definitions, valid alternative proofs and implicit elementary steps. Require the requested explanation. Record core completeness separately from ancillary errors and full correctness. q=5 and r=7; 52=9*5+7 and 0<=7<9.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "gcd_recall_0",
+      "family": "gcd",
+      "category": "inventory",
+      "condition": "recall",
+      "prompt": "Define the greatest common divisor of two nonzero integers. State its sign convention. Explain briefly; use mathematical notation as needed.",
+      "reference": "For nonzero integers a,b, gcd(a,b) is the greatest positive common divisor. If a=b*q+r, a,b and b,r have exactly the same common divisors.",
+      "rubric": "Grade mathematical content using decomposition_grading_v2.json. Accept equivalent definitions, valid alternative proofs and implicit elementary steps. Require the requested explanation. Record core completeness separately from ancillary errors and full correctness. For nonzero integers a,b, gcd(a,b) is the greatest positive common divisor. If a=b*q+r, a,b and b,r have exactly the same common divisors.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "gcd_recall_1",
+      "family": "gcd",
+      "category": "inventory",
+      "condition": "recall",
+      "prompt": "State why replacing (a,b) by (b,a-b*q) preserves their common divisors, for integer q. Explain briefly; use mathematical notation as needed.",
+      "reference": "For nonzero integers a,b, gcd(a,b) is the greatest positive common divisor. If a=b*q+r, a,b and b,r have exactly the same common divisors. If d divides a,b, then d divides a-b*q. If d divides b and r=a-b*q, then d divides b*q+r=a. Thus the sets of common divisors agree.",
+      "rubric": "Grade mathematical content using decomposition_grading_v2.json. Accept equivalent definitions, valid alternative proofs and implicit elementary steps. Require the requested explanation. Record core completeness separately from ancillary errors and full correctness. For nonzero integers a,b, gcd(a,b) is the greatest positive common divisor. If a=b*q+r, a,b and b,r have exactly the same common divisors. If d divides a,b, then d divides a-b*q. If d divides b and r=a-b*q, then d divides b*q+r=a. Thus the sets of common divisors agree.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "gcd_recognition_0",
+      "family": "gcd",
+      "category": "inventory",
+      "condition": "recognition",
+      "prompt": "Which statement defines gcd(a,b) for nonzero integers?\nA. The greatest positive integer dividing both nonzero inputs.\nB. The smallest positive integer dividing both nonzero inputs.\nC. The greatest positive integer divided by both nonzero inputs.\nD. The product of the absolute values of both nonzero inputs.\nChoose one statement and explain why it is correct. You may quote it instead of giving its letter.",
+      "reference": "Correct choice A: The greatest positive integer dividing both nonzero inputs. Explain its mathematical meaning or required conditions; a letter alone is incomplete.",
+      "rubric": "Grade mathematical content using decomposition_grading_v2.json. Accept equivalent definitions, valid alternative proofs and implicit elementary steps. Require the requested explanation. Record core completeness separately from ancillary errors and full correctness. Correct choice A: The greatest positive integer dividing both nonzero inputs. Explain its mathematical meaning or required conditions; a letter alone is incomplete.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "gcd_recognition_1",
+      "family": "gcd",
+      "category": "inventory",
+      "condition": "recognition",
+      "prompt": "Which statement defines gcd(a,b) for nonzero integers?\nA. The smallest positive integer dividing both nonzero inputs.\nB. The greatest positive integer divided by both nonzero inputs.\nC. The product of the absolute values of both nonzero inputs.\nD. The greatest positive integer dividing both nonzero inputs.\nChoose one statement and explain why it is correct. You may quote it instead of giving its letter.",
+      "reference": "Correct choice D: The greatest positive integer dividing both nonzero inputs. Explain its mathematical meaning or required conditions; a letter alone is incomplete.",
+      "rubric": "Grade mathematical content using decomposition_grading_v2.json. Accept equivalent definitions, valid alternative proofs and implicit elementary steps. Require the requested explanation. Record core completeness separately from ancillary errors and full correctness. Correct choice D: The greatest positive integer dividing both nonzero inputs. Explain its mathematical meaning or required conditions; a letter alone is incomplete.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "gcd_recognition_2",
+      "family": "gcd",
+      "category": "inventory",
+      "condition": "recognition",
+      "prompt": "Which statement defines gcd(a,b) for nonzero integers?\nA. The greatest positive integer divided by both nonzero inputs.\nB. The product of the absolute values of both nonzero inputs.\nC. The greatest positive integer dividing both nonzero inputs.\nD. The smallest positive integer dividing both nonzero inputs.\nChoose one statement and explain why it is correct. You may quote it instead of giving its letter.",
+      "reference": "Correct choice C: The greatest positive integer dividing both nonzero inputs. Explain its mathematical meaning or required conditions; a letter alone is incomplete.",
+      "rubric": "Grade mathematical content using decomposition_grading_v2.json. Accept equivalent definitions, valid alternative proofs and implicit elementary steps. Require the requested explanation. Record core completeness separately from ancillary errors and full correctness. Correct choice C: The greatest positive integer dividing both nonzero inputs. Explain its mathematical meaning or required conditions; a letter alone is incomplete.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "gcd_recognition_3",
+      "family": "gcd",
+      "category": "inventory",
+      "condition": "recognition",
+      "prompt": "Which statement defines gcd(a,b) for nonzero integers?\nA. The product of the absolute values of both nonzero inputs.\nB. The greatest positive integer dividing both nonzero inputs.\nC. The smallest positive integer dividing both nonzero inputs.\nD. The greatest positive integer divided by both nonzero inputs.\nChoose one statement and explain why it is correct. You may quote it instead of giving its letter.",
+      "reference": "Correct choice B: The greatest positive integer dividing both nonzero inputs. Explain its mathematical meaning or required conditions; a letter alone is incomplete.",
+      "rubric": "Grade mathematical content using decomposition_grading_v2.json. Accept equivalent definitions, valid alternative proofs and implicit elementary steps. Require the requested explanation. Record core completeness separately from ancillary errors and full correctness. Correct choice B: The greatest positive integer dividing both nonzero inputs. Explain its mathematical meaning or required conditions; a letter alone is incomplete.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "gcd_independent_0",
+      "family": "gcd",
+      "category": "inventory",
+      "condition": "independent_use",
+      "prompt": "Find gcd(84,30). Show the remainder steps and explain why they preserve common divisors. Give the mathematical steps.",
+      "reference": "84=2*30+24; 30=24+6; 24=4*6. gcd=6. Divisors of a,b divide a-b*q; divisors of b,r divide b*q+r.",
+      "rubric": "Grade mathematical content using decomposition_grading_v2.json. Accept equivalent definitions, valid alternative proofs and implicit elementary steps. Require the requested explanation. Record core completeness separately from ancillary errors and full correctness. 84=2*30+24; 30=24+6; 24=4*6. gcd=6. Divisors of a,b divide a-b*q; divisors of b,r divide b*q+r.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "gcd_supplied_0",
+      "family": "gcd",
+      "category": "inventory",
+      "condition": "supplied_use",
+      "prompt": "Supplied knowledge and local method: For nonzero integers a,b, gcd(a,b) is the greatest positive common divisor. If a=b*q+r, a,b and b,r have exactly the same common divisors.\nYou may use the common-divisor preservation rule and stop when the remainder is zero.\nProblem: Find gcd(84,30). Show the remainder steps and explain why they preserve common divisors. Give the mathematical steps.",
+      "reference": "84=2*30+24; 30=24+6; 24=4*6. gcd=6. Divisors of a,b divide a-b*q; divisors of b,r divide b*q+r.",
+      "rubric": "Grade mathematical content using decomposition_grading_v2.json. Accept equivalent definitions, valid alternative proofs and implicit elementary steps. Require the requested explanation. Record core completeness separately from ancillary errors and full correctness. 84=2*30+24; 30=24+6; 24=4*6. gcd=6. Divisors of a,b divide a-b*q; divisors of b,r divide b*q+r.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "gcd_independent_1",
+      "family": "gcd",
+      "category": "inventory",
+      "condition": "independent_use",
+      "prompt": "Find gcd(91,35). Show the remainder steps and explain why they preserve common divisors. Give the mathematical steps.",
+      "reference": "91=2*35+21; 35=21+14; 21=14+7; 14=2*7. gcd=7. The subtraction and reconstruction identities preserve common divisors.",
+      "rubric": "Grade mathematical content using decomposition_grading_v2.json. Accept equivalent definitions, valid alternative proofs and implicit elementary steps. Require the requested explanation. Record core completeness separately from ancillary errors and full correctness. 91=2*35+21; 35=21+14; 21=14+7; 14=2*7. gcd=7. The subtraction and reconstruction identities preserve common divisors.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "gcd_supplied_1",
+      "family": "gcd",
+      "category": "inventory",
+      "condition": "supplied_use",
+      "prompt": "Supplied knowledge and local method: For nonzero integers a,b, gcd(a,b) is the greatest positive common divisor. If a=b*q+r, a,b and b,r have exactly the same common divisors.\nYou may use the common-divisor preservation rule and stop when the remainder is zero.\nProblem: Find gcd(91,35). Show the remainder steps and explain why they preserve common divisors. Give the mathematical steps.",
+      "reference": "91=2*35+21; 35=21+14; 21=14+7; 14=2*7. gcd=7. The subtraction and reconstruction identities preserve common divisors.",
+      "rubric": "Grade mathematical content using decomposition_grading_v2.json. Accept equivalent definitions, valid alternative proofs and implicit elementary steps. Require the requested explanation. Record core completeness separately from ancillary errors and full correctness. 91=2*35+21; 35=21+14; 21=14+7; 14=2*7. gcd=7. The subtraction and reconstruction identities preserve common divisors.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "bezout_recall_0",
+      "family": "bezout",
+      "category": "inventory",
+      "condition": "recall",
+      "prompt": "State Bezout's identity for two nonzero integers. Specify coefficient domains and the right side. Explain briefly; use mathematical notation as needed.",
+      "reference": "For nonzero integers a,b, there exist integers u,v with a*u+b*v=gcd(a,b). Coprime means gcd(a,b)=1.",
+      "rubric": "Grade mathematical content using decomposition_grading_v2.json. Accept equivalent definitions, valid alternative proofs and implicit elementary steps. Require the requested explanation. Record core completeness separately from ancillary errors and full correctness. For nonzero integers a,b, there exist integers u,v with a*u+b*v=gcd(a,b). Coprime means gcd(a,b)=1.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "bezout_recall_1",
+      "family": "bezout",
+      "category": "inventory",
+      "condition": "recall",
+      "prompt": "State a linear-combination certificate that two nonzero integers are coprime, and explain why it works. Explain briefly; use mathematical notation as needed.",
+      "reference": "For nonzero integers a,b, there exist integers u,v with a*u+b*v=gcd(a,b). Coprime means gcd(a,b)=1. A common divisor divides the combination 1, so the positive gcd is 1.",
+      "rubric": "Grade mathematical content using decomposition_grading_v2.json. Accept equivalent definitions, valid alternative proofs and implicit elementary steps. Require the requested explanation. Record core completeness separately from ancillary errors and full correctness. For nonzero integers a,b, there exist integers u,v with a*u+b*v=gcd(a,b). Coprime means gcd(a,b)=1. A common divisor divides the combination 1, so the positive gcd is 1.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "bezout_recognition_0",
+      "family": "bezout",
+      "category": "inventory",
+      "condition": "recognition",
+      "prompt": "Which statement is Bezout's identity for nonzero integers?\nA. Some integers u,v satisfy a*u+b*v=gcd(a,b).\nB. Every pair of integers u,v satisfies a*u+b*v=gcd(a,b).\nC. Some positive integers u,v satisfy a*u+b*v=1 for every a,b.\nD. Some integers u,v satisfy a*u+b*v=1 for every nonzero a,b.\nChoose one statement and explain why it is correct. You may quote it instead of giving its letter.",
+      "reference": "Correct choice A: Some integers u,v satisfy a*u+b*v=gcd(a,b). Explain its mathematical meaning or required conditions; a letter alone is incomplete.",
+      "rubric": "Grade mathematical content using decomposition_grading_v2.json. Accept equivalent definitions, valid alternative proofs and implicit elementary steps. Require the requested explanation. Record core completeness separately from ancillary errors and full correctness. Correct choice A: Some integers u,v satisfy a*u+b*v=gcd(a,b). Explain its mathematical meaning or required conditions; a letter alone is incomplete.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "bezout_recognition_1",
+      "family": "bezout",
+      "category": "inventory",
+      "condition": "recognition",
+      "prompt": "Which statement is Bezout's identity for nonzero integers?\nA. Every pair of integers u,v satisfies a*u+b*v=gcd(a,b).\nB. Some positive integers u,v satisfy a*u+b*v=1 for every a,b.\nC. Some integers u,v satisfy a*u+b*v=1 for every nonzero a,b.\nD. Some integers u,v satisfy a*u+b*v=gcd(a,b).\nChoose one statement and explain why it is correct. You may quote it instead of giving its letter.",
+      "reference": "Correct choice D: Some integers u,v satisfy a*u+b*v=gcd(a,b). Explain its mathematical meaning or required conditions; a letter alone is incomplete.",
+      "rubric": "Grade mathematical content using decomposition_grading_v2.json. Accept equivalent definitions, valid alternative proofs and implicit elementary steps. Require the requested explanation. Record core completeness separately from ancillary errors and full correctness. Correct choice D: Some integers u,v satisfy a*u+b*v=gcd(a,b). Explain its mathematical meaning or required conditions; a letter alone is incomplete.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "bezout_recognition_2",
+      "family": "bezout",
+      "category": "inventory",
+      "condition": "recognition",
+      "prompt": "Which statement is Bezout's identity for nonzero integers?\nA. Some positive integers u,v satisfy a*u+b*v=1 for every a,b.\nB. Some integers u,v satisfy a*u+b*v=1 for every nonzero a,b.\nC. Some integers u,v satisfy a*u+b*v=gcd(a,b).\nD. Every pair of integers u,v satisfies a*u+b*v=gcd(a,b).\nChoose one statement and explain why it is correct. You may quote it instead of giving its letter.",
+      "reference": "Correct choice C: Some integers u,v satisfy a*u+b*v=gcd(a,b). Explain its mathematical meaning or required conditions; a letter alone is incomplete.",
+      "rubric": "Grade mathematical content using decomposition_grading_v2.json. Accept equivalent definitions, valid alternative proofs and implicit elementary steps. Require the requested explanation. Record core completeness separately from ancillary errors and full correctness. Correct choice C: Some integers u,v satisfy a*u+b*v=gcd(a,b). Explain its mathematical meaning or required conditions; a letter alone is incomplete.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "bezout_recognition_3",
+      "family": "bezout",
+      "category": "inventory",
+      "condition": "recognition",
+      "prompt": "Which statement is Bezout's identity for nonzero integers?\nA. Some integers u,v satisfy a*u+b*v=1 for every nonzero a,b.\nB. Some integers u,v satisfy a*u+b*v=gcd(a,b).\nC. Every pair of integers u,v satisfies a*u+b*v=gcd(a,b).\nD. Some positive integers u,v satisfy a*u+b*v=1 for every a,b.\nChoose one statement and explain why it is correct. You may quote it instead of giving its letter.",
+      "reference": "Correct choice B: Some integers u,v satisfy a*u+b*v=gcd(a,b). Explain its mathematical meaning or required conditions; a letter alone is incomplete.",
+      "rubric": "Grade mathematical content using decomposition_grading_v2.json. Accept equivalent definitions, valid alternative proofs and implicit elementary steps. Require the requested explanation. Record core completeness separately from ancillary errors and full correctness. Correct choice B: Some integers u,v satisfy a*u+b*v=gcd(a,b). Explain its mathematical meaning or required conditions; a letter alone is incomplete.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "bezout_independent_0",
+      "family": "bezout",
+      "category": "inventory",
+      "condition": "independent_use",
+      "prompt": "Find integer coefficients certifying that 17 and 7 are coprime. Verify the identity and justify the conclusion. Give the mathematical steps.",
+      "reference": "u=-2,v=5 works: -34+35=1. Any common divisor divides 1; the positive gcd is 1. Accept any valid coefficient pair.",
+      "rubric": "Grade mathematical content using decomposition_grading_v2.json. Accept equivalent definitions, valid alternative proofs and implicit elementary steps. Require the requested explanation. Record core completeness separately from ancillary errors and full correctness. u=-2,v=5 works: -34+35=1. Any common divisor divides 1; the positive gcd is 1. Accept any valid coefficient pair.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "bezout_supplied_0",
+      "family": "bezout",
+      "category": "inventory",
+      "condition": "supplied_use",
+      "prompt": "Supplied knowledge and local method: For nonzero integers a,b, there exist integers u,v with a*u+b*v=gcd(a,b). Coprime means gcd(a,b)=1.\nFind u,v with 17*u+7*v=1. Every common divisor divides any integer linear combination.\nProblem: Find integer coefficients certifying that 17 and 7 are coprime. Verify the identity and justify the conclusion. Give the mathematical steps.",
+      "reference": "u=-2,v=5 works: -34+35=1. Any common divisor divides 1; the positive gcd is 1. Accept any valid coefficient pair.",
+      "rubric": "Grade mathematical content using decomposition_grading_v2.json. Accept equivalent definitions, valid alternative proofs and implicit elementary steps. Require the requested explanation. Record core completeness separately from ancillary errors and full correctness. u=-2,v=5 works: -34+35=1. Any common divisor divides 1; the positive gcd is 1. Accept any valid coefficient pair.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "bezout_independent_1",
+      "family": "bezout",
+      "category": "inventory",
+      "condition": "independent_use",
+      "prompt": "Find integer coefficients certifying that 19 and 8 are coprime. Verify the identity and justify the conclusion. Give the mathematical steps.",
+      "reference": "u=3,v=-7 works: 57-56=1. Any common divisor divides 1; the positive gcd is 1. Accept any valid coefficient pair.",
+      "rubric": "Grade mathematical content using decomposition_grading_v2.json. Accept equivalent definitions, valid alternative proofs and implicit elementary steps. Require the requested explanation. Record core completeness separately from ancillary errors and full correctness. u=3,v=-7 works: 57-56=1. Any common divisor divides 1; the positive gcd is 1. Accept any valid coefficient pair.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "bezout_supplied_1",
+      "family": "bezout",
+      "category": "inventory",
+      "condition": "supplied_use",
+      "prompt": "Supplied knowledge and local method: For nonzero integers a,b, there exist integers u,v with a*u+b*v=gcd(a,b). Coprime means gcd(a,b)=1.\nFind u,v with 19*u+8*v=1. Every common divisor divides any integer linear combination.\nProblem: Find integer coefficients certifying that 19 and 8 are coprime. Verify the identity and justify the conclusion. Give the mathematical steps.",
+      "reference": "u=3,v=-7 works: 57-56=1. Any common divisor divides 1; the positive gcd is 1. Accept any valid coefficient pair.",
+      "rubric": "Grade mathematical content using decomposition_grading_v2.json. Accept equivalent definitions, valid alternative proofs and implicit elementary steps. Require the requested explanation. Record core completeness separately from ancillary errors and full correctness. u=3,v=-7 works: 57-56=1. Any common divisor divides 1; the positive gcd is 1. Accept any valid coefficient pair.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "congruence_recall_0",
+      "family": "congruence",
+      "category": "inventory",
+      "condition": "recall",
+      "prompt": "Define congruence modulo a positive integer using divisibility. Specify the domain of all variables. Explain briefly; use mathematical notation as needed.",
+      "reference": "For integers a,b and positive integer m, a is congruent to b modulo m iff m divides a-b, equivalently a-b=m*k for an integer k.",
+      "rubric": "Grade mathematical content using decomposition_grading_v2.json. Accept equivalent definitions, valid alternative proofs and implicit elementary steps. Require the requested explanation. Record core completeness separately from ancillary errors and full correctness. For integers a,b and positive integer m, a is congruent to b modulo m iff m divides a-b, equivalently a-b=m*k for an integer k.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/groups-section-mod-n-sym.html"
+    },
+    {
+      "id": "congruence_recall_1",
+      "family": "congruence",
+      "category": "inventory",
+      "condition": "recall",
+      "prompt": "Express x congruent to y modulo positive m as an equality with a quantified integer witness. Explain briefly; use mathematical notation as needed.",
+      "reference": "For integers a,b and positive integer m, a is congruent to b modulo m iff m divides a-b, equivalently a-b=m*k for an integer k.",
+      "rubric": "Grade mathematical content using decomposition_grading_v2.json. Accept equivalent definitions, valid alternative proofs and implicit elementary steps. Require the requested explanation. Record core completeness separately from ancillary errors and full correctness. For integers a,b and positive integer m, a is congruent to b modulo m iff m divides a-b, equivalently a-b=m*k for an integer k.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/groups-section-mod-n-sym.html"
+    },
+    {
+      "id": "congruence_recognition_0",
+      "family": "congruence",
+      "category": "inventory",
+      "condition": "recognition",
+      "prompt": "Which statement defines a congruent to b modulo positive integer m?\nA. m divides a-b.\nB. a-b divides m.\nC. m divides a+b.\nD. a=b as integers.\nChoose one statement and explain why it is correct. You may quote it instead of giving its letter.",
+      "reference": "Correct choice A: m divides a-b. Explain its mathematical meaning or required conditions; a letter alone is incomplete.",
+      "rubric": "Grade mathematical content using decomposition_grading_v2.json. Accept equivalent definitions, valid alternative proofs and implicit elementary steps. Require the requested explanation. Record core completeness separately from ancillary errors and full correctness. Correct choice A: m divides a-b. Explain its mathematical meaning or required conditions; a letter alone is incomplete.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/groups-section-mod-n-sym.html"
+    },
+    {
+      "id": "congruence_recognition_1",
+      "family": "congruence",
+      "category": "inventory",
+      "condition": "recognition",
+      "prompt": "Which statement defines a congruent to b modulo positive integer m?\nA. a-b divides m.\nB. m divides a+b.\nC. a=b as integers.\nD. m divides a-b.\nChoose one statement and explain why it is correct. You may quote it instead of giving its letter.",
+      "reference": "Correct choice D: m divides a-b. Explain its mathematical meaning or required conditions; a letter alone is incomplete.",
+      "rubric": "Grade mathematical content using decomposition_grading_v2.json. Accept equivalent definitions, valid alternative proofs and implicit elementary steps. Require the requested explanation. Record core completeness separately from ancillary errors and full correctness. Correct choice D: m divides a-b. Explain its mathematical meaning or required conditions; a letter alone is incomplete.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/groups-section-mod-n-sym.html"
+    },
+    {
+      "id": "congruence_recognition_2",
+      "family": "congruence",
+      "category": "inventory",
+      "condition": "recognition",
+      "prompt": "Which statement defines a congruent to b modulo positive integer m?\nA. m divides a+b.\nB. a=b as integers.\nC. m divides a-b.\nD. a-b divides m.\nChoose one statement and explain why it is correct. You may quote it instead of giving its letter.",
+      "reference": "Correct choice C: m divides a-b. Explain its mathematical meaning or required conditions; a letter alone is incomplete.",
+      "rubric": "Grade mathematical content using decomposition_grading_v2.json. Accept equivalent definitions, valid alternative proofs and implicit elementary steps. Require the requested explanation. Record core completeness separately from ancillary errors and full correctness. Correct choice C: m divides a-b. Explain its mathematical meaning or required conditions; a letter alone is incomplete.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/groups-section-mod-n-sym.html"
+    },
+    {
+      "id": "congruence_recognition_3",
+      "family": "congruence",
+      "category": "inventory",
+      "condition": "recognition",
+      "prompt": "Which statement defines a congruent to b modulo positive integer m?\nA. a=b as integers.\nB. m divides a-b.\nC. a-b divides m.\nD. m divides a+b.\nChoose one statement and explain why it is correct. You may quote it instead of giving its letter.",
+      "reference": "Correct choice B: m divides a-b. Explain its mathematical meaning or required conditions; a letter alone is incomplete.",
+      "rubric": "Grade mathematical content using decomposition_grading_v2.json. Accept equivalent definitions, valid alternative proofs and implicit elementary steps. Require the requested explanation. Record core completeness separately from ancillary errors and full correctness. Correct choice B: m divides a-b. Explain its mathematical meaning or required conditions; a letter alone is incomplete.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/groups-section-mod-n-sym.html"
+    },
+    {
+      "id": "congruence_independent_0",
+      "family": "congruence",
+      "category": "inventory",
+      "condition": "independent_use",
+      "prompt": "Let m be a positive integer and x,y integers congruent modulo m. Prove 4*x+3 is congruent to 4*y+3 modulo m. Give the mathematical steps.",
+      "reference": "The difference is 4*(x-y)=m*(4*k). Witness 4*k is an integer.",
+      "rubric": "Grade mathematical content using decomposition_grading_v2.json. Accept equivalent definitions, valid alternative proofs and implicit elementary steps. Require the requested explanation. Record core completeness separately from ancillary errors and full correctness. The difference is 4*(x-y)=m*(4*k). Witness 4*k is an integer.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/groups-section-mod-n-sym.html"
+    },
+    {
+      "id": "congruence_supplied_0",
+      "family": "congruence",
+      "category": "inventory",
+      "condition": "supplied_use",
+      "prompt": "Supplied knowledge and local method: For integers a,b and positive integer m, a is congruent to b modulo m iff m divides a-b, equivalently a-b=m*k for an integer k.\nWrite x-y=m*k for an integer k and construct a witness for the new difference.\nProblem: Let m be a positive integer and x,y integers congruent modulo m. Prove 4*x+3 is congruent to 4*y+3 modulo m. Give the mathematical steps.",
+      "reference": "The difference is 4*(x-y)=m*(4*k). Witness 4*k is an integer.",
+      "rubric": "Grade mathematical content using decomposition_grading_v2.json. Accept equivalent definitions, valid alternative proofs and implicit elementary steps. Require the requested explanation. Record core completeness separately from ancillary errors and full correctness. The difference is 4*(x-y)=m*(4*k). Witness 4*k is an integer.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/groups-section-mod-n-sym.html"
+    },
+    {
+      "id": "congruence_independent_1",
+      "family": "congruence",
+      "category": "inventory",
+      "condition": "independent_use",
+      "prompt": "Let m be a positive integer. Suppose integers x,y,z satisfy x congruent to y modulo m and y congruent to z modulo m. Prove x congruent to z modulo m. Give the mathematical steps.",
+      "reference": "x-z=(x-y)+(y-z)=m*(u+v), with integer witness u+v.",
+      "rubric": "Grade mathematical content using decomposition_grading_v2.json. Accept equivalent definitions, valid alternative proofs and implicit elementary steps. Require the requested explanation. Record core completeness separately from ancillary errors and full correctness. x-z=(x-y)+(y-z)=m*(u+v), with integer witness u+v.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/groups-section-mod-n-sym.html"
+    },
+    {
+      "id": "congruence_supplied_1",
+      "family": "congruence",
+      "category": "inventory",
+      "condition": "supplied_use",
+      "prompt": "Supplied knowledge and local method: For integers a,b and positive integer m, a is congruent to b modulo m iff m divides a-b, equivalently a-b=m*k for an integer k.\nWrite x-y=m*u and y-z=m*v for integers u,v.\nProblem: Let m be a positive integer. Suppose integers x,y,z satisfy x congruent to y modulo m and y congruent to z modulo m. Prove x congruent to z modulo m. Give the mathematical steps.",
+      "reference": "x-z=(x-y)+(y-z)=m*(u+v), with integer witness u+v.",
+      "rubric": "Grade mathematical content using decomposition_grading_v2.json. Accept equivalent definitions, valid alternative proofs and implicit elementary steps. Require the requested explanation. Record core completeness separately from ancillary errors and full correctness. x-z=(x-y)+(y-z)=m*(u+v), with integer witness u+v.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/groups-section-mod-n-sym.html"
+    },
+    {
+      "id": "inverse_recall_0",
+      "family": "inverse",
+      "category": "inventory",
+      "condition": "recall",
+      "prompt": "Define a modular inverse and state exactly when it exists for modulus m>1. Explain briefly; use mathematical notation as needed.",
+      "reference": "For positive m>1, u is an inverse of a modulo m iff a*u is congruent to 1 modulo m. Such an inverse exists iff gcd(a,m)=1.",
+      "rubric": "Grade mathematical content using decomposition_grading_v2.json. Accept equivalent definitions, valid alternative proofs and implicit elementary steps. Require the requested explanation. Record core completeness separately from ancillary errors and full correctness. For positive m>1, u is an inverse of a modulo m iff a*u is congruent to 1 modulo m. Such an inverse exists iff gcd(a,m)=1.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/groups-section-mod-n-sym.html"
+    },
+    {
+      "id": "inverse_recall_1",
+      "family": "inverse",
+      "category": "inventory",
+      "condition": "recall",
+      "prompt": "Express an inverse certificate as an integer equation. State the necessary and sufficient condition on a and m. Explain briefly; use mathematical notation as needed.",
+      "reference": "For positive m>1, u is an inverse of a modulo m iff a*u is congruent to 1 modulo m. Such an inverse exists iff gcd(a,m)=1. An integer certificate is a*u-1=m*k for integers u,k.",
+      "rubric": "Grade mathematical content using decomposition_grading_v2.json. Accept equivalent definitions, valid alternative proofs and implicit elementary steps. Require the requested explanation. Record core completeness separately from ancillary errors and full correctness. For positive m>1, u is an inverse of a modulo m iff a*u is congruent to 1 modulo m. Such an inverse exists iff gcd(a,m)=1. An integer certificate is a*u-1=m*k for integers u,k.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/groups-section-mod-n-sym.html"
+    },
+    {
+      "id": "inverse_recognition_0",
+      "family": "inverse",
+      "category": "inventory",
+      "condition": "recognition",
+      "prompt": "Which statement defines an inverse modulo m>1 and its existence condition?\nA. An integer u with a*u congruent to 1 modulo m; existence requires gcd(a,m)=1.\nB. An integer u with a+u congruent to 0 modulo m; existence requires gcd(a,m)=1.\nC. The real number 1/a, which is always an inverse modulo any positive m.\nD. An integer u with a*u congruent to 0 modulo m; existence requires a divides m.\nChoose one statement and explain why it is correct. You may quote it instead of giving its letter.",
+      "reference": "Correct choice A: An integer u with a*u congruent to 1 modulo m; existence requires gcd(a,m)=1. Explain its mathematical meaning or required conditions; a letter alone is incomplete.",
+      "rubric": "Grade mathematical content using decomposition_grading_v2.json. Accept equivalent definitions, valid alternative proofs and implicit elementary steps. Require the requested explanation. Record core completeness separately from ancillary errors and full correctness. Correct choice A: An integer u with a*u congruent to 1 modulo m; existence requires gcd(a,m)=1. Explain its mathematical meaning or required conditions; a letter alone is incomplete.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/groups-section-mod-n-sym.html"
+    },
+    {
+      "id": "inverse_recognition_1",
+      "family": "inverse",
+      "category": "inventory",
+      "condition": "recognition",
+      "prompt": "Which statement defines an inverse modulo m>1 and its existence condition?\nA. An integer u with a+u congruent to 0 modulo m; existence requires gcd(a,m)=1.\nB. The real number 1/a, which is always an inverse modulo any positive m.\nC. An integer u with a*u congruent to 0 modulo m; existence requires a divides m.\nD. An integer u with a*u congruent to 1 modulo m; existence requires gcd(a,m)=1.\nChoose one statement and explain why it is correct. You may quote it instead of giving its letter.",
+      "reference": "Correct choice D: An integer u with a*u congruent to 1 modulo m; existence requires gcd(a,m)=1. Explain its mathematical meaning or required conditions; a letter alone is incomplete.",
+      "rubric": "Grade mathematical content using decomposition_grading_v2.json. Accept equivalent definitions, valid alternative proofs and implicit elementary steps. Require the requested explanation. Record core completeness separately from ancillary errors and full correctness. Correct choice D: An integer u with a*u congruent to 1 modulo m; existence requires gcd(a,m)=1. Explain its mathematical meaning or required conditions; a letter alone is incomplete.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/groups-section-mod-n-sym.html"
+    },
+    {
+      "id": "inverse_recognition_2",
+      "family": "inverse",
+      "category": "inventory",
+      "condition": "recognition",
+      "prompt": "Which statement defines an inverse modulo m>1 and its existence condition?\nA. The real number 1/a, which is always an inverse modulo any positive m.\nB. An integer u with a*u congruent to 0 modulo m; existence requires a divides m.\nC. An integer u with a*u congruent to 1 modulo m; existence requires gcd(a,m)=1.\nD. An integer u with a+u congruent to 0 modulo m; existence requires gcd(a,m)=1.\nChoose one statement and explain why it is correct. You may quote it instead of giving its letter.",
+      "reference": "Correct choice C: An integer u with a*u congruent to 1 modulo m; existence requires gcd(a,m)=1. Explain its mathematical meaning or required conditions; a letter alone is incomplete.",
+      "rubric": "Grade mathematical content using decomposition_grading_v2.json. Accept equivalent definitions, valid alternative proofs and implicit elementary steps. Require the requested explanation. Record core completeness separately from ancillary errors and full correctness. Correct choice C: An integer u with a*u congruent to 1 modulo m; existence requires gcd(a,m)=1. Explain its mathematical meaning or required conditions; a letter alone is incomplete.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/groups-section-mod-n-sym.html"
+    },
+    {
+      "id": "inverse_recognition_3",
+      "family": "inverse",
+      "category": "inventory",
+      "condition": "recognition",
+      "prompt": "Which statement defines an inverse modulo m>1 and its existence condition?\nA. An integer u with a*u congruent to 0 modulo m; existence requires a divides m.\nB. An integer u with a*u congruent to 1 modulo m; existence requires gcd(a,m)=1.\nC. An integer u with a+u congruent to 0 modulo m; existence requires gcd(a,m)=1.\nD. The real number 1/a, which is always an inverse modulo any positive m.\nChoose one statement and explain why it is correct. You may quote it instead of giving its letter.",
+      "reference": "Correct choice B: An integer u with a*u congruent to 1 modulo m; existence requires gcd(a,m)=1. Explain its mathematical meaning or required conditions; a letter alone is incomplete.",
+      "rubric": "Grade mathematical content using decomposition_grading_v2.json. Accept equivalent definitions, valid alternative proofs and implicit elementary steps. Require the requested explanation. Record core completeness separately from ancillary errors and full correctness. Correct choice B: An integer u with a*u congruent to 1 modulo m; existence requires gcd(a,m)=1. Explain its mathematical meaning or required conditions; a letter alone is incomplete.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/groups-section-mod-n-sym.html"
+    },
+    {
+      "id": "inverse_independent_0",
+      "family": "inverse",
+      "category": "inventory",
+      "condition": "independent_use",
+      "prompt": "Find an inverse of 5 modulo 17. Verify it with an integer identity. Give the mathematical steps.",
+      "reference": "u=7,k=2 works because 35-1=34. Accept any congruent inverse and matching certificate.",
+      "rubric": "Grade mathematical content using decomposition_grading_v2.json. Accept equivalent definitions, valid alternative proofs and implicit elementary steps. Require the requested explanation. Record core completeness separately from ancillary errors and full correctness. u=7,k=2 works because 35-1=34. Accept any congruent inverse and matching certificate.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/groups-section-mod-n-sym.html"
+    },
+    {
+      "id": "inverse_supplied_0",
+      "family": "inverse",
+      "category": "inventory",
+      "condition": "supplied_use",
+      "prompt": "Supplied knowledge and local method: For positive m>1, u is an inverse of a modulo m iff a*u is congruent to 1 modulo m. Such an inverse exists iff gcd(a,m)=1.\nAn inverse u satisfies 5*u-1=17*k for an integer k.\nProblem: Find an inverse of 5 modulo 17. Verify it with an integer identity. Give the mathematical steps.",
+      "reference": "u=7,k=2 works because 35-1=34. Accept any congruent inverse and matching certificate.",
+      "rubric": "Grade mathematical content using decomposition_grading_v2.json. Accept equivalent definitions, valid alternative proofs and implicit elementary steps. Require the requested explanation. Record core completeness separately from ancillary errors and full correctness. u=7,k=2 works because 35-1=34. Accept any congruent inverse and matching certificate.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/groups-section-mod-n-sym.html"
+    },
+    {
+      "id": "inverse_independent_1",
+      "family": "inverse",
+      "category": "inventory",
+      "condition": "independent_use",
+      "prompt": "Decide whether 6 has an inverse modulo 15. Prove your answer. Give the mathematical steps.",
+      "reference": "No. gcd=3, or the left side of the proposed identity is divisible by 3 whereas 1 is not.",
+      "rubric": "Grade mathematical content using decomposition_grading_v2.json. Accept equivalent definitions, valid alternative proofs and implicit elementary steps. Require the requested explanation. Record core completeness separately from ancillary errors and full correctness. No. gcd=3, or the left side of the proposed identity is divisible by 3 whereas 1 is not.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/groups-section-mod-n-sym.html"
+    },
+    {
+      "id": "inverse_supplied_1",
+      "family": "inverse",
+      "category": "inventory",
+      "condition": "supplied_use",
+      "prompt": "Supplied knowledge and local method: For positive m>1, u is an inverse of a modulo m iff a*u is congruent to 1 modulo m. Such an inverse exists iff gcd(a,m)=1.\nAn inverse exists iff gcd(6,15)=1. Equivalently 6*u-15*k=1 must have integer solutions.\nProblem: Decide whether 6 has an inverse modulo 15. Prove your answer. Give the mathematical steps.",
+      "reference": "No. gcd=3, or the left side of the proposed identity is divisible by 3 whereas 1 is not.",
+      "rubric": "Grade mathematical content using decomposition_grading_v2.json. Accept equivalent definitions, valid alternative proofs and implicit elementary steps. Require the requested explanation. Record core completeness separately from ancillary errors and full correctness. No. gcd=3, or the left side of the proposed identity is divisible by 3 whereas 1 is not.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/groups-section-mod-n-sym.html"
+    },
+    {
+      "id": "prime_euclid_recall_0",
+      "family": "prime_euclid",
+      "category": "inventory",
+      "condition": "recall",
+      "prompt": "Define a prime integer and state Euclid's lemma with all required assumptions. Explain briefly; use mathematical notation as needed.",
+      "reference": "A positive integer p>1 is prime if its only positive divisors are 1 and p. Euclid's lemma: if prime p divides a*b, then p divides a or p divides b.",
+      "rubric": "Grade mathematical content using decomposition_grading_v2.json. Accept equivalent definitions, valid alternative proofs and implicit elementary steps. Require the requested explanation. Record core completeness separately from ancillary errors and full correctness. A positive integer p>1 is prime if its only positive divisors are 1 and p. Euclid's lemma: if prime p divides a*b, then p divides a or p divides b.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "prime_euclid_recall_1",
+      "family": "prime_euclid",
+      "category": "inventory",
+      "condition": "recall",
+      "prompt": "State the product-divisibility implication for a prime divisor. Explain why primality is required using a composite counterexample. Explain briefly; use mathematical notation as needed.",
+      "reference": "A positive integer p>1 is prime if its only positive divisors are 1 and p. Euclid's lemma: if prime p divides a*b, then p divides a or p divides b. Example: 6 divides 2*3 without dividing either factor.",
+      "rubric": "Grade mathematical content using decomposition_grading_v2.json. Accept equivalent definitions, valid alternative proofs and implicit elementary steps. Require the requested explanation. Record core completeness separately from ancillary errors and full correctness. A positive integer p>1 is prime if its only positive divisors are 1 and p. Euclid's lemma: if prime p divides a*b, then p divides a or p divides b. Example: 6 divides 2*3 without dividing either factor.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "prime_euclid_recognition_0",
+      "family": "prime_euclid",
+      "category": "inventory",
+      "condition": "recognition",
+      "prompt": "Which statement is Euclid's lemma?\nA. If p is prime and p divides a*b, then p divides a or p divides b.\nB. If any positive p divides a*b, then p divides a or p divides b.\nC. If p is prime and p divides a+b, then p divides a or p divides b.\nD. If p is prime and p divides a*b, then p divides both a and b.\nChoose one statement and explain why it is correct. You may quote it instead of giving its letter.",
+      "reference": "Correct choice A: If p is prime and p divides a*b, then p divides a or p divides b. Explain its mathematical meaning or required conditions; a letter alone is incomplete.",
+      "rubric": "Grade mathematical content using decomposition_grading_v2.json. Accept equivalent definitions, valid alternative proofs and implicit elementary steps. Require the requested explanation. Record core completeness separately from ancillary errors and full correctness. Correct choice A: If p is prime and p divides a*b, then p divides a or p divides b. Explain its mathematical meaning or required conditions; a letter alone is incomplete.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "prime_euclid_recognition_1",
+      "family": "prime_euclid",
+      "category": "inventory",
+      "condition": "recognition",
+      "prompt": "Which statement is Euclid's lemma?\nA. If any positive p divides a*b, then p divides a or p divides b.\nB. If p is prime and p divides a+b, then p divides a or p divides b.\nC. If p is prime and p divides a*b, then p divides both a and b.\nD. If p is prime and p divides a*b, then p divides a or p divides b.\nChoose one statement and explain why it is correct. You may quote it instead of giving its letter.",
+      "reference": "Correct choice D: If p is prime and p divides a*b, then p divides a or p divides b. Explain its mathematical meaning or required conditions; a letter alone is incomplete.",
+      "rubric": "Grade mathematical content using decomposition_grading_v2.json. Accept equivalent definitions, valid alternative proofs and implicit elementary steps. Require the requested explanation. Record core completeness separately from ancillary errors and full correctness. Correct choice D: If p is prime and p divides a*b, then p divides a or p divides b. Explain its mathematical meaning or required conditions; a letter alone is incomplete.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "prime_euclid_recognition_2",
+      "family": "prime_euclid",
+      "category": "inventory",
+      "condition": "recognition",
+      "prompt": "Which statement is Euclid's lemma?\nA. If p is prime and p divides a+b, then p divides a or p divides b.\nB. If p is prime and p divides a*b, then p divides both a and b.\nC. If p is prime and p divides a*b, then p divides a or p divides b.\nD. If any positive p divides a*b, then p divides a or p divides b.\nChoose one statement and explain why it is correct. You may quote it instead of giving its letter.",
+      "reference": "Correct choice C: If p is prime and p divides a*b, then p divides a or p divides b. Explain its mathematical meaning or required conditions; a letter alone is incomplete.",
+      "rubric": "Grade mathematical content using decomposition_grading_v2.json. Accept equivalent definitions, valid alternative proofs and implicit elementary steps. Require the requested explanation. Record core completeness separately from ancillary errors and full correctness. Correct choice C: If p is prime and p divides a*b, then p divides a or p divides b. Explain its mathematical meaning or required conditions; a letter alone is incomplete.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "prime_euclid_recognition_3",
+      "family": "prime_euclid",
+      "category": "inventory",
+      "condition": "recognition",
+      "prompt": "Which statement is Euclid's lemma?\nA. If p is prime and p divides a*b, then p divides both a and b.\nB. If p is prime and p divides a*b, then p divides a or p divides b.\nC. If any positive p divides a*b, then p divides a or p divides b.\nD. If p is prime and p divides a+b, then p divides a or p divides b.\nChoose one statement and explain why it is correct. You may quote it instead of giving its letter.",
+      "reference": "Correct choice B: If p is prime and p divides a*b, then p divides a or p divides b. Explain its mathematical meaning or required conditions; a letter alone is incomplete.",
+      "rubric": "Grade mathematical content using decomposition_grading_v2.json. Accept equivalent definitions, valid alternative proofs and implicit elementary steps. Require the requested explanation. Record core completeness separately from ancillary errors and full correctness. Correct choice B: If p is prime and p divides a*b, then p divides a or p divides b. Explain its mathematical meaning or required conditions; a letter alone is incomplete.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "prime_euclid_independent_0",
+      "family": "prime_euclid",
+      "category": "inventory",
+      "condition": "independent_use",
+      "prompt": "Let p be prime and n an integer. If p divides n squared, prove p divides n. Give the mathematical steps.",
+      "reference": "Euclid gives p|n or p|n, so p|n. Do not assume the desired conclusion.",
+      "rubric": "Grade mathematical content using decomposition_grading_v2.json. Accept equivalent definitions, valid alternative proofs and implicit elementary steps. Require the requested explanation. Record core completeness separately from ancillary errors and full correctness. Euclid gives p|n or p|n, so p|n. Do not assume the desired conclusion.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "prime_euclid_supplied_0",
+      "family": "prime_euclid",
+      "category": "inventory",
+      "condition": "supplied_use",
+      "prompt": "Supplied knowledge and local method: A positive integer p>1 is prime if its only positive divisors are 1 and p. Euclid's lemma: if prime p divides a*b, then p divides a or p divides b.\nWrite n squared as n*n and apply Euclid's lemma to that product.\nProblem: Let p be prime and n an integer. If p divides n squared, prove p divides n. Give the mathematical steps.",
+      "reference": "Euclid gives p|n or p|n, so p|n. Do not assume the desired conclusion.",
+      "rubric": "Grade mathematical content using decomposition_grading_v2.json. Accept equivalent definitions, valid alternative proofs and implicit elementary steps. Require the requested explanation. Record core completeness separately from ancillary errors and full correctness. Euclid gives p|n or p|n, so p|n. Do not assume the desired conclusion.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "prime_euclid_independent_1",
+      "family": "prime_euclid",
+      "category": "inventory",
+      "condition": "independent_use",
+      "prompt": "Is it true that for every positive integer d, d|a*b implies d|a or d|b? Prove or refute it. Give the mathematical steps.",
+      "reference": "False. d=6,a=2,b=3 gives 6|6 but 6 does not divide either 2 or 3. Accept any verified counterexample.",
+      "rubric": "Grade mathematical content using decomposition_grading_v2.json. Accept equivalent definitions, valid alternative proofs and implicit elementary steps. Require the requested explanation. Record core completeness separately from ancillary errors and full correctness. False. d=6,a=2,b=3 gives 6|6 but 6 does not divide either 2 or 3. Accept any verified counterexample.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "prime_euclid_supplied_1",
+      "family": "prime_euclid",
+      "category": "inventory",
+      "condition": "supplied_use",
+      "prompt": "Supplied knowledge and local method: A positive integer p>1 is prime if its only positive divisors are 1 and p. Euclid's lemma: if prime p divides a*b, then p divides a or p divides b.\nThe product implication is guaranteed for prime d. A counterexample must satisfy the premise and violate both conclusions.\nProblem: Is it true that for every positive integer d, d|a*b implies d|a or d|b? Prove or refute it. Give the mathematical steps.",
+      "reference": "False. d=6,a=2,b=3 gives 6|6 but 6 does not divide either 2 or 3. Accept any verified counterexample.",
+      "rubric": "Grade mathematical content using decomposition_grading_v2.json. Accept equivalent definitions, valid alternative proofs and implicit elementary steps. Require the requested explanation. Record core completeness separately from ancillary errors and full correctness. False. d=6,a=2,b=3 gives 6|6 but 6 does not divide either 2 or 3. Accept any verified counterexample.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "cancellation_recall_0",
+      "family": "cancellation",
+      "category": "inventory",
+      "condition": "recall",
+      "prompt": "State a sufficient condition to cancel a multiplicative factor in a congruence, retaining the same modulus. Explain briefly; use mathematical notation as needed.",
+      "reference": "If gcd(c,m)=1 and c*x is congruent to c*y modulo positive m, then x is congruent to y modulo m. Cancellation without the coprimality condition can fail.",
+      "rubric": "Grade mathematical content using decomposition_grading_v2.json. Accept equivalent definitions, valid alternative proofs and implicit elementary steps. Require the requested explanation. Record core completeness separately from ancillary errors and full correctness. If gcd(c,m)=1 and c*x is congruent to c*y modulo positive m, then x is congruent to y modulo m. Cancellation without the coprimality condition can fail.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/groups-section-mod-n-sym.html",
+      "source_note": "Authored consequence of modular inverses: multiply both sides by an inverse of c; associativity gives x congruent to y."
+    },
+    {
+      "id": "cancellation_recall_1",
+      "family": "cancellation",
+      "category": "inventory",
+      "condition": "recall",
+      "prompt": "Explain why cancellation modulo m needs a condition on the factor. State that condition and give a failure example without it. Explain briefly; use mathematical notation as needed.",
+      "reference": "If gcd(c,m)=1 and c*x is congruent to c*y modulo positive m, then x is congruent to y modulo m. Cancellation without the coprimality condition can fail. Example: 2*0 and 2*3 are congruent modulo 6, but 0 and 3 are not.",
+      "rubric": "Grade mathematical content using decomposition_grading_v2.json. Accept equivalent definitions, valid alternative proofs and implicit elementary steps. Require the requested explanation. Record core completeness separately from ancillary errors and full correctness. If gcd(c,m)=1 and c*x is congruent to c*y modulo positive m, then x is congruent to y modulo m. Cancellation without the coprimality condition can fail. Example: 2*0 and 2*3 are congruent modulo 6, but 0 and 3 are not.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/groups-section-mod-n-sym.html",
+      "source_note": "Authored consequence of modular inverses: multiply both sides by an inverse of c; associativity gives x congruent to y."
+    },
+    {
+      "id": "cancellation_recognition_0",
+      "family": "cancellation",
+      "category": "inventory",
+      "condition": "recognition",
+      "prompt": "Which cancellation rule is valid for positive integer modulus m?\nA. One may cancel c modulo m when gcd(c,m)=1.\nB. One may always cancel c modulo m when c is nonzero.\nC. One may always cancel c modulo m when c<m.\nD. One may cancel c modulo m whenever c divides m.\nChoose one statement and explain why it is correct. You may quote it instead of giving its letter.",
+      "reference": "Correct choice A: One may cancel c modulo m when gcd(c,m)=1. Explain its mathematical meaning or required conditions; a letter alone is incomplete.",
+      "rubric": "Grade mathematical content using decomposition_grading_v2.json. Accept equivalent definitions, valid alternative proofs and implicit elementary steps. Require the requested explanation. Record core completeness separately from ancillary errors and full correctness. Correct choice A: One may cancel c modulo m when gcd(c,m)=1. Explain its mathematical meaning or required conditions; a letter alone is incomplete.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/groups-section-mod-n-sym.html",
+      "source_note": "Authored consequence of modular inverses: multiply both sides by an inverse of c; associativity gives x congruent to y."
+    },
+    {
+      "id": "cancellation_recognition_1",
+      "family": "cancellation",
+      "category": "inventory",
+      "condition": "recognition",
+      "prompt": "Which cancellation rule is valid for positive integer modulus m?\nA. One may always cancel c modulo m when c is nonzero.\nB. One may always cancel c modulo m when c<m.\nC. One may cancel c modulo m whenever c divides m.\nD. One may cancel c modulo m when gcd(c,m)=1.\nChoose one statement and explain why it is correct. You may quote it instead of giving its letter.",
+      "reference": "Correct choice D: One may cancel c modulo m when gcd(c,m)=1. Explain its mathematical meaning or required conditions; a letter alone is incomplete.",
+      "rubric": "Grade mathematical content using decomposition_grading_v2.json. Accept equivalent definitions, valid alternative proofs and implicit elementary steps. Require the requested explanation. Record core completeness separately from ancillary errors and full correctness. Correct choice D: One may cancel c modulo m when gcd(c,m)=1. Explain its mathematical meaning or required conditions; a letter alone is incomplete.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/groups-section-mod-n-sym.html",
+      "source_note": "Authored consequence of modular inverses: multiply both sides by an inverse of c; associativity gives x congruent to y."
+    },
+    {
+      "id": "cancellation_recognition_2",
+      "family": "cancellation",
+      "category": "inventory",
+      "condition": "recognition",
+      "prompt": "Which cancellation rule is valid for positive integer modulus m?\nA. One may always cancel c modulo m when c<m.\nB. One may cancel c modulo m whenever c divides m.\nC. One may cancel c modulo m when gcd(c,m)=1.\nD. One may always cancel c modulo m when c is nonzero.\nChoose one statement and explain why it is correct. You may quote it instead of giving its letter.",
+      "reference": "Correct choice C: One may cancel c modulo m when gcd(c,m)=1. Explain its mathematical meaning or required conditions; a letter alone is incomplete.",
+      "rubric": "Grade mathematical content using decomposition_grading_v2.json. Accept equivalent definitions, valid alternative proofs and implicit elementary steps. Require the requested explanation. Record core completeness separately from ancillary errors and full correctness. Correct choice C: One may cancel c modulo m when gcd(c,m)=1. Explain its mathematical meaning or required conditions; a letter alone is incomplete.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/groups-section-mod-n-sym.html",
+      "source_note": "Authored consequence of modular inverses: multiply both sides by an inverse of c; associativity gives x congruent to y."
+    },
+    {
+      "id": "cancellation_recognition_3",
+      "family": "cancellation",
+      "category": "inventory",
+      "condition": "recognition",
+      "prompt": "Which cancellation rule is valid for positive integer modulus m?\nA. One may cancel c modulo m whenever c divides m.\nB. One may cancel c modulo m when gcd(c,m)=1.\nC. One may always cancel c modulo m when c is nonzero.\nD. One may always cancel c modulo m when c<m.\nChoose one statement and explain why it is correct. You may quote it instead of giving its letter.",
+      "reference": "Correct choice B: One may cancel c modulo m when gcd(c,m)=1. Explain its mathematical meaning or required conditions; a letter alone is incomplete.",
+      "rubric": "Grade mathematical content using decomposition_grading_v2.json. Accept equivalent definitions, valid alternative proofs and implicit elementary steps. Require the requested explanation. Record core completeness separately from ancillary errors and full correctness. Correct choice B: One may cancel c modulo m when gcd(c,m)=1. Explain its mathematical meaning or required conditions; a letter alone is incomplete.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/groups-section-mod-n-sym.html",
+      "source_note": "Authored consequence of modular inverses: multiply both sides by an inverse of c; associativity gives x congruent to y."
+    },
+    {
+      "id": "cancellation_independent_0",
+      "family": "cancellation",
+      "category": "inventory",
+      "condition": "independent_use",
+      "prompt": "Let x,y be integers. From 5*x congruent to 5*y modulo 12, deduce x congruent to y modulo 12 and justify cancellation. Give the mathematical steps.",
+      "reference": "gcd(5,12)=1, so the stated rule applies. Alternatively 5 is its own inverse modulo 12.",
+      "rubric": "Grade mathematical content using decomposition_grading_v2.json. Accept equivalent definitions, valid alternative proofs and implicit elementary steps. Require the requested explanation. Record core completeness separately from ancillary errors and full correctness. gcd(5,12)=1, so the stated rule applies. Alternatively 5 is its own inverse modulo 12.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/groups-section-mod-n-sym.html",
+      "source_note": "Authored consequence of modular inverses: multiply both sides by an inverse of c; associativity gives x congruent to y."
+    },
+    {
+      "id": "cancellation_supplied_0",
+      "family": "cancellation",
+      "category": "inventory",
+      "condition": "supplied_use",
+      "prompt": "Supplied knowledge and local method: If gcd(c,m)=1 and c*x is congruent to c*y modulo positive m, then x is congruent to y modulo m. Cancellation without the coprimality condition can fail.\nYou may use the coprime cancellation rule after verifying its condition.\nProblem: Let x,y be integers. From 5*x congruent to 5*y modulo 12, deduce x congruent to y modulo 12 and justify cancellation. Give the mathematical steps.",
+      "reference": "gcd(5,12)=1, so the stated rule applies. Alternatively 5 is its own inverse modulo 12.",
+      "rubric": "Grade mathematical content using decomposition_grading_v2.json. Accept equivalent definitions, valid alternative proofs and implicit elementary steps. Require the requested explanation. Record core completeness separately from ancillary errors and full correctness. gcd(5,12)=1, so the stated rule applies. Alternatively 5 is its own inverse modulo 12.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/groups-section-mod-n-sym.html",
+      "source_note": "Authored consequence of modular inverses: multiply both sides by an inverse of c; associativity gives x congruent to y."
+    },
+    {
+      "id": "cancellation_independent_1",
+      "family": "cancellation",
+      "category": "inventory",
+      "condition": "independent_use",
+      "prompt": "Does 4*x congruent to 4*y modulo 10 imply x congruent to y modulo 10 for all integers x,y? Prove or refute. Give the mathematical steps.",
+      "reference": "No. x=0,y=5 gives equal products modulo 10 but x and y differ modulo 10. Accept any verified counterexample.",
+      "rubric": "Grade mathematical content using decomposition_grading_v2.json. Accept equivalent definitions, valid alternative proofs and implicit elementary steps. Require the requested explanation. Record core completeness separately from ancillary errors and full correctness. No. x=0,y=5 gives equal products modulo 10 but x and y differ modulo 10. Accept any verified counterexample.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/groups-section-mod-n-sym.html",
+      "source_note": "Authored consequence of modular inverses: multiply both sides by an inverse of c; associativity gives x congruent to y."
+    },
+    {
+      "id": "cancellation_supplied_1",
+      "family": "cancellation",
+      "category": "inventory",
+      "condition": "supplied_use",
+      "prompt": "Supplied knowledge and local method: If gcd(c,m)=1 and c*x is congruent to c*y modulo positive m, then x is congruent to y modulo m. Cancellation without the coprimality condition can fail.\nCoprime cancellation requires gcd(4,10)=1. If it fails, test a counterexample to the claimed implication.\nProblem: Does 4*x congruent to 4*y modulo 10 imply x congruent to y modulo 10 for all integers x,y? Prove or refute. Give the mathematical steps.",
+      "reference": "No. x=0,y=5 gives equal products modulo 10 but x and y differ modulo 10. Accept any verified counterexample.",
+      "rubric": "Grade mathematical content using decomposition_grading_v2.json. Accept equivalent definitions, valid alternative proofs and implicit elementary steps. Require the requested explanation. Record core completeness separately from ancillary errors and full correctness. No. x=0,y=5 gives equal products modulo 10 but x and y differ modulo 10. Accept any verified counterexample.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/groups-section-mod-n-sym.html",
+      "source_note": "Authored consequence of modular inverses: multiply both sides by an inverse of c; associativity gives x congruent to y."
+    }
+  ],
+  "training_start": "primitive_rlp_20261005/runtime/out/policy/checkpoint-118",
+  "provenance": "Authored diagnostic questions and answer keys. Item source links identify background mathematical conventions, not the source of these exact instances.",
+  "condition_descriptions": {
+    "recall": "State a definition or condition without options.",
+    "recognition": "Select and explain a definition; option rotations repeat one item.",
+    "supplied_use": "Knowledge and local method supplied. This is an assistance contrast, not a pure knowledge intervention.",
+    "independent_use": "Same application problem without supplied knowledge or method."
+  }
+}

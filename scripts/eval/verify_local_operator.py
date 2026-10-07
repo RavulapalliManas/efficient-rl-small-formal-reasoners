@@ -6,7 +6,11 @@ One Lean worker <=2 GiB plus Python/task metadata <128 MiB. Run on cpu-angad
 under a 3 GiB cgroup and 1200-second wall limit. No model or optimizer is loaded.
 """
 import ast
+from pathlib import Path
 import re
+import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'data'))
 
 
 def extract_witness(response):

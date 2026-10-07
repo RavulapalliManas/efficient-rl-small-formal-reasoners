@@ -2,7 +2,7 @@
 
 import unittest
 
-from scripts.probe_qwen import score_answer
+from scripts.eval.probe_qwen import score_answer
 
 
 class AnswerScoringTest(unittest.TestCase):

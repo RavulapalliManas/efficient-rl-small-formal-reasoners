@@ -8,7 +8,7 @@ import tempfile
 import unittest
 
 
-SCRIPT = Path(__file__).resolve().parents[1] / "scripts/prepare_leandojo.py"
+SCRIPT = Path(__file__).resolve().parents[1] / "scripts/data/prepare_leandojo.py"
 
 
 class DataAuditTests(unittest.TestCase):

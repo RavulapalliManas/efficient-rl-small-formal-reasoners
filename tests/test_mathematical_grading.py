@@ -8,7 +8,7 @@ import tempfile
 import unittest
 
 
-SCRIPT = Path(__file__).resolve().parents[1] / 'scripts/grade_mathematical_responses.py'
+SCRIPT = Path(__file__).resolve().parents[1] / 'scripts/eval/grade_mathematical_responses.py'
 
 
 class MathematicalGradingChecks(unittest.TestCase):

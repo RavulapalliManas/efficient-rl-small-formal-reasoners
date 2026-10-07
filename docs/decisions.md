@@ -455,3 +455,9 @@ The user requests a repository that is easy to navigate. Scripts move into stage
 Archived run code on cpu-angad and in S3 keeps the old flat layout. Commands that run archived code, such as `primitive_midtraining_v1/code/scripts/audit_rlp_corpus.py`, stay unchanged. Frozen configs stay unchanged, including the fixture note in `configs/eval/local_operator_probe_v1.json`. A new GPU package must ship the stage folders, or the three cross-folder imports fail.
 
 The experiment sections of the README move verbatim into `docs/results/`, one file per experiment line. The README keeps the project purpose, setup, the status table, a repository map, a script index, and an index of the records. The status table remains the only status record. A line-level comparison against the previous README finds no removed or reworded line. All internal Markdown links and anchors resolve.
+
+## 2026-10-07: keep infrastructure identifiers out of the public repository
+
+The GitHub repository is public. Before the first push of the experiment records, replace infrastructure identifiers with placeholders: `<cpu-angad-external-ip>`, `<ssh-user>`, `<ssh-key>`, `<project-bucket>`, `<aws-account-id>`, and `<ec2-instance-id>`. Remove private Drive folder links and keep their link text. The local commits are rewritten before the push, so no pushed commit contains these values.
+
+The real values are in `.private/infrastructure.md`, which Git ignores. Ask Manas for that note. Three frozen configs change only in their S3 bucket name: `qwen_05b_number_theory_rlp_fp32.json`, `qwen_05b_primitive_rlp.json`, and `qwen_05b_number_theory_rlp_continuation.json`. Their repository hashes no longer match the hashes in the archived run receipts. The archived copies in S3 remain the reference for those runs. To relaunch one of these configs, restore the bucket name from the private note.

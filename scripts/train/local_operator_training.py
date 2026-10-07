@@ -9,8 +9,10 @@ import importlib.metadata
 import json
 from pathlib import Path
 import signal
+import sys
 import time
 
+sys.path[:0] = [str(Path(__file__).resolve().parents[1] / d) for d in ('data', 'eval')]
 from prepare_grpo_pilot import load_checker
 from verify_local_operator import extract_witness, task_obligation, reward_value
 

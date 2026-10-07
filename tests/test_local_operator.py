@@ -4,7 +4,7 @@ from pathlib import Path
 import sys
 import unittest
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
+sys.path[:0] = [str(Path(__file__).resolve().parents[1] / 'scripts' / d) for d in ('data', 'eval', 'train')]
 
 
 class LocalOperatorChecks(unittest.TestCase):

@@ -7,7 +7,7 @@ from unittest.mock import patch
 import types
 
 SCRIPTS = Path(__file__).resolve().parents[1] / "scripts"
-sys.path.insert(0, str(SCRIPTS))
+sys.path[:0] = [str(SCRIPTS / d) for d in ('data', 'train')]
 
 
 class PrerequisiteChecks(unittest.TestCase):
@@ -59,7 +59,7 @@ class PrerequisiteChecks(unittest.TestCase):
         self.assertEqual(runner.next_completion_stage({"random": 4, "curriculum": 4}, 2, 2), 2)
 
     def test_diagnostics_keep_truncation_separate_from_compiler_error(self):
-        path = SCRIPTS / "audit_proofs.py"
+        path = SCRIPTS / "audit/audit_proofs.py"
         self.assertTrue(path.exists(), "The failure classifier is not implemented")
         spec = importlib.util.spec_from_file_location("audit", path)
         audit = importlib.util.module_from_spec(spec)
@@ -121,7 +121,7 @@ class PrerequisiteChecks(unittest.TestCase):
                 pass
         fake = types.ModuleType("tensorboardX")
         fake.SummaryWriter = Writer
-        spec = importlib.util.spec_from_file_location("tracker", SCRIPTS / "track_tensorboard.py")
+        spec = importlib.util.spec_from_file_location("tracker", SCRIPTS / "monitor/track_tensorboard.py")
         tracker = importlib.util.module_from_spec(spec)
         with patch.dict(sys.modules, {"tensorboardX": fake}):
             spec.loader.exec_module(tracker)

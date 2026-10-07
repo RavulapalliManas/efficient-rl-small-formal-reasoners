@@ -6,7 +6,7 @@ import sys
 import unittest
 
 SCRIPTS = Path(__file__).resolve().parents[1] / "scripts"
-sys.path.insert(0, str(SCRIPTS))
+sys.path[:0] = [str(SCRIPTS / d) for d in ('data', 'train')]
 
 
 class RLPChecks(unittest.TestCase):
@@ -34,7 +34,7 @@ class RLPChecks(unittest.TestCase):
         self.assertNotIn('target_text', str(prompt))
 
     def test_information_gain_has_correct_sign_and_inclusive_correction(self):
-        self.assertTrue((SCRIPTS / "run_rlp_pilot.py").exists(), "RLP runner missing")
+        self.assertTrue((SCRIPTS / "train/run_rlp_pilot.py").exists(), "RLP runner missing")
         import run_rlp_pilot as rlp
         self.assertAlmostEqual(rlp.information_gain(math.log(0.6), math.log(0.2)), math.log(3))
         self.assertAlmostEqual(rlp.information_gain(math.log(0.2), math.log(0.2)), 0)
@@ -45,7 +45,7 @@ class RLPChecks(unittest.TestCase):
             self.assertAlmostEqual(actual, expected)
 
     def test_corpus_excludes_exercises_and_preserves_math_and_proof_context(self):
-        self.assertTrue((SCRIPTS / "prepare_rlp_corpus.py").exists(), "RLP corpus preparer missing")
+        self.assertTrue((SCRIPTS / "data/prepare_rlp_corpus.py").exists(), "RLP corpus preparer missing")
         import prepare_rlp_corpus as corpus
         xml = '<chapter><section><title>Integers</title><theorem xml:id="t"><statement><p>If <m>a | b</m>, a witness exists.</p></statement><proof><p>Choose the witness.</p></proof></theorem><exercises><exercise><p>SECRET EVALUATION ANSWER</p></exercise></exercises></section></chapter>'
         blocks = corpus.text_blocks(xml)

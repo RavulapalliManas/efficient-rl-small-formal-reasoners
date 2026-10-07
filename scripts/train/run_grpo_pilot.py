@@ -17,8 +17,10 @@ import json
 from pathlib import Path
 import signal
 import shutil
+import sys
 import time
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'data'))
 from prepare_grpo_pilot import load_checker, ordered_ids, verifier_failed
 
 

@@ -8,7 +8,7 @@ import tempfile
 import hashlib
 import unittest
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
+sys.path[:0] = [str(Path(__file__).resolve().parents[1] / 'scripts' / d) for d in ('data', 'train')]
 
 
 class MathematicalRLPChecks(unittest.TestCase):

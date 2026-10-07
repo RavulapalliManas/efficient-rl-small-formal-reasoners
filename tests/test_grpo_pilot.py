@@ -7,7 +7,7 @@ import unittest
 
 class OrderingTest(unittest.TestCase):
     def test_checker_paths_survive_a_subprocess_working_directory(self):
-        path = Path(__file__).resolve().parents[1] / "scripts/prepare_grpo_pilot.py"
+        path = Path(__file__).resolve().parents[1] / "scripts/data/prepare_grpo_pilot.py"
         spec = importlib.util.spec_from_file_location("pilot_prepare", path)
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
@@ -19,7 +19,7 @@ class OrderingTest(unittest.TestCase):
             self.assertTrue(checker.ROOT.is_absolute(), "Lean cannot find relative candidate files from another directory")
 
     def test_orders_preserve_the_same_theorem_occurrences(self):
-        path = Path(__file__).resolve().parents[1] / "scripts/prepare_grpo_pilot.py"
+        path = Path(__file__).resolve().parents[1] / "scripts/data/prepare_grpo_pilot.py"
         self.assertTrue(path.exists(), "The separate pilot preparation is missing")
         spec = importlib.util.spec_from_file_location("pilot_prepare", path)
         module = importlib.util.module_from_spec(spec)
@@ -37,7 +37,7 @@ class OrderingTest(unittest.TestCase):
         self.assertNotEqual(random_order, curriculum)
 
     def test_verifier_failure_is_not_a_rejected_proof(self):
-        path = Path(__file__).resolve().parents[1] / "scripts/prepare_grpo_pilot.py"
+        path = Path(__file__).resolve().parents[1] / "scripts/data/prepare_grpo_pilot.py"
         spec = importlib.util.spec_from_file_location("pilot_prepare", path)
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)

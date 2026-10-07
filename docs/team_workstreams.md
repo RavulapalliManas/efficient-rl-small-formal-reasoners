@@ -57,7 +57,7 @@ The [README status table](../README.md#baselines-and-status) remains the source 
 
 ## Data interface, 2026-10-01
 
-Use the frozen manifests and counts in [README data preparation](../README.md#data-preparation). The [dated decision](decisions.md#2026-10-01-frozen-nat-subset-for-a-local-pipeline-probe) records the source and limitations. This subset supports a pipeline probe; its small test set does not settle the main benchmark.
+Use the frozen manifests and counts in [README data preparation](results/01_data_preparation.md#data-preparation). The [dated decision](decisions.md#2026-10-01-frozen-nat-subset-for-a-local-pipeline-probe) records the source and limitations. This subset supports a pipeline probe; its small test set does not settle the main benchmark.
 
 - Manas owns the filter, overlap audit, immutable manifests, and validation baseline. He keeps the test manifest fixed during curriculum and RL development.
 - Abhinav loads `artifacts/leandojo_nat_v1/frozen/train.jsonl`. He uses records with nonempty `traced_tactics` for supervised training. He excludes the raw archive, premise corpus, validation exports, and test exports from training data.
@@ -118,17 +118,17 @@ These are summaries of recorded outcomes, not fresh reruns. Follow the linked se
 
 | Experiment | Recorded outcome | Interpretation |
 | --- | --- | --- |
-| [Instruct proof diagnostic](../README.md#instruct-proof-diagnostic) | No formal proof accepted in the sampled diagnostic; informal responses included mathematical errors | These prompts and budgets exposed failures; they did not establish a capability ceiling |
-| [Whole-proof GRPO](../README.md#separate-whole-proof-grpo-pilot) | No accepted training or validation proof and no reward variation within sampled groups | Terminal reward did not supply a usable contrast in this pilot |
-| [Prerequisite and syntax assistance](../README.md#prerequisite-curriculum-diagnostic-2026-10-04) | Readiness produced no accepted proofs; conditional training arms were skipped | Definitions and generic syntax assistance did not bootstrap this setup |
-| [Proof completion](../README.md#assisted-proof-completion-2026-10-04) | Assisted successes and nonzero gradients; no unassisted held-out success; eligible pool collapsed to a single task | Completion was learnable with assistance; the experiment could not identify an ordering effect |
-| [Earlier RLP continuation](../README.md#saved-rlp-checkpoint) | No measured arithmetic accuracy gain | A saved checkpoint did not establish acquisition |
-| [Precision correction](../README.md#precision-correction-for-rlp-midtraining) | FP32 updates worked; no measured held-out accuracy gain | Correcting numerical update loss did not resolve acquisition |
-| [Revised primitive curriculum](../README.md#revised-primitive-curriculum) | Early validation improvement, followed by final deterioration | Investigate reward alignment and checkpoint selection before further training |
+| [Instruct proof diagnostic](results/02_qwen_capability_probe.md#instruct-proof-diagnostic) | No formal proof accepted in the sampled diagnostic; informal responses included mathematical errors | These prompts and budgets exposed failures; they did not establish a capability ceiling |
+| [Whole-proof GRPO](results/03_grpo_proof_pilots.md#separate-whole-proof-grpo-pilot) | No accepted training or validation proof and no reward variation within sampled groups | Terminal reward did not supply a usable contrast in this pilot |
+| [Prerequisite and syntax assistance](results/03_grpo_proof_pilots.md#prerequisite-curriculum-diagnostic-2026-10-04) | Readiness produced no accepted proofs; conditional training arms were skipped | Definitions and generic syntax assistance did not bootstrap this setup |
+| [Proof completion](results/03_grpo_proof_pilots.md#assisted-proof-completion-2026-10-04) | Assisted successes and nonzero gradients; no unassisted held-out success; eligible pool collapsed to a single task | Completion was learnable with assistance; the experiment could not identify an ordering effect |
+| [Earlier RLP continuation](results/04_rlp_acquisition.md#saved-rlp-checkpoint) | No measured arithmetic accuracy gain | A saved checkpoint did not establish acquisition |
+| [Precision correction](results/04_rlp_acquisition.md#precision-correction-for-rlp-midtraining) | FP32 updates worked; no measured held-out accuracy gain | Correcting numerical update loss did not resolve acquisition |
+| [Revised primitive curriculum](results/04_rlp_acquisition.md#revised-primitive-curriculum) | Early validation improvement, followed by final deterioration | Investigate reward alignment and checkpoint selection before further training |
 
 ### Exact latest setup
 
-The run is `primitive_rlp_20261005`. Its [config](../configs/midtrain/qwen_05b_primitive_rlp.json), [preparer](../scripts/prepare_rlp_corpus.py), and [runner](../scripts/run_rlp_pilot.py) define the experiment. Archived shipped code is authoritative for the completed run.
+The run is `primitive_rlp_20261005`. Its [config](../configs/midtrain/qwen_05b_primitive_rlp.json), [preparer](../scripts/data/prepare_rlp_corpus.py), and [runner](../scripts/train/run_rlp_pilot.py) define the experiment. Archived shipped code is authoritative for the completed run.
 
 | Setting | Value |
 | --- | --- |
@@ -155,7 +155,7 @@ Use `primitive_midtraining_v1/prepared_ordered/` on cpu-angad. Its manifest reco
 
 ### Recounted outcomes
 
-The [CPU audit](../scripts/audit_primitive_rlp.py) reproduces these counts from the saved JSONL records. Its latest handoff-time execution returned exit code 0. `diagnosis.json` stores the outputs; paths appear below.
+The [CPU audit](../scripts/audit/audit_primitive_rlp.py) reproduces these counts from the saved JSONL records. Its latest handoff-time execution returned exit code 0. `diagnosis.json` stores the outputs; paths appear below.
 
 | Unassisted held-out metric | Starting model | Final model | Source field |
 | --- | ---: | ---: | --- |
@@ -257,7 +257,7 @@ The project asks whether reinforcement learning improves mathematical knowledge 
 | Proof strategy | Choose subgoals and dependencies with facts available | Construction of a useful proof decomposition | A supplied lemma can reveal the strategy |
 | Integrated solving | Complete a fresh problem without task-specific support | End-to-end mathematical correctness | Libraries, search, or external repairs can supply missing capability |
 
-For divisibility, recalling the existential definition and composing supplied witnesses are different tasks. A product witness tests execution. Retrieving the definition and constructing the argument without assistance tests independent use. These probes are conditional task scores, not direct measurements of isolated internal faculties. See the [inventory](../README.md#knowledge-inventory-and-local-operations) and [decomposition evaluation](../README.md#acquisition-proof-semantics-and-proof-strategy).
+For divisibility, recalling the existential definition and composing supplied witnesses are different tasks. A product witness tests execution. Retrieving the definition and constructing the argument without assistance tests independent use. These probes are conditional task scores, not direct measurements of isolated internal faculties. See the [inventory](results/05_acquisition_evaluations.md#knowledge-inventory-and-local-operations) and [decomposition evaluation](results/05_acquisition_evaluations.md#acquisition-proof-semantics-and-proof-strategy).
 
 The curriculum varies information availability, rather than labeling every task as an easy or hard proof. The intended sequence is supplied execution, reduced support, independent use, delayed retention, and transfer. Each transition needs correctness evidence. Success with a definition in the prompt does not establish that the model stores and retrieves it independently.
 
@@ -267,13 +267,13 @@ These are separate experiments with different tasks and objectives. Their histor
 
 | Experiment | Recorded observation | Lesson for the next experiment |
 | --- | --- | --- |
-| [Whole-proof GRPO](../README.md#separate-whole-proof-grpo-pilot) | No accepted sampled proofs and no within-group reward variation | Check whether the initial policy produces informative contrasts before optimizing terminal reward |
-| [Assisted proof completion](../README.md#assisted-proof-completion-2026-10-04) | Assisted success did not yield unassisted held-out success; the eligible pool collapsed | Assistance and selection can make a narrow task learnable without establishing transfer |
-| [Precision correction](../README.md#precision-correction-for-rlp-midtraining) | Corrected updates worked without a measured held-out accuracy gain | Changed weights and functioning optimizer moments are operational evidence, not acquisition evidence |
-| [Primitive RLP](../README.md#revised-primitive-curriculum) | Early validation improvement preceded final deterioration | Inspect intermediate checkpoints and preserve negative final results |
-| [Corpus audit](../README.md#structured-rlp-corpus-audit) | Numeric targets passed; support and distribution limits remained | Correct targets do not certify generated reasoning or identify the cause of deterioration |
-| [Local-action pilot](../README.md#local-action-correctness-pilot) | Verified witnesses improved on supplied tasks; explanations and composition remained weak | The verifier certifies the submitted object within its declared scope |
-| [Controlled ordered RLP](../README.md#ordered-arm-results) | Partial core scores changed; no phase produced a fully correct answer | Controlled data and ordering do not establish reward alignment with mathematical correctness |
+| [Whole-proof GRPO](results/03_grpo_proof_pilots.md#separate-whole-proof-grpo-pilot) | No accepted sampled proofs and no within-group reward variation | Check whether the initial policy produces informative contrasts before optimizing terminal reward |
+| [Assisted proof completion](results/03_grpo_proof_pilots.md#assisted-proof-completion-2026-10-04) | Assisted success did not yield unassisted held-out success; the eligible pool collapsed | Assistance and selection can make a narrow task learnable without establishing transfer |
+| [Precision correction](results/04_rlp_acquisition.md#precision-correction-for-rlp-midtraining) | Corrected updates worked without a measured held-out accuracy gain | Changed weights and functioning optimizer moments are operational evidence, not acquisition evidence |
+| [Primitive RLP](results/04_rlp_acquisition.md#revised-primitive-curriculum) | Early validation improvement preceded final deterioration | Inspect intermediate checkpoints and preserve negative final results |
+| [Corpus audit](results/07_rlp_corpus_audit.md#structured-rlp-corpus-audit) | Numeric targets passed; support and distribution limits remained | Correct targets do not certify generated reasoning or identify the cause of deterioration |
+| [Local-action pilot](results/06_local_action_pilot.md#local-action-correctness-pilot) | Verified witnesses improved on supplied tasks; explanations and composition remained weak | The verifier certifies the submitted object within its declared scope |
+| [Controlled ordered RLP](results/08_controlled_rlp.md#ordered-arm-results) | Partial core scores changed; no phase produced a fully correct answer | Controlled data and ordering do not establish reward alignment with mathematical correctness |
 
 The local RLP objective scores how generated reasoning changes the likelihood of a private mathematical target span. The [official RLP description](https://github.com/NVlabs/RLP) motivates information gain on observed text. This small Instruct-model adaptation is not a replication of its published pretraining experiments.
 
@@ -315,7 +315,7 @@ CPU source artifacts are under `/mnt/data/manasvenkatasairavulapalli/formal_rl/a
 
 Lean tactics construct proof terms that the kernel checks against formal propositions. Acceptance concerns the encoded target and its assumptions. It does not certify arbitrary prose or the fidelity of an automatic translation. See the [official Lean reference](https://lean-lang.org/doc/reference/latest/Tactic-Proofs/).
 
-The project already has a [local witness checker](../scripts/verify_local_operator.py) and earlier whole-proof checks. The witness checker inserts a submitted expression into an immutable obligation with a fixed proof skeleton. It certifies the witness, not a model-generated derivation. Anwesha's general interactive verifier remains a separate workstream.
+The project already has a [local witness checker](../scripts/eval/verify_local_operator.py) and earlier whole-proof checks. The witness checker inserts a submitted expression into an immutable obligation with a fixed proof skeleton. It certifies the witness, not a model-generated derivation. Anwesha's general interactive verifier remains a separate workstream.
 
 The recommended next step is the [Lean-verified acquisition evaluation proposal](research_plan.md#lean-verified-acquisition-evaluation-proposal-2026-10-06). Formalize the diagnostic targets faithfully and test existing checkpoints before another reward change. Previously inspected items remain development data. Final transfer requires fresh sealed tasks.
 

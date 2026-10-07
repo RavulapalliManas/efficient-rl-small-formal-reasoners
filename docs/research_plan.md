@@ -215,7 +215,7 @@ Start with supplied knowledge and short mathematical operations. The first opera
 
 For divisibility, supply `a|b iff there exists an integer k with b=a*k`. First ask for the equality associated with a witness. Then supply `b=a*k` and `c=b*l` and ask for an expression `w` satisfying `c=a*w`. A correct candidate is `k*l`. Another task supplies `x=d*u` and `y=d*v` and asks for a witness for `d|(s*x+t*y)`. A correct candidate is `s*u+t*v`. These are training examples, not reserved transfer problems.
 
-The mathematical action is an expression or certificate. The prototype in `scripts/verify_local_operator.py` inserts a bounded polynomial expression into an immutable Lean obligation. Its training fixtures cover supplied-witness reuse, composition, linear combination, and scaling. It does not yet evaluate existential elimination or model-generated explanations. It must not search for a replacement witness or repair the action. Restrict candidate syntax to the declared expression grammar before interpolation. Check the candidate's identity and side conditions. Check positive controls, wrong witnesses, reversed divisibility, missing hypotheses, and forbidden declarations before using reward outputs. Until that adapter passes these checks, report its integration as pending.
+The mathematical action is an expression or certificate. The prototype in `scripts/eval/verify_local_operator.py` inserts a bounded polynomial expression into an immutable Lean obligation. Its training fixtures cover supplied-witness reuse, composition, linear combination, and scaling. It does not yet evaluate existential elimination or model-generated explanations. It must not search for a replacement witness or repair the action. Restrict candidate syntax to the declared expression grammar before interpolation. Check the candidate's identity and side conditions. Check positive controls, wrong witnesses, reversed divisibility, missing hypotheses, and forbidden declarations before using reward outputs. Until that adapter passes these checks, report its integration as pending.
 
 Use binary reward for the requested verified local operation. Do not use prediction reward, proof length, or reduced goal count as a substitute. Record the proof obligation and verifier result with the candidate. Keep syntax errors, mathematical rejection, timeout, and infrastructure failure distinct. An accepted certificate does not certify unchecked explanatory prose. Report informal mathematical correctness separately from Lean serialization readiness. A fixed proof skeleton that performs substitution validates the submitted witness; it does not show that the model generated those proof steps.
 
@@ -295,11 +295,11 @@ Lean's [auxiliary subgoals documentation](https://lean-lang.org/theorem_proving_
 
 ## Bounded training plan, 2026-10-06
 
-This is an exploratory RL-only pilot followed by a conditional curriculum comparison. It starts from early RLP (`checkpoint-118`), with a fresh optimizer and an unchanged reference copy. It does not continue the final policy or the RLP prediction reward. The settings are implemented in `configs/rl/qwen_05b_local_operator_grpo.json` and the local-action mode of `scripts/run_grpo_pilot.py`. Implementation does not establish learning.
+This is an exploratory RL-only pilot followed by a conditional curriculum comparison. It starts from early RLP (`checkpoint-118`), with a fresh optimizer and an unchanged reference copy. It does not continue the final policy or the RLP prediction reward. The settings are implemented in `configs/rl/qwen_05b_local_operator_grpo.json` and the local-action mode of `scripts/train/run_grpo_pilot.py`. Implementation does not establish learning.
 
 ### First pilot: establish execution learning
 
-Manas owns the pilot data, adapter integration, and evaluation. Reuse `scripts/run_grpo_pilot.py` and pinned TRL rather than creating another optimizer. Reuse the local witness checker for its supported operations. The local-action mode provides a separate correctness callback; historical whole-proof modes remain unchanged. Anwesha retains ownership of the general interactive Lean interface. This standalone pilot does not require that unfinished interface.
+Manas owns the pilot data, adapter integration, and evaluation. Reuse `scripts/train/run_grpo_pilot.py` and pinned TRL rather than creating another optimizer. Reuse the local witness checker for its supported operations. The local-action mode provides a separate correctness callback; historical whole-proof modes remain unchanged. Anwesha retains ownership of the general interactive Lean interface. This standalone pilot does not require that unfinished interface.
 
 1. Freeze a development pool of supplied-witness reuse, composition, linear combination, and scaling. Add numerical certificates alongside symbolic witnesses. Split mathematical templates before rendering or variable renaming. Keep the earlier inventory as development evidence, not the new test set. Record separate training, curriculum-validation, retention, and composition manifests. Do not promise broad proof competence from these operators.
 2. Allow reasoning followed by one explicitly marked final witness. Extract that submitted object without inventing an answer. Support declared mathematical notation through a bounded parser; reject ambiguous final answers. Record extraction, verification, and explanatory-content scores separately. A verified witness earns action credit even if unrelated prose is wrong; it does not earn full-response correctness. Training and evaluation use the same extraction contract.
@@ -388,7 +388,7 @@ Do not select checkpoints by RLP reward alone. Use frozen curriculum-validation 
 
 ### Dependencies and next action
 
-Manas owns the corpus admission records, distribution specification, and evaluation rubric. The dependency chain is: audited shared corpus and known-error grading controls -> frozen probes and unchanged-policy baseline -> matched existing-RLP sampling comparison -> conditional contrastive objective test. Reuse `scripts/prepare_rlp_corpus.py` and `scripts/run_rlp_pilot.py` when their contracts fit. No new optimizer or Lean interface is required by this plan. Numerical settings and funding for additional runs must be recorded before launch; this entry authorizes no new spend.
+Manas owns the corpus admission records, distribution specification, and evaluation rubric. The dependency chain is: audited shared corpus and known-error grading controls -> frozen probes and unchanged-policy baseline -> matched existing-RLP sampling comparison -> conditional contrastive objective test. Reuse `scripts/data/prepare_rlp_corpus.py` and `scripts/train/run_rlp_pilot.py` when their contracts fit. No new optimizer or Lean interface is required by this plan. Numerical settings and funding for additional runs must be recorded before launch; this entry authorizes no new spend.
 
 
 ### Formalization work package
@@ -409,8 +409,8 @@ The treatment effect for the first comparison is the difference between the orde
 
 | Existing owner/path | Reuse | Required extension |
 | --- | --- | --- |
-| `scripts/prepare_rlp_corpus.py` | Authored primitive records and mathematical-span export | Explicit assumptions, operation labels, support views, review provenance, family splits |
-| `scripts/run_rlp_pilot.py` | Grouped RLP generation, scoring, optimizer, counters, checkpoints | View-aware order and exposure records; explicit response/scorer contract; no new optimizer |
+| `scripts/data/prepare_rlp_corpus.py` | Authored primitive records and mathematical-span export | Explicit assumptions, operation labels, support views, review provenance, family splits |
+| `scripts/train/run_rlp_pilot.py` | Grouped RLP generation, scoring, optimizer, counters, checkpoints | View-aware order and exposure records; explicit response/scorer contract; no new optimizer |
 | `configs/eval/knowledge_inventory_v1.json` | Recognition, recall, supplied use, independent use | Fresh curriculum-validation and final instances; retention and composition items |
 | `configs/eval/decomposition_grading_v2.json` | Partial credit, alternate valid methods, core versus full correctness | Named mathematical dimensions, first-error location, unknown judgments, calibration manifest |
 | Completed run records | Failure categories, precision evidence, source examples | Development evidence only; repeatedly inspected examples do not become untouched tests |
@@ -505,7 +505,7 @@ Do the admission and grader work before renting hardware. The next implementatio
 
 #### Pretraining implementation and frozen inputs
 
-The [canonical status](../README.md#controlled-rlp-pretraining-preparation) records execution. The existing preparer now exports reviewed canonical records and matched views through `scripts/mathematical_rlp_data.py`. The existing RLP runner consumes complete-answer prompts and private reference spans. It checks the early weight hash, preserves exposure order, and requires one pass through the presentation multiset. The reward remains prediction-based and heuristic; correct reference data do not certify generated reasoning.
+The [canonical status](results/08_controlled_rlp.md#controlled-rlp-pretraining-preparation) records execution. The existing preparer now exports reviewed canonical records and matched views through `scripts/data/mathematical_rlp_data.py`. The existing RLP runner consumes complete-answer prompts and private reference spans. It checks the early weight hash, preserves exposure order, and requires one pass through the presentation multiset. The reward remains prediction-based and heuristic; correct reference data do not certify generated reasoning.
 
 Use `artifacts/mathematical_pretraining_v1/data_v2/` on cpu-angad. This export supersedes ambiguous recall topic names identified by independent reviewers. It supplies the intended integer topic while withholding the rule and conditions. Report that condition as domain-cued recall. Preserve the first export and baseline outputs. Only changed recall prompts require replacement inference; merged manifests record the reused responses and exact source hashes.
 

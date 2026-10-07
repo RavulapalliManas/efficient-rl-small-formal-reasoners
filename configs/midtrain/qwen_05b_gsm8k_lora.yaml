@@ -1,0 +1,25 @@
+# Exploratory SFT probe. This is not a Lean or RL training run.
+# Batch: 2 x at most 512 tokens. Base BF16 weights: 988,065,536 bytes.
+# FP32 logits: 2 x 512 x 151,936 x 4 bytes. Gradient checkpointing bounds
+# retained activations; MLX memory is monitored during the bounded launch.
+model: artifacts/qwen_05b_probe/model
+data: artifacts/qwen_05b_probe/data
+adapter_path: artifacts/qwen_05b_probe/sft_adapter
+train: true
+fine_tune_type: lora
+num_layers: 4
+batch_size: 2
+iters: 32
+val_batches: -1
+learning_rate: 0.0001
+steps_per_report: 8
+steps_per_eval: 16
+save_every: 32
+max_seq_length: 512
+grad_checkpoint: true
+clear_cache_threshold: 1073741824
+seed: 42
+lora_parameters:
+  rank: 8
+  dropout: 0.0
+  scale: 20.0

@@ -1,0 +1,53 @@
+{
+  "scope": "Post hoc notation check, prompted by observed q2-to-q-squared misreading. Same theorem and assistance, renamed variables. Keep separate from frozen main results.",
+  "checkpoints": {
+    "original": "Qwen/Qwen2.5-0.5B-Instruct",
+    "revision": "7ae557604adf67be50417f59c2c2f167def9a775",
+    "early": "primitive_rlp_20261005/runtime/out/policy/checkpoint-118",
+    "final": "primitive_rlp_20261005/runtime/out/policy_final"
+  },
+  "seed": 20261005,
+  "cpu_threads": 8,
+  "memory_limit_gib": 8,
+  "max_wall_seconds_per_model": 600,
+  "batch_size": 4,
+  "max_prompt_tokens": 2048,
+  "max_new_tokens": 1024,
+  "length_views": [
+    256,
+    512,
+    1024
+  ],
+  "tasks": [
+    {
+      "id": "notation_division_unaided",
+      "family": "division",
+      "category": "supplementary_strategy",
+      "condition": "unaided",
+      "prompt": "Let d be a positive integer. Suppose n=d*q+r=d*s+t, where q,s,r,t are integers and 0<=r<d, 0<=t<d. Prove q=s and r=t.\nGive a complete elementary proof, including the mathematical steps.",
+      "rubric": "Judge mathematical content, not wording or notation. Correct requires all requested content with valid assumptions and no substantive false claim. Partial means sound but incomplete; incorrect means a substantive false claim or invalid inference; unassessable means no substantive answer. Accept any mathematically valid alternative solution. Do not reward merely naming a theorem. A proof must establish the full quantified conclusion from the stated assumptions. Merely repeating the plan, asserting the target, or checking examples is incomplete. Alternate valid proof strategies are accepted even in the assisted conditions. Subtracting gives d(q-s)=t-r. The bounds give |t-r|<d. Therefore the multiple of d is zero, so t=r. Then d(q-s)=0 and d>0 give q=s.",
+      "reference": "Subtracting gives d(q-s)=t-r. The bounds give |t-r|<d. Therefore the multiple of d is zero, so t=r. Then d(q-s)=0 and d>0 give q=s.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "notation_division_facts",
+      "family": "division",
+      "category": "supplementary_strategy",
+      "condition": "facts",
+      "prompt": "Let d be a positive integer. Suppose n=d*q+r=d*s+t, where q,s,r,t are integers and 0<=r<d, 0<=t<d. Prove q=s and r=t.\nAvailable facts: A nonzero integer multiple of d has absolute value at least d. Ordinary integer algebra may be used.\nGive a complete elementary proof, including the mathematical steps.",
+      "rubric": "Judge mathematical content, not wording or notation. Correct requires all requested content with valid assumptions and no substantive false claim. Partial means sound but incomplete; incorrect means a substantive false claim or invalid inference; unassessable means no substantive answer. Accept any mathematically valid alternative solution. Do not reward merely naming a theorem. A proof must establish the full quantified conclusion from the stated assumptions. Merely repeating the plan, asserting the target, or checking examples is incomplete. Alternate valid proof strategies are accepted even in the assisted conditions. Subtracting gives d(q-s)=t-r. The bounds give |t-r|<d. Therefore the multiple of d is zero, so t=r. Then d(q-s)=0 and d>0 give q=s.",
+      "reference": "Subtracting gives d(q-s)=t-r. The bounds give |t-r|<d. Therefore the multiple of d is zero, so t=r. Then d(q-s)=0 and d>0 give q=s.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "notation_division_facts_plan",
+      "family": "division",
+      "category": "supplementary_strategy",
+      "condition": "facts_plan",
+      "prompt": "Let d be a positive integer. Suppose n=d*q+r=d*s+t, where q,s,r,t are integers and 0<=r<d, 0<=t<d. Prove q=s and r=t.\nAvailable facts: A nonzero integer multiple of d has absolute value at least d. Ordinary integer algebra may be used.\nSuggested plan: Subtract the two representations. Bound the difference of the remainders and compare that bound with a nonzero multiple of d.\nGive a complete elementary proof, including the mathematical steps.",
+      "rubric": "Judge mathematical content, not wording or notation. Correct requires all requested content with valid assumptions and no substantive false claim. Partial means sound but incomplete; incorrect means a substantive false claim or invalid inference; unassessable means no substantive answer. Accept any mathematically valid alternative solution. Do not reward merely naming a theorem. A proof must establish the full quantified conclusion from the stated assumptions. Merely repeating the plan, asserting the target, or checking examples is incomplete. Alternate valid proof strategies are accepted even in the assisted conditions. Subtracting gives d(q-s)=t-r. The bounds give |t-r|<d. Therefore the multiple of d is zero, so t=r. Then d(q-s)=0 and d>0 give q=s.",
+      "reference": "Subtracting gives d(q-s)=t-r. The bounds give |t-r|<d. Therefore the multiple of d is zero, so t=r. Then d(q-s)=0 and d>0 give q=s.",
+      "source": "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    }
+  ]
+}

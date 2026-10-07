@@ -1,0 +1,23 @@
+{
+  "version": "core_content_v2",
+  "registered_when": "2026-10-05, after original outputs and strict grades were inspected; before revised grading",
+  "purpose": "User-requested exploratory regrading of all checkpoints with partial credit and separate ancillary errors.",
+  "grader": "gpt-6-astra",
+  "method": "Two independent checkpoint-blinded reviews with references; preserve disagreements and adjudicate against the response.",
+  "source": "https://proofgrader.github.io/",
+  "source_use": "Reference-informed partial credit and independent repeated grading. This custom rubric is not ProofGrader and has no human validation.",
+  "rubric": [
+    "Judge mathematical content, not matching words, style, verbosity, boxing, or a specific proof method. Accept every valid alternative solution.",
+    "Accept conventional implicit steps that a mathematically competent reader can recover directly. Do not supply a missing central lemma or replace an invalid central argument.",
+    "core_score 3: All requested core mathematical content is established. A proof must contain a valid argument, not merely its true conclusion. A step-check must identify the correct earliest error or correctly accept all steps, with a valid reason.",
+    "core_score 2: The main result or approach is correct, but a requested part, explanation, or local step is missing or needs repair. The response does not establish the whole task.",
+    "core_score 1: There is substantive correct progress or a correct requested component, but a central error or major gap prevents the result. A correct definition can earn partial credit even when a requested condition is wrong.",
+    "core_score 0: No substantive correct progress beyond copying assumptions, restating the target, generic prose, or a false proposed solution. A true theorem repeated without evidence is not a proof.",
+    "Ancillary errors do not lower core_score if they are separable from a complete valid solution, neither used in its derivation nor contradicting its core answer. Record them in ancillary_error. A contradiction of the requested conclusion or an error needed by the argument is central and must lower core_score.",
+    "full_correct is true only when core_score is 3 and the response contains no substantive mathematical error. This retains a separate stricter correctness measure.",
+    "Give each answer its earned partial credit even if it also contains an error. Do not collapse all erroneous responses to zero. Do not infer unstated intended arguments or reward irrelevant true facts.",
+    "Assess the visible response only. A truncated but complete proof can earn full credit. A truncated incomplete proof earns the corresponding partial credit. Do not penalize length by itself.",
+    "Check calculations and every load-bearing inference against the problem. References provide one solution, not a mandatory template. Note any reference defect rather than following it blindly.",
+    "Return review_id, core_score (integer 0 through 3), full_correct (boolean), ancillary_error (boolean), reason (specific mathematical justification), and evidence (short exact response excerpt supporting the grade)."
+  ]
+}

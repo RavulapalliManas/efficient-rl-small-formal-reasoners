@@ -1,0 +1,28 @@
+{
+  "source_sha256": "c2311deed2468c5b2a76827ba263ebaeff86c97e6efcb8def25311f239e6849a",
+  "accepted_templates": [
+    "linear",
+    "chain",
+    "cancellation",
+    "division",
+    "bezout",
+    "inverse",
+    "gcd",
+    "congruence",
+    "modular_cancellation",
+    "composition"
+  ],
+  "reviewers": [
+    "root source inspection and CPU arithmetic checks",
+    "review_pretraining_data independent source review"
+  ],
+  "review_status": "accepted_by_mathematical_review",
+  "date": "2026-10-06",
+  "sources": [
+    "https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html",
+    "https://twjudson.github.io/aata-files/aata-html/groups-section-mod-n-sym.html"
+  ],
+  "reviewed_extension": "The single-zero Bezout case follows directly from a signed coefficient on the nonzero operand; the cited theorem states a narrower domain.",
+  "scope": "Authored reference templates, hypotheses, operation labels, masks, and split construction. Arithmetic certificates receive exact CPU checks. No human validation, formal certification, grader reliability claim, or training result.",
+  "recall_clarification": "Independent reviewers identified an ambiguous domain in initial recall prompts. The new version supplies the intended integer topic but withholds the rule and conditions. Call this domain-cued recall. Original export remains immutable."
+}

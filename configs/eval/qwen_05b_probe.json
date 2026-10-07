@@ -1,0 +1,19 @@
+{
+  "model": "Qwen/Qwen2.5-0.5B",
+  "revision": "060db6499f32faf8b98477b0a26969ef7d8b9987",
+  "model_path": "artifacts/qwen_05b_probe/model",
+  "data_path": "artifacts/qwen_05b_probe/data",
+  "formal_validation": "artifacts/leandojo_nat_v1/frozen/val.jsonl",
+  "seed": 42,
+  "gsm8k_n": 24,
+  "math_per_level": 4,
+  "shots": 4,
+  "max_tokens": 512,
+  "max_prompt_tokens": 4096,
+  "max_seconds_per_question": 60,
+  "memory_limit_gib": 4,
+  "datasets": {
+    "gsm8k": {"repo": "openai/gsm8k", "revision": "740312add88f781978c0658806c59bc2815b9866", "directory": "main"},
+    "math_number_theory": {"repo": "EleutherAI/hendrycks_math", "revision": "21a5633873b6a120296cce3e2df9d5550074f4a3", "directory": "number_theory"}
+  }
+}

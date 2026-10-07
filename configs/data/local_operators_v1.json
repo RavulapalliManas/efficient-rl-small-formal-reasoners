@@ -1,0 +1,321 @@
+{
+  "scope": "Authored local-action development pilot. Validation changes algebraic templates; heldout compositions remain supplied-action tasks, not full proof or independent acquisition.",
+  "rows": [
+    {
+      "variables": [
+        "k"
+      ],
+      "context": "(a b k : Int) (hk : b = a * k)",
+      "target": "b = a * {candidate}",
+      "proof": "rw [hk] <;> ring1",
+      "prompt": "Definition: a|b means b=a*k for an integer k. Given an integer witness k and b=a*k, return a multiplier w such that b=a*w.",
+      "correct": [
+        "k",
+        "k+0"
+      ],
+      "incorrect": [
+        "k+1",
+        "-k"
+      ],
+      "id": "unpack_symbolic",
+      "family": "unpack",
+      "split": "train",
+      "template": "unpack_plain",
+      "reference": "k"
+    },
+    {
+      "variables": [
+        "k",
+        "l"
+      ],
+      "context": "(a b c k l : Int) (h1 : b = a * k) (h2 : c = b * l)",
+      "target": "c = a * {candidate}",
+      "proof": "rw [h2, h1]\nring1",
+      "prompt": "All variables are integers. Given b=a*k and c=b*l, return a witness expression w such that c=a*w.",
+      "correct": [
+        "k*l",
+        "l*k"
+      ],
+      "incorrect": [
+        "k+l",
+        "k"
+      ],
+      "id": "compose_symbolic",
+      "family": "compose",
+      "split": "train",
+      "template": "compose_plain",
+      "reference": "k*l"
+    },
+    {
+      "variables": [
+        "s",
+        "t",
+        "u",
+        "v"
+      ],
+      "context": "(d x y s t u v : Int) (h1 : x = d * u) (h2 : y = d * v)",
+      "target": "s*x + t*y = d * {candidate}",
+      "proof": "rw [h1, h2]\nring1",
+      "prompt": "All variables are integers. Given x=d*u and y=d*v, return a witness expression w such that s*x+t*y=d*w.",
+      "correct": [
+        "s*u+t*v",
+        "v*t+u*s"
+      ],
+      "incorrect": [
+        "s*u-t*v",
+        "u+v"
+      ],
+      "id": "combine_symbolic",
+      "family": "combine",
+      "split": "train",
+      "template": "combine_plain",
+      "reference": "s*u+t*v"
+    },
+    {
+      "variables": [
+        "k",
+        "t"
+      ],
+      "context": "(a b k t : Int) (h : b = a * k)",
+      "target": "t*b = a * {candidate}",
+      "proof": "rw [h]\nring1",
+      "prompt": "All variables are integers. Given b=a*k, return a witness expression w such that t*b=a*w.",
+      "correct": [
+        "t*k",
+        "k*t"
+      ],
+      "incorrect": [
+        "t+k",
+        "k"
+      ],
+      "id": "scale_symbolic",
+      "family": "scale",
+      "split": "train",
+      "template": "scale_plain",
+      "reference": "t*k"
+    },
+    {
+      "id": "unpack_number",
+      "family": "unpack",
+      "split": "train",
+      "template": "unpack_number",
+      "context": "(a : Int) (h : 21 = a*7)",
+      "target": "21 = a*{candidate}",
+      "proof": "rw [h] <;> ring1",
+      "variables": [],
+      "reference": "7",
+      "prompt": "All variables are integers. Given (a : Int) (h : 21 = a*7). Return w satisfying 21 = a*w."
+    },
+    {
+      "id": "compose_number",
+      "family": "compose",
+      "split": "train",
+      "template": "compose_number",
+      "context": "(a b c : Int) (h1 : b=a*3) (h2 : c=b*5)",
+      "target": "c = a*{candidate}",
+      "proof": "rw [h2, h1]\nring1",
+      "variables": [],
+      "reference": "15",
+      "prompt": "All variables are integers. Given (a b c : Int) (h1 : b=a*3) (h2 : c=b*5). Return w satisfying c = a*w."
+    },
+    {
+      "id": "combine_number",
+      "family": "combine",
+      "split": "train",
+      "template": "combine_number",
+      "context": "(d x y : Int) (h1 : x=d*2) (h2 : y=d*3)",
+      "target": "4*x+5*y = d*{candidate}",
+      "proof": "rw [h1, h2]\nring1",
+      "variables": [],
+      "reference": "23",
+      "prompt": "All variables are integers. Given (d x y : Int) (h1 : x=d*2) (h2 : y=d*3). Return w satisfying 4*x+5*y = d*w."
+    },
+    {
+      "id": "scale_number",
+      "family": "scale",
+      "split": "train",
+      "template": "scale_number",
+      "context": "(a b : Int) (h : b=a*3)",
+      "target": "4*b = a*{candidate}",
+      "proof": "rw [h]\nring1",
+      "variables": [],
+      "reference": "12",
+      "prompt": "All variables are integers. Given (a b : Int) (h : b=a*3). Return w satisfying 4*b = a*w."
+    },
+    {
+      "id": "unpack_shift",
+      "family": "unpack",
+      "split": "validation",
+      "template": "unpack_shift",
+      "context": "(a b k : Int) (h : b=a*k)",
+      "target": "b = a*({candidate}+1)",
+      "proof": "rw [h]\nring1",
+      "variables": [
+        "k"
+      ],
+      "reference": "k-1",
+      "prompt": "All variables are integers. Given (a b k : Int) (h : b=a*k). Return w satisfying b = a*(w+1)."
+    },
+    {
+      "id": "compose_double",
+      "family": "compose",
+      "split": "validation",
+      "template": "compose_double",
+      "context": "(a b c k l : Int) (h1 : b=a*k) (h2 : c=2*b*l)",
+      "target": "c = a*{candidate}",
+      "proof": "rw [h2, h1]\nring1",
+      "variables": [
+        "k",
+        "l"
+      ],
+      "reference": "2*k*l",
+      "prompt": "All variables are integers. Given (a b c k l : Int) (h1 : b=a*k) (h2 : c=2*b*l). Return w satisfying c = a*w."
+    },
+    {
+      "id": "combine_subtract",
+      "family": "combine",
+      "split": "validation",
+      "template": "combine_subtract",
+      "context": "(d x y s t u v : Int) (h1 : x=d*u) (h2 : y=d*v)",
+      "target": "s*x-t*y = d*{candidate}",
+      "proof": "rw [h1, h2]\nring1",
+      "variables": [
+        "s",
+        "t",
+        "u",
+        "v"
+      ],
+      "reference": "s*u-t*v",
+      "prompt": "All variables are integers. Given (d x y s t u v : Int) (h1 : x=d*u) (h2 : y=d*v). Return w satisfying s*x-t*y = d*w."
+    },
+    {
+      "id": "scale_successor",
+      "family": "scale",
+      "split": "validation",
+      "template": "scale_successor",
+      "context": "(a b k t : Int) (h : b=a*k)",
+      "target": "(t+1)*b = a*{candidate}",
+      "proof": "rw [h]\nring1",
+      "variables": [
+        "k",
+        "t"
+      ],
+      "reference": "(t+1)*k",
+      "prompt": "All variables are integers. Given (a b k t : Int) (h : b=a*k). Return w satisfying (t+1)*b = a*w."
+    },
+    {
+      "id": "unpack_shift_number",
+      "family": "unpack",
+      "split": "validation",
+      "template": "unpack_shift_number",
+      "context": "(a b : Int) (h : b=a*9)",
+      "target": "b = a*({candidate}+2)",
+      "proof": "rw [h]\nring1",
+      "variables": [],
+      "reference": "7",
+      "prompt": "All variables are integers. Given (a b : Int) (h : b=a*9). Return w satisfying b = a*(w+2)."
+    },
+    {
+      "id": "compose_double_number",
+      "family": "compose",
+      "split": "validation",
+      "template": "compose_double_number",
+      "context": "(a b c : Int) (h1 : b=a*2) (h2 : c=3*b*7)",
+      "target": "c = a*{candidate}",
+      "proof": "rw [h2, h1]\nring1",
+      "variables": [],
+      "reference": "42",
+      "prompt": "All variables are integers. Given (a b c : Int) (h1 : b=a*2) (h2 : c=3*b*7). Return w satisfying c = a*w."
+    },
+    {
+      "id": "combine_subtract_number",
+      "family": "combine",
+      "split": "validation",
+      "template": "combine_subtract_number",
+      "context": "(d x y : Int) (h1 : x=d*4) (h2 : y=d*3)",
+      "target": "5*x-2*y = d*{candidate}",
+      "proof": "rw [h1, h2]\nring1",
+      "variables": [],
+      "reference": "14",
+      "prompt": "All variables are integers. Given (d x y : Int) (h1 : x=d*4) (h2 : y=d*3). Return w satisfying 5*x-2*y = d*w."
+    },
+    {
+      "id": "scale_sum_number",
+      "family": "scale",
+      "split": "validation",
+      "template": "scale_sum_number",
+      "context": "(a b : Int) (h : b=a*5)",
+      "target": "3*b+2*b = a*{candidate}",
+      "proof": "rw [h]\nring1",
+      "variables": [],
+      "reference": "25",
+      "prompt": "All variables are integers. Given (a b : Int) (h : b=a*5). Return w satisfying 3*b+2*b = a*w."
+    },
+    {
+      "id": "compose_three_link",
+      "family": "compose",
+      "split": "heldout",
+      "template": "compose_three_link",
+      "context": "(a b c e k l m : Int) (h1 : b=a*k) (h2 : c=b*l) (h3 : e=c*m)",
+      "target": "e = a*{candidate}",
+      "proof": "rw [h3, h2, h1]\nring1",
+      "variables": [
+        "k",
+        "l",
+        "m"
+      ],
+      "reference": "k*l*m",
+      "prompt": "All variables are integers. Given (a b c e k l m : Int) (h1 : b=a*k) (h2 : c=b*l) (h3 : e=c*m). Return w satisfying e = a*w."
+    },
+    {
+      "id": "combine_three_sum",
+      "family": "combine",
+      "split": "heldout",
+      "template": "combine_three_sum",
+      "context": "(d x y z u v r : Int) (h1 : x=d*u) (h2 : y=d*v) (h3 : z=d*r)",
+      "target": "x+y+z = d*{candidate}",
+      "proof": "rw [h1, h2, h3]\nring1",
+      "variables": [
+        "u",
+        "v",
+        "r"
+      ],
+      "reference": "u+v+r",
+      "prompt": "All variables are integers. Given (d x y z u v r : Int) (h1 : x=d*u) (h2 : y=d*v) (h3 : z=d*r). Return w satisfying x+y+z = d*w."
+    },
+    {
+      "id": "scale_nested",
+      "family": "scale",
+      "split": "heldout",
+      "template": "scale_nested",
+      "context": "(a b k s t : Int) (h : b=a*k)",
+      "target": "s*(t*b) = a*{candidate}",
+      "proof": "rw [h]\nring1",
+      "variables": [
+        "k",
+        "s",
+        "t"
+      ],
+      "reference": "s*t*k",
+      "prompt": "All variables are integers. Given (a b k s t : Int) (h : b=a*k). Return w satisfying s*(t*b) = a*w."
+    },
+    {
+      "id": "unpack_offset",
+      "family": "unpack",
+      "split": "heldout",
+      "template": "unpack_offset",
+      "context": "(a b k t : Int) (h : b=a*k)",
+      "target": "b+a*t = a*{candidate}",
+      "proof": "rw [h]\nring1",
+      "variables": [
+        "k",
+        "t"
+      ],
+      "reference": "k+t",
+      "prompt": "All variables are integers. Given (a b k t : Int) (h : b=a*k). Return w satisfying b+a*t = a*w."
+    }
+  ],
+  "validation_min_net_gain": 2,
+  "provenance": "Integer ring consequences of explicitly supplied equalities; every reference requires pinned Lean replay before use.",
+  "split_rule": "All renderings of a template stay in one split; shared primitives intentional; prior diagnostic exposure retained in train."
+}

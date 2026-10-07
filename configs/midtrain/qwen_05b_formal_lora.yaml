@@ -1,0 +1,22 @@
+# Fixed exploratory adaptation probe on the frozen formal training split.
+# Predict recorded tactics. These states can be intermediate subgoals.
+model: artifacts/qwen_05b_probe/model
+data: artifacts/qwen_05b_probe/formal_sft_data
+adapter_path: artifacts/qwen_05b_probe/formal_sft_adapter
+train: true
+fine_tune_type: lora
+num_layers: 4
+batch_size: 2
+iters: 32
+val_batches: -1
+learning_rate: 0.0001
+steps_per_report: 8
+steps_per_eval: 16
+save_every: 32
+max_seq_length: 512
+grad_checkpoint: true
+seed: 42
+lora_parameters:
+  rank: 8
+  dropout: 0.0
+  scale: 20.0

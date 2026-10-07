@@ -1,0 +1,33 @@
+{
+  "archive_url": "https://zenodo.org/records/12740403/files/leandojo_benchmark_4.tar.gz",
+  "archive_md5": "25e1ee60cd8925b9d2e8673ddcc34b4c",
+  "source": {
+    "url": "https://github.com/leanprover-community/mathlib4",
+    "commit": "29dcec074de168ac2bf835a77ef68bbe069194c5"
+  },
+  "lean_toolchain": "leanprover/lean4:v4.10.0-rc1",
+  "families": {
+    "arithmetic": [
+      "Mathlib/Init/Data/Nat/Lemmas.lean",
+      "Mathlib/Data/Nat/Defs.lean",
+      "Mathlib/Data/Nat/SuccPred.lean",
+      "Mathlib/Data/Nat/Order/Lemmas.lean",
+      "Mathlib/Data/Nat/Dist.lean",
+      "Mathlib/Algebra/Group/Nat.lean",
+      "Mathlib/Algebra/Order/Ring/Nat.lean"
+    ],
+    "gcd": ["Mathlib/Data/Nat/GCD/Basic.lean"],
+    "congruences": ["Mathlib/Data/Nat/ModEq.lean"],
+    "primes": ["Mathlib/Data/Nat/Prime.lean", "Mathlib/Data/Nat/Factors.lean"],
+    "divisors": ["Mathlib/NumberTheory/Divisors.lean"],
+    "factorial": ["Mathlib/Data/Nat/Factorial/Basic.lean"],
+    "binomial": ["Mathlib/Data/Nat/Choose/Basic.lean"]
+  },
+  "excluded_header_tokens": [
+    "Finset", "Multiset", "List", "Set", "Int", "Rat", "Real", "Complex",
+    "Polynomial", "ZMod", "Fintype", "Fin", "Type", "Sort", "ℤ", "ℚ", "ℝ", "ℂ"
+  ],
+  "near_duplicate_threshold": 0.9,
+  "max_candidates": 10000,
+  "max_candidate_mib": 64
+}

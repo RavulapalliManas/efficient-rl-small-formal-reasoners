@@ -1,0 +1,64 @@
+{
+  "checkpoints": {
+    "original": "Qwen/Qwen2.5-0.5B-Instruct",
+    "revision": "7ae557604adf67be50417f59c2c2f167def9a775",
+    "early": "primitive_rlp_20261005/runtime/out/policy/checkpoint-118",
+    "final": "primitive_rlp_20261005/runtime/out/policy_final"
+  },
+  "primary_checkpoint": "early",
+  "seed": 20261005,
+  "cpu_threads": 8,
+  "memory_limit_gib": 8,
+  "batch_size": 4,
+  "max_prompt_tokens": 2048,
+  "max_new_tokens": 1024,
+  "length_views": [
+    256,
+    512,
+    1024
+  ],
+  "max_wall_seconds_per_model": 900,
+  "scope": "Stage 1 greedy expression-format diagnostic on training fixtures, not stochastic GRPO readiness or held-out acquisition.",
+  "tasks": [
+    {
+      "id": "unpack",
+      "family": "divisibility_operators",
+      "category": "local_execution",
+      "condition": "supplied_use",
+      "prompt": "Definition: a|b means b=a*k for an integer k. Given an integer witness k and b=a*k, return a multiplier w such that b=a*w. Return only the expression, using k and integer constants with +, -, *, and parentheses. Do not include an equals sign or explanation.",
+      "reference": "Examples of correct expressions: k, k+0",
+      "rubric": "Check the returned expression against the immutable Lean obligation. Report syntax rejection separately from mathematical acceptance and infrastructure failure. Do not repair a candidate.",
+      "source": "Authored training fixtures in scripts/verify_local_operator.py; mathematical convention: https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "compose",
+      "family": "divisibility_operators",
+      "category": "local_execution",
+      "condition": "supplied_use",
+      "prompt": "All variables are integers. Given b=a*k and c=b*l, return a witness expression w such that c=a*w. Return only the expression, using k, l and integer constants with +, -, *, and parentheses. Do not include an equals sign or explanation.",
+      "reference": "Examples of correct expressions: k*l, l*k",
+      "rubric": "Check the returned expression against the immutable Lean obligation. Report syntax rejection separately from mathematical acceptance and infrastructure failure. Do not repair a candidate.",
+      "source": "Authored training fixtures in scripts/verify_local_operator.py; mathematical convention: https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "combine",
+      "family": "divisibility_operators",
+      "category": "local_execution",
+      "condition": "supplied_use",
+      "prompt": "All variables are integers. Given x=d*u and y=d*v, return a witness expression w such that s*x+t*y=d*w. Return only the expression, using s, t, u, v and integer constants with +, -, *, and parentheses. Do not include an equals sign or explanation.",
+      "reference": "Examples of correct expressions: s*u+t*v, v*t+u*s",
+      "rubric": "Check the returned expression against the immutable Lean obligation. Report syntax rejection separately from mathematical acceptance and infrastructure failure. Do not repair a candidate.",
+      "source": "Authored training fixtures in scripts/verify_local_operator.py; mathematical convention: https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    },
+    {
+      "id": "scale",
+      "family": "divisibility_operators",
+      "category": "local_execution",
+      "condition": "supplied_use",
+      "prompt": "All variables are integers. Given b=a*k, return a witness expression w such that t*b=a*w. Return only the expression, using k, t and integer constants with +, -, *, and parentheses. Do not include an equals sign or explanation.",
+      "reference": "Examples of correct expressions: t*k, k*t",
+      "rubric": "Check the returned expression against the immutable Lean obligation. Report syntax rejection separately from mathematical acceptance and infrastructure failure. Do not repair a candidate.",
+      "source": "Authored training fixtures in scripts/verify_local_operator.py; mathematical convention: https://twjudson.github.io/aata-files/aata-html/integers-section-division-algorithm.html"
+    }
+  ]
+}

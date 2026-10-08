@@ -1,0 +1,838 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{xurl}
+\usepackage[colorlinks=true,linkcolor=blue!50!black,urlcolor=blue!50!black,citecolor=blue!50!black]{hyperref}
+
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+\newcolumntype{P}[1]{>{\raggedright\arraybackslash}p{#1}}
+\setlist{itemsep=2pt,topsep=4pt}
+\emergencystretch=3em
+\newcommand{\code}[1]{\texttt{#1}}
+\newcommand{\pth}[1]{\nolinkurl{#1}}
+\newcommand{\Pset}{\mathcal{P}}
+\newcommand{\expref}[1]{Experiment~#1}
+
+\title{Efficient Reinforcement Learning for Small Formal Reasoners\\[2pt]
+\large Experiment record and formalization, 1 to 8 October 2026}
+\author{Manas Ravulapalli\\ \small Compiled from the project repository and run records}
+\date{9 October 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+This report records every experiment of the project from 1 to 8 October 2026, with the formal definitions behind them. The project asks whether reinforcement learning (RL) can teach \code{Qwen2.5-0.5B-Instruct} number theory and Lean~4 proofs under a fixed compute budget. We ran 13 experiments: data preparation, two capability baselines, three proof-RL studies with a terminal Lean reward, five knowledge-acquisition studies with an RLP reward, one evaluation series of saved checkpoints, and one RL pilot with a Lean-verified local reward. The model never produced an accepted Lean proof without assistance. Lean accepted 0 of 63 whole-proof attempts in the recounted local check, and the exported records of a larger sampling run show 0 of 273. RL with a terminal Lean reward gave no learning signal, because no sampled group had reward variation. In one RLP run, the prediction reward rose while held-out accuracy fell from 42/108 to 21/108. The only measured RL gain came from a Lean-checked witness reward on a narrow task, where validation accuracy rose from 0/8 to 6/8. A post hoc analysis shows that none of the 63 failed proof attempts was well-formed Lean~4. The report ends with a proposed study that has not run.
+\end{abstract}
+
+\section*{Status of this document}
+\begin{itemize}
+\item Every count comes from a run record. Appendix~\ref{app:provenance} names the record and the raw artifact for each experiment.
+\item The detailed run records are archived in Git commit \code{8fc8423} under \code{docs/results/} and \code{docs/decisions.md}. Each of those records names the CPU recount script that produced its counts.
+\item For this report, three independent checks re-read 89 counts of Experiments~1, 2, and 4 to 13 from the raw artifacts, and all 89 matched. We re-read the counts of \expref{3} and Section~\ref{sec:posthoc} directly. Appendix~\ref{app:provenance} lists the sources.
+\item Section~\ref{sec:posthoc} reports two analyses that we ran on 8 October 2026, after all training runs. Their scripts are in \code{scripts/audit/}.
+\item The experiment descriptions in the formal terms of Section~\ref{sec:formalism} were written after the runs. They describe the designs. They do not reinterpret the results.
+\item Paths name the machine and a relative location, for example cpu-angad \pth{formal_rl/artifacts/} or S3 \pth{capstate/acq/formal_rl/}. Bucket names, addresses, and instance identifiers are kept out of the repository.
+\end{itemize}
+
+\tableofcontents
+
+\section{Introduction}
+\label{sec:intro}
+
+\subsection{Question and scope}
+The project asks when RL improves number-theory knowledge and Lean~4 proof construction in a model with about 500 million parameters, under a fixed compute budget. The midsemester goal is a model that generates some verified proofs. The longer goal is proof strategy on competition problems with RL in the loop. Neither goal is met yet.
+
+This report covers 13 experiments. Table~\ref{tab:summary} lists them. The numbers match \pth{docs/EXPERIMENTS.md}. The sections group the experiments by the question they answer.
+
+\begin{table}[p]
+\centering
+\small
+\caption{All experiments, 1 to 6 October 2026. ``Start'' is the policy that each run started from. ``ck-118'' is \code{checkpoint-118} of \expref{9}. A count $n/m$ is $n$ successes in $m$ items.}
+\label{tab:summary}
+\begin{tabularx}{\textwidth}{@{}rP{3.3cm}P{1.5cm}P{1.6cm}Y@{}}
+\toprule
+\# & Experiment & Date & Start & Main result \\
+\midrule
+1 & LeanDojo data subset and number-theory pool & 10-01 & -- & 706/17/15 Nat theorems; 2,658/43/38 broader pool. Lean replay not done \\
+2 & Base-model math probe and GSM8K LoRA & 10-01 & Base & GSM8K 9/24 before, 8/24 after LoRA. MATH number theory 3/20 both \\
+3 & Instruct proof check, local and GPU sampling & 10-01, 10-03 & Instruct & Lean accepted 0/63 local attempts. GPU sampling records show 0/273 \\
+4 & Whole-proof GRPO, random vs. family order & 10-03 & Instruct & 0/8 validation theorems in every phase. No group had reward variation \\
+5 & Prerequisite curriculum GRPO and syntax retry & 10-04 & Instruct & 0/256 sampled proofs accepted. GRPO skipped \\
+6 & Assisted proof completion & 10-04 & Instruct & 2/64 with a missing expression. One theorem qualified. Unassisted held-out 0/16 \\
+7 & RLP number-theory training and continuation & 10-04 & Instruct & Held-out 11/48 before and after the continuation. Validation 7/16 throughout \\
+8 & Precision audit and FP32 rerun & 10-04 & RLP parent & 8,557,971 of 494,032,768 weights changed. FP32 rerun: held-out 11/48, validation 7/16 to 6/16 \\
+9 & Primitive RLP curriculum & 10-05 & Instruct & Held-out fell from 42/108 to 21/108. Validation peaked at 25/56 at ck-118 \\
+10 & Evaluations of saved checkpoints & 10-05 & -- & Early RLP: explained recognition 14/32 vs. 7/32. No gain in complete applications or proofs \\
+11 & Local-action pilot, Lean-verified reward & 10-06 & ck-118 & Validation 0/8 to 6/8; held-out 0/4 to 2/4. Error-free answers 2/8 and 0/4 \\
+12 & RLP corpus audit & 10-06 & -- & All 612 numeric targets correct. 160 of 448 training rules lack domain or zero conditions \\
+13 & Controlled RLP, ordered arm & 10-06 & ck-118 & 0/18 fully correct at all five checkpoints. Shuffled arm not scored \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Findings in brief}
+\begin{enumerate}
+\item A terminal Lean reward gave no learning signal while the model never succeeded. This blocked \expref{4}, \expref{5}, and most of \expref{6}.
+\item The unchanged model does not write well-formed Lean~4. In the 63 failed attempts of \expref{3}, 57 had a parse or file-structure error, 3 were empty, and 3 used \code{sorry} (Section~\ref{sec:posthoc}).
+\item A Lean-checked reward worked once the task was small enough for the model to succeed sometimes (\expref{11}).
+\item The RLP reward can rise while correctness falls (\expref{9}). Correct training targets did not make the generated reasoning correct.
+\item No curriculum experiment produced a scored comparison of ordered against shuffled training.
+\item AI graders disagreed on 44 of 321 response views in \expref{10}. Correctness scores without a checker are noisy.
+\end{enumerate}
+
+\section{Setup}
+\label{sec:setup}
+
+\subsection{Model}
+Every experiment used Qwen2.5 with 0.5 billion parameters~\cite{qwen25}. \expref{2} used the base model. All other experiments used \code{Qwen/Qwen2.5-0.5B-Instruct} or a checkpoint trained from it. We read Table~\ref{tab:arch} from the model configuration and the header of the weight file. The parameter total matches the count in the weight audit of \expref{8}.
+
+\begin{table}[h]
+\centering
+\small
+\caption{Architecture of \code{Qwen2.5-0.5B-Instruct}, read from \code{config.json} and \code{model.safetensors}.}
+\label{tab:arch}
+\begin{tabularx}{\textwidth}{@{}lY@{}}
+\toprule
+Property & Value \\
+\midrule
+Class & \code{Qwen2ForCausalLM}, decoder-only transformer \\
+Parameters & 494,032,768, of which 136,134,656 (27.6\%) are the embedding table \\
+Layers & 24, each with 14,912,384 parameters \\
+Hidden size & 896 \\
+Attention & Grouped-query: 14 query heads, 2 key-value heads, head size 64, bias on Q, K, V \\
+Feed-forward & SwiGLU, inner size 4,864; 87.7\% of the parameters of each layer \\
+Normalization and position & RMSNorm ($\epsilon = 10^{-6}$); RoPE with $\theta = 10^{6}$ \\
+Context & 32,768 tokens \\
+Vocabulary & 151,936 embedding rows; the tokenizer has 151,665 entries \\
+Output layer & Tied to the input embedding \\
+Stored precision & BF16 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The Qwen2.5 report states that pretraining used 18 trillion tokens, and that post-training used supervised fine-tuning on more than one million samples followed by multistage RL~\cite{qwen25}. The report does not state how much Lean~4 the data contains. The tokenizer encodes each of the Lean symbols $\vdash$, $\mathbb{N}$, $\mid$, $\equiv$, $\forall$, $\exists$, $\langle$, $\rangle$, $\to$, and $\uparrow$ as one token. It splits mathlib names into pieces; \code{Nat.Prime} takes three tokens.
+
+\subsection{Lean environment and the checker}
+All Lean checks use Lean \code{v4.10.0-rc1} with mathlib commit \pth{29dcec074de168ac2bf835a77ef68bbe069194c5}. This is the pair that the LeanDojo Benchmark~4 archive records. The checker accepts a candidate only if all of these conditions hold:
+\begin{enumerate}
+\item The target theorem statement is unchanged.
+\item The file compiles without an error.
+\item The target is absent from the environment before the candidate runs.
+\item The proof uses only permitted axioms. \code{sorry}, \code{admit}, new axioms, and \code{native\_decide} are rejected as forbidden constructs.
+\end{enumerate}
+Each run that used Lean checked a true control and a false control before it scored candidates. A verifier infrastructure failure gives a null outcome, which Section~\ref{sec:signals} defines. The checker module is loaded from the run environment; its source is not in this repository.
+
+\subsection{Compute and accounting}
+GPU runs used single NVIDIA L40S instances on AWS, as Spot or on-demand leases with an independent termination guard on cpu-angad. CPU work, recounts, and evaluations of saved checkpoints ran on cpu-angad. The approved ceilings were \$10 per pilot on 3 October, \$64 in total on 4 October, and \$95 in total on 6 October. The run ledgers hold conservative cost reservations. They hold no billed amounts, so this report states no billed total.
+
+Each run counts generated tokens and physical Lean calls from its raw records. Evaluation tokens are counted apart from training tokens. No run measured GPU-active time. Wall time includes generation, optimization, evaluation, and Lean, so it is not a GPU time.
+
+\subsection{Grading}
+Natural-language answers in \expref{9}, \expref{10}, \expref{11}, and \expref{13} were graded by AI reviewers. Reviewers saw blinded responses and references, and a third reviewer adjudicated disagreements. Planted controls checked consistency. They did not measure accuracy on new answers. No grade has human or Lean validation. Section~\ref{sec:evaluation} gives the grading contract.
+
+\section{Formalization}
+\label{sec:formalism}
+
+\subsection{Capability decomposition}
+We decompose mathematical competence into four conditional task families. Table~\ref{tab:decomposition} lists them. These are task scores under declared support. They are not direct measurements of separate internal faculties.
+
+\begin{table}[h]
+\centering
+\small
+\caption{Capability decomposition used by the evaluations.}
+\label{tab:decomposition}
+\begin{tabularx}{\textwidth}{@{}lYY@{}}
+\toprule
+Component & Controlled task & Main inference limit \\
+\midrule
+Knowledge access & Recognition, recall, supplied use, and independent use & A prompt cue can reveal a fact or a method \\
+Proof semantics & Execute a local operation with the mathematics supplied & A correct witness can accompany an incorrect explanation \\
+Proof strategy & Choose subgoals and dependencies with facts available & A supplied lemma can reveal the strategy \\
+Integrated solving & Complete a fresh problem without task-specific support & Libraries, search, or repairs can supply missing capability \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+For divisibility, recall of the existential definition and composition of supplied witnesses are different tasks. Given $b = ak$ and $c = bl$, the witness $w = kl$ satisfies $c = aw$. A correct product witness tests execution. Retrieval of the definition and construction of the argument without support test independent use.
+
+\subsection{Mathematical records}
+\label{sec:records}
+Each verified reference derivation has one canonical record
+\begin{equation}
+E_i = (\Gamma_i,\, g_i,\, \mathcal{K}_i,\, G_i,\, \pi_i,\, R_i).
+\label{eq:record}
+\end{equation}
+Here $\Gamma_i$ is the set of assumptions, $g_i$ is the goal, and $\mathcal{K}_i$ is the set of annotated mathematical prerequisites. $G_i$ is the scoped dependency graph, $\pi_i$ is the sequence of proof operations, and $R_i$ is the renderer and verifier provenance. A theorem can have more than one valid derivation. A grader must not reject a valid alternative because it differs from $G_i$.
+
+The controlled studies use three record types:
+\begin{align}
+k &= (\mathrm{id},\ \mathrm{domain},\ \mathrm{statement},\ \mathrm{assumptions},\ \mathrm{prerequisites}, \nonumber\\ &\qquad \mathrm{valid\_uses},\ \mathrm{invalid\_uses},\ \mathrm{source},\ \mathrm{review\_status}), \\
+o &= (\mathrm{id},\ \mathrm{input\_state},\ \mathrm{required\_conditions},\ \mathrm{action}, \nonumber\\ &\qquad \mathrm{output\_state},\ \mathrm{justification}), \\
+e &= (\mathrm{id},\ \mathrm{family\_id},\ \mathrm{concept\_ids},\ \mathrm{operator\_ids},\ \mathrm{assumptions}, \nonumber\\ &\qquad \mathrm{goal},\ \mathrm{reference\_steps},\ \mathrm{dependencies},\ \mathrm{split},\ \mathrm{provenance}).
+\end{align}
+A knowledge item $k$ is a fact with its domain and conditions. An operator $o$ is a local transformation with its required conditions. An example $e$ is a task instance with a reference derivation. Each reference step records its claim, operation, premises, scope, and justification. Every premise of a step must be an assumption, an exposed fact, or an earlier step.
+
+The records keep integer and natural-number domains separate. They also keep zero and sign conditions explicit. For example, modular cancellation belongs to the integers, and its coprimality hypothesis belongs to the rule. A paired invalid use omits that hypothesis and is labeled as an error.
+
+Each record has exactly one admission status: \code{unreviewed}, \code{accepted\_by\_exact\_check}, \code{accepted\_by\_mathematical\_review}, \code{disputed}, or \code{rejected}. Only admitted records enter positive training targets. An exact arithmetic check certifies its declared computation. It does not certify a universal statement. Without Lean, a reviewed proof is mathematically reviewed, not formally certified.
+
+\subsection{Information views}
+\label{sec:views}
+The model sees a rendered view $x(e, v)$ of an admitted example $e$, with
+\begin{equation}
+v = (m_K,\ m_S,\ \rho,\ \tau).
+\label{eq:view}
+\end{equation}
+Here $m_K$ is the knowledge mask, $m_S$ is the structure mask, $\rho$ is the representation (numerical or symbolic), and $\tau$ is the task type. Model-visible fields contain only the rendered task and the declared support. Private fields contain the reference steps, hidden targets, review records, and scoring candidates.
+
+Both masks are discrete intervention labels, not calibrated difficulty values:
+\begin{itemize}
+\item Knowledge axis $m_K$: full fact supplied, partial fact supplied, recognition alternatives, fact absent.
+\item Structure axis $m_S$: local operation supplied, sequence or subgoals supplied, partial sequence, structure absent.
+\end{itemize}
+The two axes are not independent in practice. A subgoal can reveal a witness, which is knowledge leakage. A supplied lemma can reveal the decomposition, which is structural support. Each view records exactly which facts and hints it exposes.
+
+With coordinates (knowledge demand, structure demand), the research plan defines three proposed paths: structure first, $(0,0) \to (0,1) \to (1,1)$; knowledge first, $(0,0) \to (1,0) \to (1,1)$; and joint, $(0,0) \to (1,1)$. These paths change both the order and the distribution of support conditions, so they are path comparisons, not order-only comparisons. None has run.
+
+\subsection{Learning signals}
+\label{sec:signals}
+
+\paragraph{Verified binary reward.} For a task with a frozen formal obligation, let $a$ be the object extracted from the response, such as a witness expression or a proof body. The reward is
+\begin{equation}
+r(x, a) =
+\begin{cases}
+1 & \text{if Lean accepts the unchanged obligation with } a, \\
+0 & \text{if Lean rejects } a \text{, or no valid object can be extracted}, \\
+\bot & \text{if the verifier infrastructure fails.}
+\end{cases}
+\label{eq:verified}
+\end{equation}
+A null reward $\bot$ is excluded from updates. It is never converted to $0$. Extraction failures receive a separate format status. An accepted witness certifies the submitted object. It does not certify the explanatory prose around it.
+
+\paragraph{RLP prediction reward.} Let $x$ be the prompt, $r$ the generated reasoning, and $y$ a hidden target span. Let $\ell_\theta(y \mid \cdot)$ be the mean teacher-forced log probability of $y$ under the policy, and $\ell_{\bar\theta}$ the same quantity under an exponential moving average (EMA) teacher. The reward is
+\begin{equation}
+R_{\mathrm{RLP}}(x, r, y) = \ell_\theta(y \mid x, r) - \ell_{\bar\theta}(y \mid x).
+\label{eq:rlp}
+\end{equation}
+This objective follows the information-gain reward of RLP~\cite{rlp}. Our task-conditioned adaptation is not a reproduction of the published experiments. The reward scores how much the reasoning raises the likelihood of the target. It does not score whether the reasoning is correct.
+
+\paragraph{Group-relative advantage.} For one prompt, the trainer samples $G$ responses $r_1, \dots, r_G$ with rewards $R_1, \dots, R_G$. The group-relative advantage is
+\begin{equation}
+A_j = \frac{R_j - \bar{R}}{s_R + \varepsilon}, \qquad \bar{R} = \frac{1}{G}\sum_{k=1}^{G} R_k,
+\label{eq:adv}
+\end{equation}
+where $s_R$ is the group standard deviation of the rewards and $\varepsilon > 0$ is a small constant~\cite{trl}. Two consequences follow from Equations~\eqref{eq:rlp} and~\eqref{eq:adv}.
+
+First, the teacher term cancels. Within a group, $\ell_{\bar\theta}(y \mid x)$ is the same for every response, so
+\begin{equation}
+R_j - \bar{R} = \ell_\theta(y \mid x, r_j) - \frac{1}{G}\sum_{k=1}^{G} \ell_\theta(y \mid x, r_k).
+\end{equation}
+The standard deviation $s_R$ is also unchanged by a common shift. Therefore the EMA teacher does not act as a penalty that keeps the policy near its start. The runner used no KL reference penalty in the RLP studies.
+
+Second, a group without reward variation gives no learning signal. If $R_1 = \dots = R_G$, then $A_j = 0$ for every $j$. Without a reference penalty, the policy-gradient term for that group is zero. With the binary reward of Equation~\eqref{eq:verified}, a group of all failures is such a group. For a binary reward with success probability $p$ per sample, the probability that a group has variation is
+\begin{equation}
+P_{\mathrm{mix}}(p, G) = 1 - p^{G} - (1-p)^{G}.
+\label{eq:pmix}
+\end{equation}
+With $G = 4$, $P_{\mathrm{mix}} = 0.185$ at $p = 0.05$ and $0.875$ at $p = 0.5$.
+
+\paragraph{Readiness gate.} Before any optimizer update, sample the unchanged policy on the frozen training pool. Let $\mathcal{G}$ be the set of sampled groups. Define the mixed-group fraction
+\begin{equation}
+\phi_{\mathrm{mix}} = \frac{\left|\{\, g \in \mathcal{G} : \text{group } g \text{ contains both accepted and rejected responses} \,\}\right|}{|\mathcal{G}|}.
+\end{equation}
+A run proceeds only if $\phi_{\mathrm{mix}} > 0$ across more than one task family. Report the entire pool, including unsolved tasks. Do not select a favorable subset and call it readiness.
+
+\subsection{Curriculum formalism}
+\label{sec:curriculum}
+A curriculum experiment has the following parts.
+\begin{enumerate}
+\item A concept graph $\mathcal{C} = (V, D)$. The nodes $V$ are concepts, and an edge $(u, w) \in D$ states that $u$ is a prerequisite of $w$. Each edge records its provenance: authored, reviewed, annotation-derived, or Lean-checked.
+\item A pool of items. Each item has an identifier, its concepts, a split, a task type, and a success check.
+\item An ordered list of support levels $s_1 \succ s_2 \succ \dots \succ s_L$, from most to least support.
+\item A presentation multiset $\Pset = \{\, (e,\ v,\ j) \,\}$, where $e$ is an example, $v$ is a view, and $j$ is a repeat index. A repeat with $j > 0$ is a replay.
+\item An arm $a$, defined by an order function $\sigma_a$ that maps $\Pset$ to a sequence.
+\item A fading rule. It is either a fixed schedule, or a rule that lowers support only when curriculum validation passes a declared threshold. All arms share the rule.
+\item The readiness gate of Section~\ref{sec:signals}.
+\item Endpoints. Each endpoint states its measure, its denominator, its phase, and its artifact.
+\end{enumerate}
+
+An order-only study compares a treatment arm with a control arm. It must satisfy these invariants:
+\begin{enumerate}
+\item Both arms consume the same multiset $\Pset$, including replay occurrences.
+\item Both arms start from the same checkpoint, with the same reward, optimizer, precision, and resource caps.
+\item Training, curriculum-validation, and final-evaluation items stay in separate splits. All views and paraphrases of an example family stay in its split.
+\item No final-evaluation item enters training, prompts, retrieval, or adaptive sampling.
+\item A study that changes the distribution of support conditions is a path comparison, not an order-only comparison.
+\end{enumerate}
+
+The experiments used two controls. A per-pass permutation shuffles the order inside each pass over the pool, so membership per pass is identical between arms. A global permutation shuffles the whole sequence $\Pset$ with a fixed seed, so only the total multiset is identical; a presentation without support can then come before the same example with full support. These controls test different hypotheses, and a study must name which one it uses.
+
+\subsection{Evaluation formalism}
+\label{sec:evaluation}
+Knowledge acquisition means improved recall and application of exposed facts on fresh tasks, without those facts supplied at evaluation. Operator learning means improved valid transformations when the required mathematics is supplied. Proof composition means valid combinations of these transformations on unfamiliar dependencies. Delayed retention tests acquisition after intervening updates on other material.
+
+Let $C$ be the set of concept families, and let $n_c$ be the number of unassisted application items for concept $c$. The primary score of the controlled study is the concept-macro full correctness
+\begin{equation}
+F = \frac{1}{|C|} \sum_{c \in C} \frac{1}{n_c} \sum_{i=1}^{n_c} \mathrm{full\_correct}[c, i].
+\label{eq:primary}
+\end{equation}
+Unknown grades count as failures in this conservative score, and their frequency is reported. Truncated responses stay in the denominators. The treatment effect of an order study is $\Delta = F_{\mathrm{ordered}} - F_{\mathrm{shuffled}}$, reported with each arm's change from the unchanged checkpoint. The interval for $F$ uses a paired concept-cluster percentile bootstrap with 10{,}000 draws and seed 20261006. This interval describes the authored corpus, not variation across training seeds.
+
+The decision rules are fixed in advance. The exploratory progression threshold is a concept-macro gain of 0.10; it is not a power calculation. Delayed retention requires a nonzero success count before the interlude and zero lost successes after it. Checkpoint selection maximizes $F$ on curriculum validation among checkpoints that satisfy retention, with ties to the earliest. Final-test results cannot change the selection, and the RLP reward alone cannot select a checkpoint.
+
+Each graded response returns \code{fact\_correct}, \code{conditions\_correct}, \code{operations\_correct}, \code{conclusion\_correct}, \code{core\_score}, \code{full\_correct}, \code{first\_error\_step}, \code{error\_category}, \code{uncertain}, \code{reason}, and \code{evidence}. Graders accept valid alternative methods and conventional notation. They cannot supply a missing central lemma or repair an invalid central argument. A correct conclusion reached through invalid reasoning fails full correctness.
+
+\section{Data and capability baselines}
+\label{sec:baselines}
+
+\subsection{\expref{1}: LeanDojo subset and number-theory pool}
+\paragraph{Question.} Which Lean theorems can serve as training, curriculum-validation, and held-out items, without overlap between splits?
+
+\paragraph{Method.} We filtered LeanDojo Benchmark~4~\cite{leandojo} to declared arithmetic and number-theory source files and kept the official \code{random} split membership. The filter excluded declarations with listed types or ambiguous proof syntax. It removed training declarations whose normalized statements overlap validation or test statements, and training declarations that reference a validation or test theorem. Evaluation exports keep headers, imports, and source locations, and omit proofs. A broader pool used the same curator with logic, sets, functions, relations, integer arithmetic, and more number-theory families.
+
+\paragraph{Result.} Table~\ref{tab:data} gives the counts. The Nat training split has 447 theorems with tactic traces and 1,312 tactic records. The broader training pool has 1,350 theorems with traces and 5,233 tactic records, and 1,402 annotated references between training theorems.
+
+\begin{table}[h]
+\centering
+\small
+\caption{\expref{1}: theorem counts per split.}
+\label{tab:data}
+\begin{tabular}{@{}lrrr@{}}
+\toprule
+Export & Training & Curriculum validation & Held-out test \\
+\midrule
+Nat subset: selected before the declaration filter & 810 & 18 & 15 \\
+Nat subset: retained & 706 & 17 & 15 \\
+Broader pool: candidates & 2,764 & 43 & 38 \\
+Broader pool: retained & 2,658 & 43 & 38 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Limits.} Text-overlap checks do not establish semantic independence, and the official random split shares source files and theorem families across splits. The LeanDojo authors report that random splits overestimate performance because models can memorize proofs of similar theorems~\cite{leandojo}. Lean has not replayed these proofs at the pinned version. Fifteen test theorems give a resolution of 6.7 percentage points per theorem. Model pretraining exposure to mathlib is unknown.
+
+\subsection{\expref{2}: Base-model math probe and GSM8K LoRA}
+\paragraph{Question.} What informal mathematics does the base model solve, and does a small supervised adaptation change it?
+
+\paragraph{Method.} The probe used \code{Qwen/Qwen2.5-0.5B} (base, revision \code{060db649}) through MLX-LM on a laptop, with four-shot prompts and a 512-token cap. It sampled 24 GSM8K and 20 MATH number-theory test questions. Math-Verify scored boxed answers. A LoRA adapter was then trained on 64 separate GSM8K training questions for 32 optimizer updates, with 11,471 teacher-forced tokens.
+
+\paragraph{Result.} Table~\ref{tab:probe} gives the counts. Full-text validation loss on 16 questions fell from 0.701403 to 0.514280, but final-answer accuracy did not improve.
+
+\begin{table}[h]
+\centering
+\small
+\caption{\expref{2}: correct final answers. The constant-zero column is a baseline added after the run.}
+\label{tab:probe}
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+Metric & Base & After LoRA & Constant zero & Questions \\
+\midrule
+GSM8K & 9 & 8 & 0 & 24 \\
+MATH number theory & 3 & 3 & 1 & 20 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Limits.} These are single-seed sample counts, not benchmark scores. A correct final answer does not establish a correct derivation. The probe used the base model, so it is not the baseline for the Instruct experiments.
+
+\subsection{\expref{3}: Instruct proof check}
+\paragraph{Question.} Does the unchanged Instruct model write proofs that Lean accepts?
+
+\paragraph{Method.} The local check gave each of 21 formal goals (17 curriculum-validation theorems and 4 elementary goals) one greedy attempt and two sampled attempts, with a 512-token cap and the chat template. It also asked for 8 informal proofs. A second run on an L40S GPU on 3 October sampled the same 21 goals greedily and at temperatures 0.3, 0.6, and 0.9, with four samples per goal at each temperature. Four earlier launches of the GPU run failed during setup, before any generation.
+
+\paragraph{Result.} Table~\ref{tab:instruct} gives the counts. Two AI reviewers judged 1 of the 8 informal proofs sound and complete, 2 as a valid core with false explanations, and 5 as invalid or incomplete. Section~\ref{sec:posthoc} classifies the 63 failed local attempts.
+
+\begin{table}[h]
+\centering
+\small
+\caption{\expref{3}: whole-proof attempts by the unchanged Instruct model on 21 goals.}
+\label{tab:instruct}
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+Run & Attempts & Accepted & At token cap & Generated tokens \\
+\midrule
+Local, recounted & 63 & 0 & 23 & 17,326 \\
+GPU, greedy & 21 & 0 & 7 & 6,569 \\
+GPU, temperature 0.3 & 84 & 0 & 18 & 23,233 \\
+GPU, temperature 0.6 & 84 & 0 & 13 & 19,999 \\
+GPU, temperature 0.9 & 84 & 0 & 11 & 16,563 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Limits.} The GPU counts come from the TensorBoard export of the streamed run records on cpu-angad. The independent final recount of that run was never done. This diagnostic establishes failure under these prompts and budgets. It does not establish a capability ceiling.
+
+\section{Proof RL with a terminal Lean reward}
+\label{sec:proofrl}
+
+Table~\ref{tab:curriculum} describes the curriculum designs of Experiments~4 to 6, 7, 9, and 13 in the terms of Section~\ref{sec:curriculum}. Experiments~4 to 6 used GRPO with the binary reward of Equation~\eqref{eq:verified}, TRL 0.24.0, full-parameter training, learning rate $10^{-6}$, four samples per group, and no KL penalty. Appendix~\ref{app:hyper} lists the settings.
+
+\begin{table}[p]
+\centering
+\small
+\caption{Curriculum designs, 3 to 6 October 2026. ``Not tested'' means that the study produced no scored contrast between arms.}
+\label{tab:curriculum}
+\begin{tabularx}{\textwidth}{@{}P{2.3cm}YYYY@{}}
+\toprule
+Experiment & Order rule & Support schedule & Control & Outcome for the order contrast \\
+\midrule
+4. Whole-proof GRPO & Source-file family rank & None & Per-pass permutation & Not tested. No group had reward variation \\
+\addlinespace
+5. Prerequisite GRPO & Four authored stages: logic, arithmetic, divisibility, induction & Fixed: lemma statements, then lemma names, then none & Per-pass permutation & Not tested. Readiness accepted $0/64$ proofs in each of three support conditions. GRPO skipped \\
+\addlinespace
+5. Syntax retry & Same as above & Same, with generic Lean~4 syntax templates in full support & Per-pass permutation & Not tested. Readiness accepted $0/64$ proofs. GRPO skipped \\
+\addlinespace
+6. Assisted completion & Prerequisite rank & Fades on validation: missing expression, missing tactic, missing body & Per-pass permutation & Not tested. One theorem qualified, so both arms had the same order \\
+\addlinespace
+7. RLP continuation & Primitive and proof-structure text first, then textbook contexts & Built into the text & None & No contrast possible \\
+\addlinespace
+9. Primitive RLP & Four stages with dependencies; replay drawn from earlier stages & Definitions supplied in training only & None & No contrast possible \\
+\addlinespace
+13. Controlled RLP & Support level: full, partial, recognition, recall, independent & The order is the fading schedule & Global permutation, same multiset & Ordered arm scored. Shuffled arm not scored \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{\expref{4}: Whole-proof GRPO}
+\paragraph{Question.} Does GRPO with a terminal Lean reward improve whole-proof generation, and does source-family order beat random order?
+
+\paragraph{Method.} Two arms reloaded the same Instruct checkpoint and saw identical theorem occurrences, in random order or in source-family order. Prompts used training headers without gold traces. The completion cap was 256 tokens. Two GPU launches failed before the completed run. The first failed on a relative checker path. In the second, the curriculum arm aborted during an optimizer save. Three CPU preparation attempts also failed. All failed records are preserved.
+
+\paragraph{Result.} Each arm completed 32 optimizer steps and 128 training rollouts. No training proof was accepted. No sampled group had reward variation, and the recorded gradient norms stayed at zero. The unchanged policy and both final policies each solved 0 of 8 diagnostic validation theorems, with 0 of 32 attempts accepted. The worker generated 39,452 tokens.
+
+\paragraph{Interpretation.} This is the zero-variance case of Equation~\eqref{eq:adv}. The optimizer steps carried no learning signal, so the run says nothing about curriculum order.
+
+\subsection{\expref{5}: Prerequisite curriculum GRPO and the syntax retry}
+\paragraph{Question.} Do authored prerequisite tasks with decreasing support give the model enough successes to train on?
+
+\paragraph{Method.} We wrote four stages of tasks: logic, arithmetic, divisibility, and induction. Before any update, a readiness check sampled the unchanged policy on 16 training theorems in each support condition, with four samples per theorem. The conditions were lemma statements with definitions and guidance, lemma names only, and no task-specific help. A retry added generic Lean~4 tactic templates to the full-support condition.
+
+\paragraph{Result.} Each of the four conditions accepted 0 of 64 sampled proofs. The combined readiness record counts 256 sampled proofs and no accepted proof. No group had reward variation, so the runner skipped GRPO. The original readiness worker generated 30,027 tokens and made 218 physical Lean calls. The failures include whole declarations where a tactic body was requested, obsolete Lean syntax, unknown symbols, and unfinished goals.
+
+\subsection{\expref{6}: Assisted proof completion}
+\paragraph{Question.} If the model receives most of a training proof, does it complete the rest, and does that create a learning signal?
+
+\paragraph{Method.} Training theorems came with completion forms: a missing expression, a missing final tactic, or a missing body. Evaluation statements had no prefixes. A frozen probe compared four prompt conditions on the same 16 training theorems. A theorem qualified for training when one condition gave both accepted and rejected proofs. Assistance was to fade only when both arms solved enough unassisted validation theorems. CPU replay accepted all 24 reference proofs.
+
+\paragraph{Result.} Table~\ref{tab:completion} gives the counts. Only \code{PrereqRL.train\_twice\_divisible} qualified, so both arms trained on one theorem in the same order. Each arm ran three optimizer steps, with two mixed-reward groups that gave nonzero gradient norms. Every unassisted validation round accepted 0 of 16 attempts, so assistance never decreased. The worker generated 48,913 tokens over 440 rollout attempts and made 465 physical Lean calls.
+
+\begin{table}[h]
+\centering
+\small
+\caption{\expref{6}: accepted completions, generated continuation tokens, and physical Lean calls.}
+\label{tab:completion}
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+Phase & Accepted / rollouts & Theorems & Tokens & Lean calls \\
+\midrule
+Frozen, existing prompt & 0 / 64 & 16 & 7,336 & 63 \\
+Frozen, prefilled code block & 0 / 64 & 16 & 7,716 & 64 \\
+Frozen, missing expression & 2 / 64 & 16 & 3,034 & 64 \\
+Frozen, missing tactic & 0 / 64 & 16 & 7,539 & 64 \\
+Random arm, training & 10 / 12 & 1 & 449 & 12 \\
+Prerequisite arm, training & 10 / 12 & 1 & 393 & 12 \\
+Unassisted held-out, baseline & 0 / 16 & 4 & 2,960 & 16 \\
+Unassisted held-out, random final & 0 / 16 & 4 & 3,091 & 16 \\
+Unassisted held-out, prerequisite final & 0 / 16 & 4 & 2,838 & 16 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Interpretation.} Assistance created mixed rewards and real gradients. The accepted completions filled in \code{ih} after a supplied \code{simpa [twice] using}. The model completed a given proof; it did not find a proof strategy. One qualifying theorem cannot identify an ordering effect.
+
+\section{Knowledge acquisition with the RLP reward}
+\label{sec:rlp}
+
+Experiments~7, 8, 9, and 13 trained with the RLP reward of Equation~\eqref{eq:rlp} through the TRL GRPO trainer, with learning rate $10^{-6}$, EMA teacher decay 0.999, and no KL penalty. Experiment~12 audited the training data of \expref{9}. No experiment in this section used a Lean reward.
+
+\subsection{\expref{7}: RLP training and primitive-first continuation}
+\paragraph{Question.} Does RLP training on number-theory text improve number-theory answers?
+
+\paragraph{Method.} The first stage trained the Instruct model on chapters of an openly licensed algebra textbook (Judson, AATA), with four samples per group, a 128-token completion cap, and a 256-token context. The continuation loaded that policy and its teacher, and trained on project-authored text about primitives, witnesses, induction, contradiction, and primes, placed before the textbook contexts. Continuation evaluations supplied an answer-format prefix.
+
+\paragraph{Result.} The first stage ran 256 optimizer steps over 1,024 rollouts and generated 117,972 training tokens. Its arithmetic evaluation accepted 0 of 32 answers before and after training, and all 32 answers lacked a parseable boxed answer both times. The continuation generated 127,389 training tokens, for 245,361 across both stages. Held-out arithmetic and prime questions scored 11/48 before and after. Prime curriculum validation scored 7/16 before, after, and at every intermediate evaluation. The final policy is saved in S3 under \code{number\_theory\_rlp\_20261004\_continuation/}.
+
+\subsection{\expref{8}: Precision audit and FP32 rerun}
+\paragraph{Question.} Did the continuation update the weights at all?
+
+\paragraph{Method.} A CPU audit compared every stored parameter of the continuation with its parent, inspected the optimizer state, and ran controlled AdamW updates on the saved weights. A rerun then repeated the continuation from the same parent, teacher, data, seed, and limits, with FP32 parameters and optimizer moments and BF16 computation. Precision was the only intervention.
+
+\paragraph{Result.} Only 8,557,971 of 494,032,768 parameter entries changed in the continuation. The saved optimizer moments were BF16, with no FP32 master weights. On identical saved weights with constant nonzero gradients, a BF16 control changed 660 of 65,536 entries, while the FP32 control changed every sampled entry. Both zero-gradient controls left the weights unchanged. In the FP32 rerun, the first update changed sampled weights with FP32 moments. Held-out accuracy stayed at 11/48, and validation went from 7/16 to 6/16. The rerun generated 125,411 training tokens.
+
+\paragraph{Interpretation.} The controls show that BF16 rounding discarded small updates in the original setup. The rerun shows that working updates still gave no accuracy gain. The audit does not measure how much the rounding loss contributed to the original null result.
+
+\subsection{\expref{9}: Primitive RLP curriculum}
+\paragraph{Question.} Does RLP on authored primitive tasks, presented in dependency order, improve unassisted answers?
+
+\paragraph{Method.} The run started from the original Instruct model, not from \expref{7}. It trained on 448 unique authored tasks, from witnesses and substitution through gcd, Bézout coefficients, inverses, primes, and congruences. Replay of earlier tasks expanded them to 596 presentations, one per optimizer step, with eight samples per group and a 512-token response limit. Training prompts supplied definitions. The reward scored a hidden integer target span after the scorer appended a boxed-answer prefix. Evaluation removed the definitions and required the model to write the answer. Curriculum validation had 56 items and the held-out set had 108.
+
+\paragraph{Result.} Table~\ref{tab:primitive} gives the held-out counts. Validation scored 16/56 at the start, 25/56 at the first saved checkpoint (\code{checkpoint-118}), and 13/56 at the end. Between start and end, 28 held-out answers were lost and 7 were gained. Over the same run, the mean reasoned log probability of the target rose from $-3.891959$ to $-2.059282$ at 14 fixed positions. The run generated 1,626,779 training tokens over 4,768 training responses.
+
+\begin{table}[h]
+\centering
+\small
+\caption{\expref{9}: unassisted held-out answers, 108 items.}
+\label{tab:primitive}
+\begin{tabular}{@{}lrr@{}}
+\toprule
+Metric & Start & End \\
+\midrule
+Correct boxed integer & 42 & 21 \\
+No parseable integer & 17 & 69 \\
+Reached the generation limit & 15 & 36 \\
+Contains a code fence & 0 & 27 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Interpretation.} The prediction reward and the correctness score moved in opposite directions. Among 4,768 training responses, 17 incorrect boxed answers received a positive advantage, and a wrong boxed answer outranked every correct one in 2 of 66 mixed groups. So the reward did not consistently prefer wrong answers, but it did not certify correct ones. Training scored a supplied answer prefix, while evaluation required the model to write it. This mismatch is a possible explanation for the decline. No ablation isolated it, and reward choice, optimization, and training length were also not isolated. The early validation peak made \code{checkpoint-118} a candidate starting point, and the team later selected it. Those validation scores come from repeated measurements on the same items, so they are not held-out evidence.
+
+\subsection{\expref{12}: Audit of the primitive RLP corpus}
+\paragraph{Question.} Were the training targets of \expref{9} mathematically correct, and could shortcuts solve them?
+
+\paragraph{Method.} A CPU script recomputed every numeric answer independently of the original preparer. A separate AI-assisted review checked the supplied rules against the source. Constant-answer baselines tested for shortcuts. The audit ran no model, no GPU, and no Lean.
+
+\paragraph{Result.} All 612 unique numeric targets were correct. Table~\ref{tab:corpus} gives the review of supplied rules. A constant answer solved every contradiction item: 4 of 4 in validation and 6 of 6 in the held-out set. A constant prime-factor answer scored 4 of 4 in validation and 3 of 6 in the held-out set. Replay changed exposure: witness tasks had 73 presentations and induction tasks had 32, from equal unique counts.
+
+\begin{table}[h]
+\centering
+\small
+\caption{\expref{12}: admission of supplied rules for future reuse.}
+\label{tab:corpus}
+\begin{tabular}{@{}lrl@{}}
+\toprule
+Split & Unique records & Rule review \\
+\midrule
+Training & 448 & 288 reviewed; 160 disputed \\
+Curriculum validation & 56 & 36 reviewed; 20 disputed \\
+Held-out & 108 & 54 reviewed; 30 disputed; 24 admitted by exact check \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Interpretation.} The disputed rules state remainder, gcd, Bézout, inverse, or cancellation facts without domain or zero conditions. For example, a modular inverse needs $\gcd(a, n) = 1$. Their concrete answers are correct, so the dispute concerns reuse of the rules, not the historical arithmetic. Some task types had shortcuts and cannot distinguish the intended skill.
+
+\subsection{\expref{13}: Controlled RLP, ordered arm}
+\paragraph{Question.} Does fading support in a fixed order beat the same presentations in shuffled order?
+
+\paragraph{Method.} Both arms continue from \code{checkpoint-118}. The study has 72 training instances, 18 curriculum-validation instances, and 29 final-test instances. Each instance has five views: full information, partial information, recognition alternatives, domain-cued recall, and an independent problem. Each arm receives the same 432 presentations, including replay. The ordered arm runs from full support to none; the control is a global permutation. Graders scored a five-phase evaluation on the 18 independent-use validation items. Before training, the unchanged checkpoint fully solved 1 of 18 independent-use items and 3 of 18 items with facts and method supplied, for a concept-macro score $F = 0.03125$. On 24 authored controls, each grader made no false acceptance and no false rejection.
+
+\paragraph{Result.} The ordered arm completed 432 optimizer steps and generated 2,794,874 training tokens. Its first update changed 68,032 of 68,096 sampled parameters. Table~\ref{tab:ordered} gives its phase results. From the initial to the final phase, 4 items improved in core score, 6 worsened, and 8 stayed the same. No item became fully correct.
+
+\begin{table}[h]
+\centering
+\small
+\caption{\expref{13}: ordered arm, 18 validation items per phase. The core score is ordinal partial credit from 0 to 3.}
+\label{tab:ordered}
+\begin{tabular}{@{}lrrr@{}}
+\toprule
+Phase & Mean core score & Fully correct & At the 1{,}024-token cap \\
+\midrule
+Initial & 0.89 & 0/18 & 0/18 \\
+500{,}000-token checkpoint & 0.89 & 0/18 & 2/18 \\
+1{,}000{,}000-token checkpoint & 1.33 & 0/18 & 6/18 \\
+2{,}000{,}000-token checkpoint & 1.17 & 0/18 & 17/18 \\
+Final & 0.72 & 0/18 & 7/18 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Limits.} The shuffled arm has responses but no scores, so the order contrast $\Delta$ is unmeasured. The 2,000,000-token phase reached the cap on 17 of 18 answers, so its partial-credit score is censored. In this design, order and support level are the same variable: the contrast tests fading support over time against mixed support, not order between concepts. The first second-review file failed evidence alignment and was excluded; a fresh review and blinded adjudication replaced it.
+
+\section{Evaluations of saved checkpoints (\expref{10})}
+\label{sec:evals}
+
+\paragraph{Question.} Did the RLP checkpoints of \expref{9} acquire knowledge that the original model lacks?
+
+\paragraph{Method.} Three evaluations compared the original Instruct model, early RLP (\code{checkpoint-118}), and final RLP on cpu-angad, with matched FP32 inference and greedy decoding. No training occurred. All grades are blinded AI judgments with adjudication.
+
+\subsection{Content probe}
+Table~\ref{tab:content} gives the counts. A constant option label scores 6 of 24 on recognition, and a constant application answer of one scores 4 of 12. Two reviewers agreed on 71 of 72 responses. Final RLP reached the response limit on 12 of 12 recall answers and 11 of 12 application answers. Graders marked 7 of its 12 application answers unassessable, so its zero applications do not show erased knowledge.
+
+\begin{table}[h]
+\centering
+\small
+\caption{\expref{10}, content probe: correct responses.}
+\label{tab:content}
+\begin{tabular}{@{}lrrr@{}}
+\toprule
+Task & Original & Early RLP & Final RLP \\
+\midrule
+Concept recognition, repeated option orders & 19/24 & 19/24 & 17/24 \\
+Definition and theorem recall & 3/12 & 4/12 & 3/12 \\
+Elementary application, content review & 3/12 & 4/12 & 0/12 \\
+Elementary application, strict integer parsing & 3/12 & 3/12 & 0/12 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Acquisition, proof semantics, and proof strategy}
+Table~\ref{tab:decomp} gives complete core answers under a revised rubric, with a 1,024-token response limit. The original model completed 4 of 24 acquisition tasks, and each RLP checkpoint completed 2 of 24. Final RLP generated 63,735 tokens and reached the cap on 26 of 80 main responses. The original generated 40,123 tokens with 2 of 80 at the cap, and early RLP generated 32,975 tokens with 0 of 80. The two independent reviews disagreed on 44 of 321 response views, including the notation check. The rubric was revised after the original responses and strict grades were inspected, so this is post hoc exploratory regrading.
+
+\begin{table}[h]
+\centering
+\small
+\caption{\expref{10}, decomposition evaluation: complete core answers.}
+\label{tab:decomp}
+\begin{tabular}{@{}lrrr@{}}
+\toprule
+Task family & Original & Early RLP & Final RLP \\
+\midrule
+Definition and theorem recall & 1/12 & 0/12 & 1/12 \\
+Explained application & 3/12 & 2/12 & 1/12 \\
+Proof-step checking & 2/12 & 0/12 & 1/12 \\
+Complete proof, unaided & 2/12 & 0/12 & 1/12 \\
+Same proof, supplied facts & 4/12 & 0/12 & 3/12 \\
+Same proof, facts and plan & 3/12 & 0/12 & 2/12 \\
+ProcessBench selected subset & 0/4 & 0/4 & 0/4 \\
+ProofNet-Verified selected subset & 0/4 & 0/4 & 0/4 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Knowledge inventory and Lean witness controls}
+Table~\ref{tab:inventory} compares the original model with early RLP. Early RLP doubled explained recognition, from 7 of 32 to 14 of 32 complete core answers, but did not improve supplied or independent use. The original reached the cap on 2 of 80 responses and early RLP on 0 of 80. Recognition repeats the same questions with rotated options, so its presentations are not independent concepts.
+
+A Lean adapter for submitted witnesses passed 16 of 16 controls: it accepted every correct witness and rejected every incorrect one. All 4 direct early-model responses failed the expression-only parser. The parser failed on the answer format; one response still contained a valid boxed witness.
+
+\begin{table}[h]
+\centering
+\small
+\caption{\expref{10}, knowledge inventory: complete core answers and fully correct answers.}
+\label{tab:inventory}
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+& \multicolumn{2}{c}{Complete core} & \multicolumn{2}{c}{Fully correct} \\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}
+Task & Original & Early RLP & Original & Early RLP \\
+\midrule
+Recall & 2/16 & 1/16 & 0/16 & 0/16 \\
+Explained recognition & 7/32 & 14/32 & 4/32 & 8/32 \\
+Supplied use & 4/16 & 4/16 & 1/16 & 2/16 \\
+Independent use & 3/16 & 3/16 & 2/16 & 1/16 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Interpretation.} Early RLP improved recognition only. It did not improve supplied or independent use. Final RLP lost complete answers, and truncation confounds that loss. We wrote these probes after analyzing earlier failures, so they serve as development checks and cannot serve as fresh held-out tests.
+
+\section{RL with a Lean-verified local reward (\expref{11})}
+\label{sec:localaction}
+
+\paragraph{Question.} Does a Lean-verified reward teach the model a small proof step when the mathematics is supplied?
+
+\paragraph{Method.} Each task supplied equalities and asked for a witness. For example, given $b = ak$ and $c = bl$, the model must submit $k l$ so that $c = a(kl)$. Lean checked the witness in an immutable obligation, and the reward followed Equation~\eqref{eq:verified}. GRPO ran 64 optimizer steps from \code{checkpoint-118}, with eight samples per group, a 1,024-token cap, FP32 optimizer moments, and a KL coefficient of 0.02. Checkpoint selection used the strict validation score with earliest ties, and selected step 64. Lean gave no feedback during generation.
+
+\paragraph{Result.} Table~\ref{tab:operator} gives the counts. The GPU run generated 135,822 tokens and made 346 physical Lean calls. With the CPU development samples, the totals are 145,873 tokens and 408 Lean calls.
+
+\begin{table}[h]
+\centering
+\small
+\caption{\expref{11}: unchanged \code{checkpoint-118} against the selected checkpoint.}
+\label{tab:operator}
+\begin{tabular}{@{}lrr@{}}
+\toprule
+Endpoint & Unchanged & Selected \\
+\midrule
+Validation: strict extraction and Lean acceptance & 0/8 & 6/8 \\
+Validation: correct witness, content review & 0/8 & 7/8 \\
+Validation: no substantive mathematical error & 0/8 & 2/8 \\
+Held-out composition: strict extraction and Lean acceptance & 0/4 & 2/4 \\
+Held-out composition: correct witness, content review & 1/4 & 2/4 \\
+Held-out composition: no substantive mathematical error & 0/4 & 0/4 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Interpretation.} The content review shows that the gain includes corrected mathematics as well as formatting. Lean checked only the witness. Several valid witnesses came with explanations that divide by a quantity that can be zero. The trained model still dropped factors on harder compositions. With 8 validation and 4 held-out items, the evidence supports a narrow result about executing one supplied operation. It is too small for a claim about reliability. The content review saw checkpoint labels, so it is not blinded.
+
+\section{Post hoc analyses, 8 October 2026}
+\label{sec:posthoc}
+
+\subsection{Why the Instruct proof attempts failed}
+\paragraph{Question.} Did the 63 local attempts of \expref{3} fail on the mathematics or on the Lean language?
+
+\paragraph{Method.} \code{scripts/audit/classify\_proof\_failures.py} reads the saved Lean output of each attempt and assigns one exclusive class. It runs no model and no Lean.
+
+\paragraph{Result.} Table~\ref{tab:failures} gives the classes. No attempt reached the point where Lean checks the mathematics. Of the 60 attempts that Lean checked, 44 placed \code{import} lines inside the proof and 23 contained stray Markdown backticks. Of all 63, 34 wrote a new \code{theorem}, \code{lemma}, or \code{example} declaration when only a proof body was requested. A pattern match finds Lean~3 syntax, such as \code{begin} \ldots{} \code{end} or \code{import data.nat}, in 33 of 63. We checked 6 of those matches by hand, and all 6 were Lean~3. Lean reported no unknown-identifier error, because parsing failed before elaboration, so invented lemma names were never checked.
+
+\begin{table}[h]
+\centering
+\small
+\caption{Classes of the 63 failed local attempts of \expref{3}.}
+\label{tab:failures}
+\begin{tabular}{@{}lr@{}}
+\toprule
+Class & Attempts \\
+\midrule
+Parse or file-structure error & 57 \\
+Empty proof (the response was only \code{by}) & 3 \\
+Forbidden construct (\code{sorry}) & 3 \\
+Well-formed Lean that failed only on the mathematics & 0 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Interpretation.} The first barrier is the Lean~4 language and the file format, before any mathematics. A prefilled code block did not remove it: in \expref{6}, that condition accepted 0 of 64. The analysis covers one prompt, the unchanged model, and 21 goals. The 256 attempts of \expref{5} are on cpu-angad and were not reclassified.
+
+\subsection{Material for a proof-state curriculum}
+\paragraph{Question.} How many starting points for a curriculum that starts near the end of a known proof do the training proofs contain?
+
+\paragraph{Method.} \code{scripts/audit/curriculum\_inventory.py} reads the traced training proofs. It counts a proof as linear when each tactic's resulting state equals the next tactic's starting state and the last state has no goals. A linear proof with $n$ tactics gives $n-1$ starting points with at least one reference tactic supplied. The script reads training proofs only, because evaluation records carry no proofs.
+
+\paragraph{Result.} Table~\ref{tab:inventory_curr} gives the counts. In the broader pool, 85\% of the linear proofs have one or two tactics, and only 24 have five or more. The 490 nested tactic proofs have a median of five tactics. No validation or test theorem appears as a premise in a training proof.
+
+\begin{table}[h]
+\centering
+\small
+\caption{Proof structure of the training exports of \expref{1}.}
+\label{tab:inventory_curr}
+\begin{tabular}{@{}lrr@{}}
+\toprule
+Count & Nat subset & Broader pool \\
+\midrule
+Training theorems & 706 & 2,658 \\
+Term-mode proofs, no tactics & 259 & 1,308 \\
+Linear tactic proofs & 295 & 860 \\
+\quad of which one tactic & 200 & 485 \\
+\quad of which five or more tactics & 5 & 24 \\
+Nested tactic proofs & 152 & 490 \\
+Starting points with a supplied prefix & 150 & 600 \\
+References between training theorems & 344 & 1,402 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Limits.} The linearity test compares state strings, and Lean has not replayed the proofs. Without cutting the nested proofs, most theorems allow at most two curriculum levels. The references are annotations, not kernel-checked dependencies.
+
+\section{What the record shows}
+\label{sec:findings}
+
+\paragraph{The cold start blocked every terminal-reward study.} Equation~\eqref{eq:adv} gives zero advantage to a group of all failures, and Equation~\eqref{eq:pmix} shows how fast such groups dominate as the success rate falls. Experiments~4 and~5 had no successes. \expref{6} created successes only with most of the proof supplied. Section~\ref{sec:posthoc} shows that the unchanged model did not produce well-formed Lean~4, so the barrier came before the mathematics.
+
+\paragraph{A verified reward works on a task the model can sometimes solve.} \expref{11} narrowed the task to one supplied local operation. Groups then had variation, and validation accuracy rose from 0/8 to 6/8. The explanations around correct witnesses often stayed wrong, so the reward certified the submitted object only.
+
+\paragraph{The prediction reward does not track correctness.} In \expref{9} the reasoned target likelihood rose while held-out accuracy halved. In the preparation of \expref{13}, a deliberately false reasoning prefix raised the target likelihood in both inspected examples. RLP gave no accuracy gain in Experiments~7, 8, 9, or 13.
+
+\paragraph{No curriculum comparison has a result.} Three studies had no reward variation, one selected a single task, two had no control arm, and one has an unscored control. Every prerequisite edge so far was authored by the team or derived from annotations. No experiment tested whether a prerequisite helps a later concept.
+
+\paragraph{Grading without a checker is noisy.} AI reviewers disagreed on 44 of 321 views in \expref{10}, and the primitive RLP corpus contained shortcut tasks (\expref{12}). This motivates Lean-checked endpoints where they exist.
+
+\subsection{Threats to validity}
+\begin{itemize}
+\item Samples are small. Validation sets have 8 to 56 items, the Nat test split has 15 theorems, and the false-prefix result rests on 2 examples.
+\item Each run used one training seed, so no result has a seed-to-seed interval.
+\item Several evaluation sets were reused across experiments and became development material.
+\item Pretraining exposure of the model to mathlib and to the authored concepts is unknown.
+\item No run measured GPU-active time, so cost comparisons use tokens and Lean calls only.
+\item The GPU sampling counts of \expref{3} come from an exported monitoring stream. Nobody recounted them independently.
+\end{itemize}
+
+\section{Proposed next study (not run)}
+\label{sec:proposed}
+This section states a plan. Nothing in it has run, and its predictions are declared before any data.
+
+\paragraph{Question.} Under a fixed Lean-call budget, which gives more held-out Lean proofs for a 0.5B model: a curriculum that keeps the success rate near one half, or a reward that credits individual tactics?
+
+\paragraph{Stages.} The plan has four stages:
+\begin{enumerate}
+\item Supervised training on Lean~4 proofs at the pinned version, so that the model writes well-formed Lean. The parse rate and the elaboration rate on held-out statements decide when this stage ends.
+\item Expert iteration: sample proofs on fixed statements, keep the proofs that Lean accepts, and fine-tune on them~\cite{polu2022}. RLP on the same corpus enters only if it beats supervised training alone at equal compute.
+\item GRPO with the binary reward, once the readiness gate passes.
+\item A comparison of GRPO with expert iteration at the same number of Lean calls. On informal mathematics, Havrilla et al.\ report that ``all algorithms perform comparably, with Expert Iteration performing best in most cases''~\cite{havrilla2024}.
+\end{enumerate}
+
+\paragraph{Curriculum.} A reverse curriculum gives the model a reference proof prefix and asks for the rest, then moves the starting point back toward the theorem statement~\cite{r3}. The arms are: no curriculum; a staged schedule; all depths mixed; and an adaptive rule that keeps each theorem near a success rate of one half. In the R3 study, the mixed schedule beat the staged one~\cite{r3}. The adaptive arm changes the distribution of support levels, so it is a path comparison under Section~\ref{sec:curriculum}.
+
+\paragraph{Reward distribution.} Lean marks the first failing tactic, and tactic-level rewards with first-error propagation outperformed outcome-only rewards in most settings of Kim and Yun~\cite{kim2026}. A tactic-level term is heuristic. A reward for valid Lean alone is open to gaming, for example by repeated \code{try simp}, and a compile-only reward in autoformalization led the model to emit the same simple, irrelevant statement for every problem~\cite{formarl}. Any such term must stay below the value of one accepted proof.
+
+\paragraph{Endpoints and prediction.} The primary endpoint is held-out whole-theorem proofs per 1{,}000 Lean calls. The secondary endpoint is $\phi_{\mathrm{mix}}$ per training step. We predict that the curriculum helps most when the reward is outcome-only. Loop decisions use curriculum validation only, and the test set is scored once. From 0 of 15, an exact McNemar test needs 6 newly solved theorems for $p < 0.05$, so the larger pool with 38 test theorems is the better held-out set.
+
+\paragraph{Preparation.} Lean must first replay the 860 linear proofs and every cut point. Then the pass rate at each starting point is measured for the unchanged model.
+
+\begin{thebibliography}{99}
+\bibitem{qwen25} Qwen Team. Qwen2.5 technical report. \url{https://arxiv.org/abs/2412.15115}.
+\bibitem{rlp} A.~Hatamizadeh, S.~N.~Akter, S.~Prabhumoye, J.~Kautz, et al. RLP: Reinforcement as a pretraining objective. \url{https://arxiv.org/abs/2510.01265}.
+\bibitem{trl} Hugging Face. TRL v0.24.0 GRPO trainer documentation. \url{https://huggingface.co/docs/trl/v0.24.0/en/grpo_trainer}.
+\bibitem{leandojo} K.~Yang et al. LeanDojo: Theorem proving with retrieval-augmented language models. \url{https://arxiv.org/abs/2306.15626}.
+\bibitem{polu2022} S.~Polu et al. Formal mathematics statement curriculum learning. \url{https://arxiv.org/abs/2202.01344}.
+\bibitem{havrilla2024} A.~Havrilla et al. Teaching large language models to reason with reinforcement learning. \url{https://arxiv.org/abs/2403.04642}.
+\bibitem{r3} Training large language models for reasoning through reverse curriculum reinforcement learning. \url{https://arxiv.org/abs/2402.05808}.
+\bibitem{kim2026} M.~Kim and S.-Y.~Yun. Process-verified reinforcement learning for theorem proving via Lean. \url{https://arxiv.org/abs/2606.20068}.
+\bibitem{formarl} Y.~Huang et al. FormaRL: Enhancing autoformalization with no labeled data. \url{https://arxiv.org/abs/2508.18914}.
+\end{thebibliography}
+
+\appendix
+
+\section{Training settings}
+\label{app:hyper}
+Table~\ref{tab:hyper} lists the settings from the frozen configs in \code{configs/}. Every training run used TRL 0.24.0 and learning rate $10^{-6}$. ``Tokens'' is the generated-token cap of the run, not the realized count.
+
+\begin{table}[h]
+\centering
+\small
+\caption{Settings of the training runs, read from the configs.}
+\label{tab:hyper}
+\begin{tabularx}{\textwidth}{@{}rYrrrrr@{}}
+\toprule
+\# & Config & $G$ & Max new & Temp. & KL $\beta$ & Steps \\
+\midrule
+4 & \code{rl/qwen\_05b\_whole\_proof\_grpo} & 4 & 256 & 0.6 & 0 & 32 per arm \\
+5 & \code{rl/qwen\_05b\_prerequisite\_grpo}, \code{\_syntax} & 4 & 256 & 0.6 & 0 & 0 \\
+6 & \code{rl/qwen\_05b\_completion\_grpo} & 4 & 256 & 0.6 & 0 & 3 per arm \\
+7 & \code{pretrain/qwen\_05b\_number\_theory\_rlp}, \code{\_continuation} & 4 & 128 & 0.8 & -- & 256 each \\
+8 & \code{midtrain/qwen\_05b\_number\_theory\_rlp\_fp32} & 4 & 128 & 0.8 & -- & 256 \\
+9 & \code{midtrain/qwen\_05b\_primitive\_rlp} & 8 & 512 & 0.8 & -- & 596 \\
+11 & \code{rl/qwen\_05b\_local\_operator\_grpo} & 8 & 1,024 & 0.7 & 0.02 & 64 \\
+13 & \code{midtrain/qwen\_05b\_controlled\_rlp} & 8 & 1,024 & 0.8 & -- & 432 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The GRPO proof runs of Experiments~4 to 6 sampled with top-$p$ 0.9, and the RLP runs with top-$p$ 0.95. The RLP runs used EMA decay 0.999. Experiments~4 to 6 trained in BF16. Experiments~8, 9, 11, and 13 used FP32 parameters and optimizer moments with BF16 computation.
+
+\section{Provenance}
+\label{app:provenance}
+Table~\ref{tab:provenance} names, for each experiment, the archived record and the raw artifact that holds its counts. ``Archived record'' paths are in Git commit \code{8fc8423}. Raw artifacts are on cpu-angad under \code{formal\_rl/} unless the path starts with \code{artifacts/} in this repository.
+
+\begin{longtable}{@{}P{0.6cm}P{4.6cm}P{6.2cm}P{2.2cm}@{}}
+\caption{Sources of the counts.}\label{tab:provenance}\\
+\toprule
+\# & Archived record & Raw artifact & Re-read from raw files \\
+\midrule
+\endfirsthead
+\toprule
+\# & Archived record & Raw artifact & Re-read from raw files \\
+\midrule
+\endhead
+1 & \pth{docs/results/01_data_preparation.md} & \pth{artifacts/leandojo_nat_v1/frozen/}; \pth{artifacts/leandojo_number_theory_v2/} & Yes \\
+2 & \pth{docs/results/02_qwen_capability_probe.md} & \pth{artifacts/qwen_05b_probe/comparison.json} (local) & Yes \\
+3 & \pth{docs/results/02_qwen_capability_probe.md} & \pth{artifacts/qwen_05b_instruct_proof/summary.json} (local); \pth{tensorboard_pilot_20261003/events/} & Yes \\
+4 & \pth{docs/results/03_grpo_proof_pilots.md} & \pth{artifacts/whole_proof_grpo_20261003/} & Yes \\
+5 & \pth{docs/results/03_grpo_proof_pilots.md} & \pth{artifacts/prerequisite_rl_v1/} & Yes \\
+6 & \pth{docs/results/03_grpo_proof_pilots.md} & \pth{artifacts/completion_rl_v1/} & Yes \\
+7 & \pth{docs/results/04_rlp_acquisition.md} & \pth{artifacts/number_theory_rlp_v1/}; \pth{artifacts/number_theory_rlp_v2/audit_final/} & Yes \\
+8 & \pth{docs/results/04_rlp_acquisition.md} & \pth{artifacts/number_theory_rlp_v2/update_audit/}; \pth{artifacts/number_theory_rlp_fp32_midtraining/} & Yes \\
+9 & \pth{docs/decisions.md}, \pth{docs/team_workstreams.md} & \pth{primitive_midtraining_v1/audit_final/diagnosis/} & Yes \\
+10 & \pth{docs/results/05_acquisition_evaluations.md} & \pth{artifacts/acquisition_eval_v1/}; \pth{artifacts/decomposition_eval_v2/}; \pth{artifacts/knowledge_inventory_v1/} & Yes \\
+11 & \pth{docs/results/06_local_action_pilot.md} & \pth{operator_pilot_v1/gpu_records/out/} & Yes \\
+12 & \pth{docs/results/07_rlp_corpus_audit.md} & \pth{artifacts/rlp_data_audit_v1/final/} & Yes \\
+13 & \pth{docs/results/08_controlled_rlp.md} & \pth{artifacts/mathematical_pretraining_v1/}; \pth{artifacts/controlled_ordered_review_20261006/run.json} and \pth{ordered_results_v2e/} & Yes \\
+PH & This report, Section~\ref{sec:posthoc} & \pth{scripts/audit/classify_proof_failures.py}; \pth{scripts/audit/curriculum_inventory.py} & Yes \\
+\bottomrule
+\end{longtable}
+
+Architecture values come from the model's \code{config.json} and the header of \code{model.safetensors}. Literature claims come from the cited sources, which we read on 8 October 2026.
+
+\end{document}

@@ -20,8 +20,8 @@
   ],
   "external_subset": {
     "tasks": 8,
-    "source_manifest": "cpu-angad:/mnt/data/manasvenkatasairavulapalli/formal_rl/decomposition_eval_v2/sources/public_selection/source_manifest.json",
-    "resolved_config": "cpu-angad:/mnt/data/manasvenkatasairavulapalli/formal_rl/decomposition_eval_v2/code/decomposition_probe_v2.json"
+    "source_manifest": "cpu-angad:<cpu-data-root>/formal_rl/decomposition_eval_v2/sources/public_selection/source_manifest.json",
+    "resolved_config": "cpu-angad:<cpu-data-root>/formal_rl/decomposition_eval_v2/code/decomposition_probe_v2.json"
   },
   "tasks": [
     {

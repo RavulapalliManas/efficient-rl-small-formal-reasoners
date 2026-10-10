@@ -7,11 +7,31 @@ This project tests when reinforcement learning (RL) helps a small language model
 | Purpose | Location |
 | --- | --- |
 | Current project status | [Status](#status) |
+| Saved model checkpoints | [Downloads](#checkpoints) |
 | Experiment catalogue, protocols, evidence, ownership, and decisions | [EXPERIMENTS.md](docs/EXPERIMENTS.md) |
 | Main report source. Edit this for project document requests | [project_report.tex](docs/tex/project_report.tex) |
 | Compiled report | [project_report.pdf](docs/tex/project_report.pdf) |
 | Reward exploit inventory | [REWARD_HACKING.md](docs/REWARD_HACKING.md) |
 | Agent rules and document ownership | [AGENTS.md](AGENTS.md) |
+
+## Checkpoints
+
+Saved model weights and tokenizer files are available through [GitHub Releases](https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases).
+The [download index](configs/checkpoints.json) records source files, asset sizes, and GitHub digests.
+
+| Checkpoint | Download |
+| --- | --- |
+| SFT final | [Release](https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/tag/lean_sft_20261009_v2-final) |
+
+Download all assets for a release into one directory:
+
+```bash
+gh release download lean_sft_20261009_v2-final --repo RavulapalliManas/efficient-rl-small-formal-reasoners --dir sft-final
+```
+
+If a release contains split files, use the reassembly command in its release notes.
+Auxiliary metadata with private infrastructure identifiers uses redacted `.public.json` files.
+Weights and optimizer state retain their original contents.
 
 ## Setup
 

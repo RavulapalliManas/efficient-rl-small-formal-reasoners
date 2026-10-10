@@ -1,10 +1,13 @@
 # Reward hacking through the Lean reward
 
-Status date: 2026-10-10.
+Snapshot date: 2026-10-10. Scorer snapshot: `train_code_v9`.
+Catalogue record: [AUD-002](EXPERIMENTS.md#aud-002). Current execution status: [README](../README.md#status).
+The later decision log adopts `train_code_v11`. This inventory retains its earlier findings until source-based reconciliation.
+Its fix and open-item labels describe this snapshot. They are not a current scorer assessment.
 
 This file lists every input that the Lean reward accepts, or accepted, without a proof of a statement worth proving. Each entry gives the evidence, the fix, and what stays open.
 
-## Scope and status
+## Scope of this snapshot
 
 - No policy trained with the Lean scorer has met an entry of families S, P, T, L, W, or N. The Lean GRPO trainer has not run on a GPU (README status table).
 - Those entries came from a script we wrote or from a data audit. Entries R1 and R4 come from earlier experiments, in which policies were trained.

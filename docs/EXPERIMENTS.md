@@ -123,7 +123,8 @@ Current execution status appears in the README, not in this register.
 
 This is a protocol checkpoint, not a report of live machine state.
 The decision log adopts `nt_pool_v2`, `nt_splits_v3`, and scorer `train_code_v11`.
-The interleaved SFT config selects `nt_sft_v5` and its comments-removed counterpart.
+The interleaved SFT config selects `nt_sft_v8` and its comments-removed counterpart.
+The earlier `nt_sft_v5` pair remains the data-coverage baseline.
 The data build note indexes `nt_rl_tasks_v3` for RL proof-prefix and whole-proof tasks.
 Verify resolved launch inputs against these sources when a run is approved.
 
@@ -390,10 +391,49 @@ Do not use this list as execution status.
 ### EXP-017: Midsem splits and training data
 
 - Config: Input versions appear in the decision log and interleaved SFT config.
-- Code: [`scripts/data/build_nt_splits.py`](../scripts/data/build_nt_splits.py); [`scripts/data/build_nt_sft_data.py`](../scripts/data/build_nt_sft_data.py); [`scripts/data/build_nt_hole_tasks.py`](../scripts/data/build_nt_hole_tasks.py); [`scripts/audit/check_split_leakage.py`](../scripts/audit/check_split_leakage.py).
-- Evidence locator: `cpu-angad nt_splits_v3/summary.json; nt_splits_v3_audit/leakage_check.json; nt_sft_v5/; nt_sft_v5_nocomments/; nt_rl_tasks_v3/tasks.jsonl`
+- Code: [`scripts/data/build_nt_splits.py`](../scripts/data/build_nt_splits.py); [`scripts/data/build_nt_sft_data.py`](../scripts/data/build_nt_sft_data.py); [`scripts/data/build_syntax_sft.py`](../scripts/data/build_syntax_sft.py); [`scripts/data/build_nt_hole_tasks.py`](../scripts/data/build_nt_hole_tasks.py); [`scripts/audit/check_split_leakage.py`](../scripts/audit/check_split_leakage.py).
+- Evidence locator: `cpu-angad nt_splits_v3/summary.json; nt_splits_v3_audit/leakage_check.json; nt_sft_v8/; nt_sft_v8_nocomments/; syntax_sft_v3/; syntax_code_v3/logs/data_check_v2.json; nt_rl_tasks_v3/tasks.jsonl`. The v5 data remains historical.
 - Source record: `artifacts/notes/2026-10-10_data_build_report.md` (local historical note).
 - Boundary or gap: Use the final outputs section of the source note. Earlier rebuilds remain historical. Similarity filtering does not establish semantic independence.
+
+- Syntax expansion run: `exp017-syntax-v1`, CPU-only, owned and executed by Manas via Codex; reviewer not assigned. Inputs: `task_bank_v2`, its training exports, `nt_splits_v3`, and `nt_aug_v1`. Output: `cpu-angad syntax_sft_v1/`, then `nt_sft_v6/` and `nt_sft_v6_nocomments/`.
+- Question: Can existing admitted training proofs provide more examples of Lean proof syntax, without adding held-out proofs? This build measures data coverage, not a training benefit. Compare syntax coverage with `nt_sft_v5`; preserve it as the historical baseline.
+- Admission: exclude evaluation/dev files and evaluation premises; apply the existing statement similarity thresholds to validation, test, DEV, held-out proof problems, and miniF2F. Recheck each syntax theorem with scorer v11. Every cut must reconstruct the checked proof. Use the existing cut states and record that they are not re-traced.
+- Limits: managed CPU service, four Lean workers, `MemoryMax=16G`, existing per-command timeout, at most 1,500 syntax theorems and four units per theorem. Existing held-out membership stays frozen. Forward-only SFT exclusions also remove base examples that hit held-out proof problems or DEV. Preserve failed checks and all earlier data versions.
+- Failed launch: `exp017-syntax-v1` exited 127 before data processing because its interpreter path did not exist. No data outputs were created. Retry `exp017-syntax-v1-retry1` uses the interpreter from the completed in-house runner and a separate code/log directory. cpu-angad lacks the AWS CLI, so the Mac transports archive streams to durable storage without storing data locally.
+- Retry 1 exited 1 before data processing: the frozen scorer deployment lacked `check_leakage.py`, which the in-house expansion added later. Retry `exp017-syntax-v1-retry2` includes that dependency explicitly. Its code/log directory is separate; no prior output is overwritten.
+- Retry 2 exited 1 during reference checking. `Unique.bijective` uses `attribute [local simp] … in` before its declaration. The scorer left that incomplete command in the setup prefix. Extend `split_prefix` to keep it with the declaration, as it does for `open … in`. The reconstructed source stays identical. Regression check: `uv run python -m unittest discover -s tests -p test_syntax_sft.py`. Failed outputs remain in `syntax_sft_v1/` and `syntax_code_v1_retry2/`.
+- Replacement run: `exp017-syntax-v2`, code in `syntax_code_v2/`, outputs `syntax_sft_v2/`, `nt_sft_v7/`, and `nt_sft_v7_nocomments/`. Recheck all candidates with the same limits and scorer v11 plus the scoped-attribute context fix. `run.json` records the exact scorer hashes. No failed proof enters the output.
+- Pinned syntax source: [Lean v4.10.0-rc1 command parser](https://github.com/leanprover/lean4/blob/v4.10.0-rc1/src/Lean/Parser/Command.lean#L607) defines `in` as a trailing command parser. The context fix preserves that command boundary; it changes no proof acceptance condition.
+- Run v2 exited 1 at `MulChar.inv_mul`: a line comment after a doc comment hid the declaration modifier from `split_prefix`. Keep trailing line comments with the declaration, then peel the doc comment. The full source remains unchanged. The regression check now covers both context failures. Preserve `syntax_sft_v2/` and its code/log directory; the queued readiness check did not run because the build failed.
+- Run `exp017-syntax-v3` rechecks all candidates with both context fixes, unchanged acceptance checks, and unchanged limits. Its code is `syntax_code_v3/`; outputs are `syntax_sft_v3/`, `nt_sft_v8/`, and `nt_sft_v8_nocomments/`. The [pinned declaration modifier parser](https://github.com/leanprover/lean4/blob/v4.10.0-rc1/src/Lean/Parser/Command.lean#L61) identifies doc comments as part of a declaration.
+- Readiness measurement correction: the first audit used `len(apply_chat_template(...))`, which counted dictionary fields in the installed Transformers version. Its token lengths and pass verdict are invalid. Preserve `logs/data_check.json` and the original check source. `verify_expansion_v2.py` reads `input_ids` explicitly, checks the IDs against encoding the rendered chat without extra special tokens, and writes `logs/data_check_v2.json`. Follow the [Hugging Face chat-template training guidance](https://huggingface.co/docs/transformers/main/chat_templating#model-training).
+- Final evidence: `exp017-syntax-v3` returned exit 0. `exp017-data-check-v3-corrected` returned exit 0 with no readiness failures. Recount source: `syntax_code_v3/verify_expansion_v2.py`. Result: `syntax_code_v3/logs/data_check_v2.json`. All rows have matching arm membership and prompts; targets match after comment removal. No theorem spans training and loss evaluation. No statement hits the declared similarity thresholds. These checks do not establish semantic independence.
+- Reference recount: `syntax_sft_v3/checks.jsonl` contains 1,236 checks. The accepted count is 1,194. The rejected count is 42. Both context regression theorems are accepted. `syntax_sft_v3/run.json` records the Lean version, the declared mathlib revision, input hashes, and scorer hashes. The environment lacks Git metadata, so this build does not independently establish the mathlib revision.
+- Assembly: `nt_aug_v1/proofs.jsonl` supplies the tactic variants. The forward-only exclusion file removes 31 base SFT problems with held-out/DEV similarity hits. Source manifests, the exact runner, raw reference verdicts, paired datasets, and audit sources/results are preserved in the final archive. The remote receipt is `syntax_code_v3/logs/final_archive.receipt.json`; durable object key `capstate/acq/formal_rl/exp017-syntax-v3/final.tar.gz`. The external proof import remains a separate running job and supplies no rows to this release.
+
+Coverage recount from `data_check_v2.json`, with each value counted from the actual dataset rows:
+
+| Count | Historical v5 | Expanded v8 |
+| --- | ---: | ---: |
+| Training examples | 1,088 | 5,812 |
+| Loss-evaluation examples | 65 | 245 |
+| All examples | 1,153 | 6,057 |
+| Distinct theorem names | 553 | 1,716 |
+| Mathlib syntax continuations | 0 | 2,747 |
+| Tactic-augmentation proofs | 0 | 2,211 |
+| Maximum chat-template tokens | 1,809 | 1,809 |
+| Examples over the 2,048-token limit | 0 | 0 |
+| Case-analysis indicators | 320 | 1,800 |
+| Witness/constructor indicators | 289 | 1,484 |
+| Induction indicators | 77 | 166 |
+| Contradiction indicators | 3 | 41 |
+
+The syntax indicators use the existing `STRUCTURE` regexes on target proof text.
+An example can match several indicators. These counts measure syntax coverage, not model competence.
+Syntax targets require their original mathlib file context; they are not standalone competition proofs.
+Existing cut states are not re-traced. No SFT or RL training runs in this data build.
+- Source guidance checked 2026-10-10: [Theorem Proving in Lean, tactics](https://lean-lang.org/theorem_proving_in_lean4/Tactics/) describes tactic proof construction and structure. [Mathematics in Lean, logic](https://leanprover-community.github.io/mathematics_in_lean/C03_Logic.html) supplies terminology for case analysis and constructors. Training examples reuse pinned mathlib proofs, not copied tutorial text.
 
 <a id="exp-018"></a>
 
@@ -401,7 +441,7 @@ Do not use this list as execution status.
 
 - Config: `configs/midtrain/qwen_05b_nt_interleaved_sft_v1.json`.
 - Code: [`scripts/train/run_sft.py`](../scripts/train/run_sft.py).
-- Evidence locator: `Planned inputs: cpu-angad nt_sft_v5/ and nt_sft_v5_nocomments/. Output run IDs not assigned.`
+- Evidence locator: `Planned inputs: cpu-angad nt_sft_v8/ and nt_sft_v8_nocomments/. Output run IDs not assigned.`
 - Source record: `artifacts/notes/2026-10-10_midsem_plan.md` (local historical note).
 - Boundary or gap: Compare comments with comments removed using the same examples and starting checkpoint. Choose the arm on DEV. The dated plan predates the final splits; use the adopted inputs above.
 
@@ -463,3 +503,5 @@ Add one dated line per decision. Do not edit old lines.
 - 2026-10-10: Adopt nt_splits_v3 for the midsem RL study: exclude train statements with token Jaccard >= 0.85 to a validation or test statement and >= 0.7 to any miniF2F test statement, plus statements whose hypotheses prove False; hold out 25% of proved problems from SFT as the source of RL proof-prefix tasks; a 300-statement DEV slice for all decisions; primary metric on the 392 validation statements no single tactic proves, reported by nearest-train-similarity band.
 - 2026-10-10: Adopt scorer v11 (train_code_v11) as the reward and evaluation check for every arm: axiom report read only at the target's #print axioms line, one-command parse check, FORBIDDEN extended with metaprogram commands and observe, and FORBIDDEN applied only outside Lean comments, so informal reasoning in comments cannot cause a rejection (12 of 1,153 nt_sft_v5 rows had been falsely rejected for the word observe). The old subprocess check in probe_start_depth.py is not used for new results; earlier results it scored are re-scored before reuse. The shuffled-reward arm replaces the Bernoulli random-reward arm. Lean timeout: 20 s for RL rewards and pass-rate maps, 60 s for final validation and test scoring.
 - 2026-10-10: Establish stable experiment IDs and a single catalogue in this file. Keep current status in README, scientific narrative in the TeX report, and raw evidence in run artifacts. Preserve dated notes as history; create no new per-session Markdown records. Historical results remain un-recounted by this documentation change.
+- 2026-10-10: Manas requested completion of the data expansion for Lean syntax. Reuse existing replay-accepted training proofs and tactic augmentation; build paired SFT data on CPU. Keep external proof import as a separate running job. No GPU launch or training is authorized by this data request.
+- 2026-10-10: Adopt `nt_sft_v8` and `nt_sft_v8_nocomments` after the corrected readiness check and final archive confirmation. Use all loss-evaluation rows in the SFT config. Preserve the frozen splits, forward-only exclusions, failed builds, and invalid first token-length audit. Syntax coverage is measured; training benefit remains unmeasured.

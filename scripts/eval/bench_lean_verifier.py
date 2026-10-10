@@ -77,7 +77,7 @@ def body_of(given, steps):
 
 
 def split_prefix(prefix):
-    """Split the file prefix at its last command boundary. A trailing doc comment, `open/set_option ... in` line,
+    """Split the file prefix at its last command boundary. A trailing doc comment, `open/set_option/attribute ... in` line,
     attribute block (`@[...]`, possibly with indented continuation lines), or lone modifier line belongs to the
     target declaration, so it moves to each REPL command; the joined text is unchanged."""
     head = prefix
@@ -88,7 +88,10 @@ def split_prefix(prefix):
             head = stripped[:start]
             continue
         last = stripped.rsplit("\n", 1)[-1]
-        if re.match(r"(open|set_option)\b.*\sin$", last) or re.fullmatch(r"(protected|private|noncomputable|nonrec)\s*", last):
+        if last.lstrip().startswith("--"):
+            head = stripped[:len(stripped) - len(last)]
+            continue
+        if re.match(r"(open|set_option|attribute)\b.*\sin$", last) or re.fullmatch(r"(protected|private|noncomputable|nonrec)\s*", last):
             head = stripped[:len(stripped) - len(last)]
             continue
         attribute = re.search(r"(?:^|\n)(@\[[^\n]*(?:\n[ \t]+[^\n]*)*)$", stripped)

@@ -8,11 +8,21 @@ This project tests when reinforcement learning (RL) helps a small language model
 | --- | --- |
 | Current project status | [Status](#status) |
 | Saved model checkpoints | [Downloads](#checkpoints) |
+| Curriculum data and builders | [Curriculum](#curriculum) |
 | Experiment catalogue, protocols, evidence, ownership, and decisions | [EXPERIMENTS.md](docs/EXPERIMENTS.md) |
 | Main report source. Edit this for project document requests | [project_report.tex](docs/tex/project_report.tex) |
 | Compiled report | [project_report.pdf](docs/tex/project_report.pdf) |
 | Reward exploit inventory | [REWARD_HACKING.md](docs/REWARD_HACKING.md) |
 | Agent rules and document ownership | [AGENTS.md](AGENTS.md) |
+
+## Curriculum
+
+Download the prepared data from [Lean curriculum v8](https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/tag/lean-curriculum-v8).
+The bundle includes both SFT comment variants, syntax examples, source manifests, reference verdicts, and the corrected readiness audit.
+
+The [split builder](scripts/data/build_nt_splits.py) and [syntax builder](scripts/data/build_syntax_sft.py) prepare these inputs.
+The [SFT config](configs/midtrain/qwen_05b_nt_interleaved_sft_v1.json) records the adopted data versions.
+The [experiment record](docs/EXPERIMENTS.md#exp-017) describes their provenance and limitations.
 
 ## Checkpoints
 

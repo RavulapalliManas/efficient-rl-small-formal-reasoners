@@ -94,73 +94,73 @@
           "name": "added_tokens.json",
           "bytes": 605,
           "digest": "sha256:58b54bbe36fc752f79a24a271ef66a0a0830054b4dfad94bde757d851968060b",
-          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/untagged-7902c5ccefc77296f8d4/added_tokens.json"
+          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/lean_sft_20261009_v2-final/added_tokens.json"
         },
         {
           "name": "chat_template.jinja",
           "bytes": 2507,
           "digest": "sha256:cd8e9439f0570856fd70470bf8889ebd8b5d1107207f67a5efb46e342330527f",
-          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/untagged-7902c5ccefc77296f8d4/chat_template.jinja"
+          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/lean_sft_20261009_v2-final/chat_template.jinja"
         },
         {
           "name": "checkpoint.json",
           "bytes": 1884,
           "digest": "sha256:46f168389e5a20db1e5866438139cdfe73349da766bc4a57ec8fd96c6ab1389c",
-          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/untagged-7902c5ccefc77296f8d4/checkpoint.json"
+          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/lean_sft_20261009_v2-final/checkpoint.json"
         },
         {
           "name": "config.json",
           "bytes": 1226,
           "digest": "sha256:0201265f1368bc566692b5735e51d3fba0cca51afd00b14150e1be4be5c51f00",
-          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/untagged-7902c5ccefc77296f8d4/config.json"
+          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/lean_sft_20261009_v2-final/config.json"
         },
         {
           "name": "generation_config.json",
           "bytes": 216,
           "digest": "sha256:0095b48e992bceff67bd7cf4074f5e2031f7220457ff771bc3e8bae3d029b191",
-          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/untagged-7902c5ccefc77296f8d4/generation_config.json"
+          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/lean_sft_20261009_v2-final/generation_config.json"
         },
         {
           "name": "LICENSE",
           "bytes": 11343,
           "digest": "sha256:832dd9e00a68dd83b3c3fb9f5588dad7dcf337a0db50f7d9483f310cd292e92e",
-          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/untagged-7902c5ccefc77296f8d4/LICENSE"
+          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/lean_sft_20261009_v2-final/LICENSE"
         },
         {
           "name": "merges.txt",
           "bytes": 1671853,
           "digest": "sha256:8831e4f1a044471340f7c0a83d7bd71306a5b867e95fd870f74d0c5308a904d5",
-          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/untagged-7902c5ccefc77296f8d4/merges.txt"
+          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/lean_sft_20261009_v2-final/merges.txt"
         },
         {
           "name": "model.safetensors",
           "bytes": 1976163472,
           "digest": "sha256:a138c41297d193fee98aefa7105d1ad35d430e1b46cba551e92995a97f31206c",
-          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/untagged-7902c5ccefc77296f8d4/model.safetensors"
+          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/lean_sft_20261009_v2-final/model.safetensors"
         },
         {
           "name": "special_tokens_map.json",
           "bytes": 613,
           "digest": "sha256:76862e765266b85aa9459767e33cbaf13970f327a0e88d1c65846c2ddd3a1ecd",
-          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/untagged-7902c5ccefc77296f8d4/special_tokens_map.json"
+          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/lean_sft_20261009_v2-final/special_tokens_map.json"
         },
         {
           "name": "tokenizer.json",
           "bytes": 11421896,
           "digest": "sha256:9c5ae00e602b8860cbd784ba82a8aa14e8feecec692e7076590d014d7b7fdafa",
-          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/untagged-7902c5ccefc77296f8d4/tokenizer.json"
+          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/lean_sft_20261009_v2-final/tokenizer.json"
         },
         {
           "name": "tokenizer_config.json",
           "bytes": 4686,
           "digest": "sha256:0a04a9d7d4a62b28482bdfe726c122756de85714fb64166ace92ae75b8f57614",
-          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/untagged-7902c5ccefc77296f8d4/tokenizer_config.json"
+          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/lean_sft_20261009_v2-final/tokenizer_config.json"
         },
         {
           "name": "vocab.json",
           "bytes": 2776833,
           "digest": "sha256:ca10d7e9fb3ed18575dd1e277a2579c16d108e32f27439684afa0e10b1440910",
-          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/untagged-7902c5ccefc77296f8d4/vocab.json"
+          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/lean_sft_20261009_v2-final/vocab.json"
         }
       ]
     },
@@ -347,133 +347,805 @@
           "name": "acquisition_manifest.public.json",
           "bytes": 8461,
           "digest": "sha256:e2a4dc29feea9e104d57e6967d1662265b5afe7bf453cef17f08532a41ccb2dc",
-          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/untagged-e6f2d2d776919dea396b/acquisition_manifest.public.json"
+          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/primitive_rlp_20261005-checkpoint-118/acquisition_manifest.public.json"
         },
         {
           "name": "added_tokens.json",
           "bytes": 605,
           "digest": "sha256:58b54bbe36fc752f79a24a271ef66a0a0830054b4dfad94bde757d851968060b",
-          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/untagged-e6f2d2d776919dea396b/added_tokens.json"
+          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/primitive_rlp_20261005-checkpoint-118/added_tokens.json"
         },
         {
           "name": "chat_template.jinja",
           "bytes": 2507,
           "digest": "sha256:cd8e9439f0570856fd70470bf8889ebd8b5d1107207f67a5efb46e342330527f",
-          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/untagged-e6f2d2d776919dea396b/chat_template.jinja"
+          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/primitive_rlp_20261005-checkpoint-118/chat_template.jinja"
         },
         {
           "name": "checkpoint.json",
           "bytes": 4292,
           "digest": "sha256:59988113efcabd9047ad728e886caca72acfcc823f64348c3c07541de6cbcff4",
-          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/untagged-e6f2d2d776919dea396b/checkpoint.json"
+          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/primitive_rlp_20261005-checkpoint-118/checkpoint.json"
         },
         {
           "name": "checkpoint_ready.public.json",
           "bytes": 740,
           "digest": "sha256:0a09cd79b0eafe34148396a2f1c0a72a11fda14b87faa550ff1cf47c1929cc9c",
-          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/untagged-e6f2d2d776919dea396b/checkpoint_ready.public.json"
+          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/primitive_rlp_20261005-checkpoint-118/checkpoint_ready.public.json"
         },
         {
           "name": "config.json",
           "bytes": 1227,
           "digest": "sha256:d5b6e60aaa72e74d9b13e3a941c8a62e98715ffd36668ab0fd1b303907c8b1f9",
-          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/untagged-e6f2d2d776919dea396b/config.json"
+          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/primitive_rlp_20261005-checkpoint-118/config.json"
         },
         {
           "name": "ema_teacher.pt",
           "bytes": 1976244891,
           "digest": "sha256:fb20c9cbb5bb0167077a84fcba5914abdd7078a732ff736c17167db9de7f86d3",
-          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/untagged-e6f2d2d776919dea396b/ema_teacher.pt"
+          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/primitive_rlp_20261005-checkpoint-118/ema_teacher.pt"
         },
         {
           "name": "generation_config.json",
           "bytes": 216,
           "digest": "sha256:0095b48e992bceff67bd7cf4074f5e2031f7220457ff771bc3e8bae3d029b191",
-          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/untagged-e6f2d2d776919dea396b/generation_config.json"
+          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/primitive_rlp_20261005-checkpoint-118/generation_config.json"
         },
         {
           "name": "LICENSE",
           "bytes": 11343,
           "digest": "sha256:832dd9e00a68dd83b3c3fb9f5588dad7dcf337a0db50f7d9483f310cd292e92e",
-          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/untagged-e6f2d2d776919dea396b/LICENSE"
+          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/primitive_rlp_20261005-checkpoint-118/LICENSE"
         },
         {
           "name": "merges.txt",
           "bytes": 1671853,
           "digest": "sha256:8831e4f1a044471340f7c0a83d7bd71306a5b867e95fd870f74d0c5308a904d5",
-          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/untagged-e6f2d2d776919dea396b/merges.txt"
+          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/primitive_rlp_20261005-checkpoint-118/merges.txt"
         },
         {
           "name": "model.safetensors",
           "bytes": 1976163472,
           "digest": "sha256:a315c55ecd68d289c06b554c3b60dda31a965ca1c697130fdbeb91a4a2627762",
-          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/untagged-e6f2d2d776919dea396b/model.safetensors"
+          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/primitive_rlp_20261005-checkpoint-118/model.safetensors"
         },
         {
           "name": "optimizer.pt.part-aa",
           "bytes": 1610612736,
           "digest": "sha256:3e762a1c073d0990b785ffb25707e13d9efe5a82f4c5d92a83a4b47d295df06a",
-          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/untagged-e6f2d2d776919dea396b/optimizer.pt.part-aa"
+          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/primitive_rlp_20261005-checkpoint-118/optimizer.pt.part-aa"
         },
         {
           "name": "optimizer.pt.part-ab",
           "bytes": 1610612736,
           "digest": "sha256:3d9e06f24e60644fd56b35cbc1369eb7536790d876b0b849cc5abc01200d3ab6",
-          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/untagged-e6f2d2d776919dea396b/optimizer.pt.part-ab"
+          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/primitive_rlp_20261005-checkpoint-118/optimizer.pt.part-ab"
         },
         {
           "name": "optimizer.pt.part-ac",
           "bytes": 731280267,
           "digest": "sha256:a9821e9763deef8c72379d9e2f1c617ab66c94c8ac39b5c89599cfdbda10b25f",
-          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/untagged-e6f2d2d776919dea396b/optimizer.pt.part-ac"
+          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/primitive_rlp_20261005-checkpoint-118/optimizer.pt.part-ac"
         },
         {
           "name": "rng_state.pth",
           "bytes": 14709,
           "digest": "sha256:5dd66e23e806aa961c50e3927cc774888210c0e26bcf03bf934301bebcdfa7e5",
-          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/untagged-e6f2d2d776919dea396b/rng_state.pth"
+          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/primitive_rlp_20261005-checkpoint-118/rng_state.pth"
         },
         {
           "name": "scheduler.pt",
           "bytes": 1401,
           "digest": "sha256:33242ec00d145ec0cd7f26047f4ca734c41f06d5853c0420442d00595e372816",
-          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/untagged-e6f2d2d776919dea396b/scheduler.pt"
+          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/primitive_rlp_20261005-checkpoint-118/scheduler.pt"
         },
         {
           "name": "special_tokens_map.json",
           "bytes": 613,
           "digest": "sha256:76862e765266b85aa9459767e33cbaf13970f327a0e88d1c65846c2ddd3a1ecd",
-          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/untagged-e6f2d2d776919dea396b/special_tokens_map.json"
+          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/primitive_rlp_20261005-checkpoint-118/special_tokens_map.json"
         },
         {
           "name": "tokenizer.json",
           "bytes": 11421896,
           "digest": "sha256:9c5ae00e602b8860cbd784ba82a8aa14e8feecec692e7076590d014d7b7fdafa",
-          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/untagged-e6f2d2d776919dea396b/tokenizer.json"
+          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/primitive_rlp_20261005-checkpoint-118/tokenizer.json"
         },
         {
           "name": "tokenizer_config.json",
           "bytes": 4686,
           "digest": "sha256:0a04a9d7d4a62b28482bdfe726c122756de85714fb64166ace92ae75b8f57614",
-          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/untagged-e6f2d2d776919dea396b/tokenizer_config.json"
+          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/primitive_rlp_20261005-checkpoint-118/tokenizer_config.json"
         },
         {
           "name": "trainer_state.json",
           "bytes": 109269,
           "digest": "sha256:5a2249085a1b6b1d1991dc2b9d4f6fca8e662c44ce1956842abb0bd8dbbba908",
-          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/untagged-e6f2d2d776919dea396b/trainer_state.json"
+          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/primitive_rlp_20261005-checkpoint-118/trainer_state.json"
         },
         {
           "name": "training_args.bin",
           "bytes": 7185,
           "digest": "sha256:b9337c8f7b2bfe308a1386a58ba20f96fd92e45abf76e7ca76131e32216fcd2d",
-          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/untagged-e6f2d2d776919dea396b/training_args.bin"
+          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/primitive_rlp_20261005-checkpoint-118/training_args.bin"
         },
         {
           "name": "vocab.json",
           "bytes": 2776833,
           "digest": "sha256:ca10d7e9fb3ed18575dd1e277a2579c16d108e32f27439684afa0e10b1440910",
-          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/untagged-e6f2d2d776919dea396b/vocab.json"
+          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/primitive_rlp_20261005-checkpoint-118/vocab.json"
+        }
+      ]
+    },
+    {
+      "label": "Primitive RLP final",
+      "source_run": "primitive_rlp_20261005",
+      "checkpoint": "final",
+      "tag": "primitive_rlp_20261005-final",
+      "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/tag/primitive_rlp_20261005-final",
+      "source_files": [
+        {
+          "name": "acquisition_manifest.json",
+          "bytes": 8580,
+          "etag": "9e74c4f369025296770d16c2f867646e",
+          "assets": [
+            "acquisition_manifest.public.json"
+          ],
+          "redacted_fields": [
+            "<project-bucket>",
+            "<aws-account-id>"
+          ]
+        },
+        {
+          "name": "added_tokens.json",
+          "bytes": 605,
+          "etag": "b9a7a9cfe915c587f6fa31268b8529b0",
+          "assets": [
+            "added_tokens.json"
+          ],
+          "redacted_fields": []
+        },
+        {
+          "name": "chat_template.jinja",
+          "bytes": 2507,
+          "etag": "9a1b1065834e140093019c313c23b567",
+          "assets": [
+            "chat_template.jinja"
+          ],
+          "redacted_fields": []
+        },
+        {
+          "name": "checkpoint_ready.json",
+          "bytes": 536,
+          "etag": "9978cc9071fd3d35fc3404abf3b80695",
+          "assets": [
+            "checkpoint_ready.public.json"
+          ],
+          "redacted_fields": [
+            "<project-bucket>",
+            "<aws-account-id>"
+          ]
+        },
+        {
+          "name": "config.json",
+          "bytes": 1227,
+          "etag": "f2b6c68953b742b4bcb97c9500745903",
+          "assets": [
+            "config.json"
+          ],
+          "redacted_fields": []
+        },
+        {
+          "name": "generation_config.json",
+          "bytes": 216,
+          "etag": "2571d4f44987105b00691ca00d8ef833",
+          "assets": [
+            "generation_config.json"
+          ],
+          "redacted_fields": []
+        },
+        {
+          "name": "merges.txt",
+          "bytes": 1671853,
+          "etag": "72dacf1de43bc354dc3c521e44ed0b24",
+          "assets": [
+            "merges.txt"
+          ],
+          "redacted_fields": []
+        },
+        {
+          "name": "model.safetensors",
+          "bytes": 1976163472,
+          "etag": "2081e376944a91622cc066b15e65cd19-236",
+          "assets": [
+            "model.safetensors"
+          ],
+          "redacted_fields": []
+        },
+        {
+          "name": "special_tokens_map.json",
+          "bytes": 613,
+          "etag": "5708ee87a0925280424b5caa0906752f",
+          "assets": [
+            "special_tokens_map.json"
+          ],
+          "redacted_fields": []
+        },
+        {
+          "name": "tokenizer.json",
+          "bytes": 11421896,
+          "etag": "5a33d271dfd58fc351ead295e83a0ca5-2",
+          "assets": [
+            "tokenizer.json"
+          ],
+          "redacted_fields": []
+        },
+        {
+          "name": "tokenizer_config.json",
+          "bytes": 4686,
+          "etag": "51caf04fd31953889b85dc9a861f9c80",
+          "assets": [
+            "tokenizer_config.json"
+          ],
+          "redacted_fields": []
+        },
+        {
+          "name": "training_args.bin",
+          "bytes": 7185,
+          "etag": "59066cd7715ab69ea51152e863cee413",
+          "assets": [
+            "training_args.bin"
+          ],
+          "redacted_fields": []
+        },
+        {
+          "name": "vocab.json",
+          "bytes": 2776833,
+          "etag": "613b8e4a622c4a2c90e9e1245fc540d6",
+          "assets": [
+            "vocab.json"
+          ],
+          "redacted_fields": []
+        }
+      ],
+      "assets": [
+        {
+          "name": "acquisition_manifest.public.json",
+          "bytes": 8560,
+          "digest": "sha256:53493d261884ef04a13e188ba524d2c39e1ff739a34b353d1f9d92de5287af21",
+          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/primitive_rlp_20261005-final/acquisition_manifest.public.json"
+        },
+        {
+          "name": "added_tokens.json",
+          "bytes": 605,
+          "digest": "sha256:58b54bbe36fc752f79a24a271ef66a0a0830054b4dfad94bde757d851968060b",
+          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/primitive_rlp_20261005-final/added_tokens.json"
+        },
+        {
+          "name": "chat_template.jinja",
+          "bytes": 2507,
+          "digest": "sha256:cd8e9439f0570856fd70470bf8889ebd8b5d1107207f67a5efb46e342330527f",
+          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/primitive_rlp_20261005-final/chat_template.jinja"
+        },
+        {
+          "name": "checkpoint.json",
+          "bytes": 3201,
+          "digest": "sha256:b5a691f43aba114a21baa69ff3d51a65f927d8ea61f57042955be59194540816",
+          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/primitive_rlp_20261005-final/checkpoint.json"
+        },
+        {
+          "name": "checkpoint_ready.public.json",
+          "bytes": 578,
+          "digest": "sha256:286e227837d3d7b733901899dba6d3c17b4ac3f060b2fbf667c3376db215fea4",
+          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/primitive_rlp_20261005-final/checkpoint_ready.public.json"
+        },
+        {
+          "name": "config.json",
+          "bytes": 1227,
+          "digest": "sha256:d5b6e60aaa72e74d9b13e3a941c8a62e98715ffd36668ab0fd1b303907c8b1f9",
+          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/primitive_rlp_20261005-final/config.json"
+        },
+        {
+          "name": "generation_config.json",
+          "bytes": 216,
+          "digest": "sha256:0095b48e992bceff67bd7cf4074f5e2031f7220457ff771bc3e8bae3d029b191",
+          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/primitive_rlp_20261005-final/generation_config.json"
+        },
+        {
+          "name": "LICENSE",
+          "bytes": 11343,
+          "digest": "sha256:832dd9e00a68dd83b3c3fb9f5588dad7dcf337a0db50f7d9483f310cd292e92e",
+          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/primitive_rlp_20261005-final/LICENSE"
+        },
+        {
+          "name": "merges.txt",
+          "bytes": 1671853,
+          "digest": "sha256:8831e4f1a044471340f7c0a83d7bd71306a5b867e95fd870f74d0c5308a904d5",
+          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/primitive_rlp_20261005-final/merges.txt"
+        },
+        {
+          "name": "model.safetensors",
+          "bytes": 1976163472,
+          "digest": "sha256:5aaae13b452edc871c15754f6fe817741cdf58d7a4f1ed2ca349945f6b2cf2c3",
+          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/primitive_rlp_20261005-final/model.safetensors"
+        },
+        {
+          "name": "special_tokens_map.json",
+          "bytes": 613,
+          "digest": "sha256:76862e765266b85aa9459767e33cbaf13970f327a0e88d1c65846c2ddd3a1ecd",
+          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/primitive_rlp_20261005-final/special_tokens_map.json"
+        },
+        {
+          "name": "tokenizer.json",
+          "bytes": 11421896,
+          "digest": "sha256:9c5ae00e602b8860cbd784ba82a8aa14e8feecec692e7076590d014d7b7fdafa",
+          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/primitive_rlp_20261005-final/tokenizer.json"
+        },
+        {
+          "name": "tokenizer_config.json",
+          "bytes": 4686,
+          "digest": "sha256:0a04a9d7d4a62b28482bdfe726c122756de85714fb64166ace92ae75b8f57614",
+          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/primitive_rlp_20261005-final/tokenizer_config.json"
+        },
+        {
+          "name": "training_args.bin",
+          "bytes": 7185,
+          "digest": "sha256:b9337c8f7b2bfe308a1386a58ba20f96fd92e45abf76e7ca76131e32216fcd2d",
+          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/primitive_rlp_20261005-final/training_args.bin"
+        },
+        {
+          "name": "vocab.json",
+          "bytes": 2776833,
+          "digest": "sha256:ca10d7e9fb3ed18575dd1e277a2579c16d108e32f27439684afa0e10b1440910",
+          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/primitive_rlp_20261005-final/vocab.json"
+        }
+      ]
+    },
+    {
+      "label": "Controlled RLP ordered final",
+      "source_run": "controlled_rlp_20261006",
+      "checkpoint": "ordered-final",
+      "tag": "controlled_rlp_20261006-ordered-final",
+      "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/tag/controlled_rlp_20261006-ordered-final",
+      "source_files": [
+        {
+          "name": "acquisition_manifest.json",
+          "bytes": 7484,
+          "etag": "9367b66e80e303538ade840de691ecdb",
+          "assets": [
+            "acquisition_manifest.public.json"
+          ],
+          "redacted_fields": [
+            "<project-bucket>",
+            "<aws-account-id>"
+          ]
+        },
+        {
+          "name": "added_tokens.json",
+          "bytes": 605,
+          "etag": "b9a7a9cfe915c587f6fa31268b8529b0",
+          "assets": [
+            "added_tokens.json"
+          ],
+          "redacted_fields": []
+        },
+        {
+          "name": "chat_template.jinja",
+          "bytes": 2507,
+          "etag": "9a1b1065834e140093019c313c23b567",
+          "assets": [
+            "chat_template.jinja"
+          ],
+          "redacted_fields": []
+        },
+        {
+          "name": "checkpoint_ready.json",
+          "bytes": 545,
+          "etag": "4cfe6d8770e7076b897b3f6b106730ee",
+          "assets": [
+            "checkpoint_ready.public.json"
+          ],
+          "redacted_fields": [
+            "<project-bucket>",
+            "<aws-account-id>"
+          ]
+        },
+        {
+          "name": "config.json",
+          "bytes": 1227,
+          "etag": "f2b6c68953b742b4bcb97c9500745903",
+          "assets": [
+            "config.json"
+          ],
+          "redacted_fields": []
+        },
+        {
+          "name": "generation_config.json",
+          "bytes": 216,
+          "etag": "2571d4f44987105b00691ca00d8ef833",
+          "assets": [
+            "generation_config.json"
+          ],
+          "redacted_fields": []
+        },
+        {
+          "name": "merges.txt",
+          "bytes": 1671853,
+          "etag": "72dacf1de43bc354dc3c521e44ed0b24",
+          "assets": [
+            "merges.txt"
+          ],
+          "redacted_fields": []
+        },
+        {
+          "name": "model.safetensors",
+          "bytes": 1976163472,
+          "etag": "e77d52be4fc4e664a08fab1aae1cb706-236",
+          "assets": [
+            "model.safetensors"
+          ],
+          "redacted_fields": []
+        },
+        {
+          "name": "special_tokens_map.json",
+          "bytes": 613,
+          "etag": "5708ee87a0925280424b5caa0906752f",
+          "assets": [
+            "special_tokens_map.json"
+          ],
+          "redacted_fields": []
+        },
+        {
+          "name": "tokenizer.json",
+          "bytes": 11421896,
+          "etag": "5a33d271dfd58fc351ead295e83a0ca5-2",
+          "assets": [
+            "tokenizer.json"
+          ],
+          "redacted_fields": []
+        },
+        {
+          "name": "tokenizer_config.json",
+          "bytes": 4686,
+          "etag": "51caf04fd31953889b85dc9a861f9c80",
+          "assets": [
+            "tokenizer_config.json"
+          ],
+          "redacted_fields": []
+        },
+        {
+          "name": "training_args.bin",
+          "bytes": 7249,
+          "etag": "edd05c80267068f793b1e70fc60c9951",
+          "assets": [
+            "training_args.bin"
+          ],
+          "redacted_fields": []
+        },
+        {
+          "name": "vocab.json",
+          "bytes": 2776833,
+          "etag": "613b8e4a622c4a2c90e9e1245fc540d6",
+          "assets": [
+            "vocab.json"
+          ],
+          "redacted_fields": []
+        }
+      ],
+      "assets": [
+        {
+          "name": "acquisition_manifest.public.json",
+          "bytes": 7444,
+          "digest": "sha256:8a6fa480841e736a7cb9b3941da94d358c0cb685919c170b9e47f45390e2578a",
+          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/controlled_rlp_20261006-ordered-final/acquisition_manifest.public.json"
+        },
+        {
+          "name": "added_tokens.json",
+          "bytes": 605,
+          "digest": "sha256:58b54bbe36fc752f79a24a271ef66a0a0830054b4dfad94bde757d851968060b",
+          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/controlled_rlp_20261006-ordered-final/added_tokens.json"
+        },
+        {
+          "name": "chat_template.jinja",
+          "bytes": 2507,
+          "digest": "sha256:cd8e9439f0570856fd70470bf8889ebd8b5d1107207f67a5efb46e342330527f",
+          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/controlled_rlp_20261006-ordered-final/chat_template.jinja"
+        },
+        {
+          "name": "checkpoint.json",
+          "bytes": 3219,
+          "digest": "sha256:f6d691a672122b996fd3ea5c2555ce3c525bebe11bb0c8d1183e7d66a9e7860f",
+          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/controlled_rlp_20261006-ordered-final/checkpoint.json"
+        },
+        {
+          "name": "checkpoint_ready.public.json",
+          "bytes": 587,
+          "digest": "sha256:77ebc5ccb710a5eecd4c0671f9efbcedd6b792c7b8f65fff234cffbb2f850013",
+          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/controlled_rlp_20261006-ordered-final/checkpoint_ready.public.json"
+        },
+        {
+          "name": "config.json",
+          "bytes": 1227,
+          "digest": "sha256:d5b6e60aaa72e74d9b13e3a941c8a62e98715ffd36668ab0fd1b303907c8b1f9",
+          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/controlled_rlp_20261006-ordered-final/config.json"
+        },
+        {
+          "name": "generation_config.json",
+          "bytes": 216,
+          "digest": "sha256:0095b48e992bceff67bd7cf4074f5e2031f7220457ff771bc3e8bae3d029b191",
+          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/controlled_rlp_20261006-ordered-final/generation_config.json"
+        },
+        {
+          "name": "LICENSE",
+          "bytes": 11343,
+          "digest": "sha256:832dd9e00a68dd83b3c3fb9f5588dad7dcf337a0db50f7d9483f310cd292e92e",
+          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/controlled_rlp_20261006-ordered-final/LICENSE"
+        },
+        {
+          "name": "merges.txt",
+          "bytes": 1671853,
+          "digest": "sha256:8831e4f1a044471340f7c0a83d7bd71306a5b867e95fd870f74d0c5308a904d5",
+          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/controlled_rlp_20261006-ordered-final/merges.txt"
+        },
+        {
+          "name": "model.safetensors",
+          "bytes": 1976163472,
+          "digest": "sha256:137019ffeebe940899a9706d0696b1414a4376124d0d5c0758afcac731640e18",
+          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/controlled_rlp_20261006-ordered-final/model.safetensors"
+        },
+        {
+          "name": "special_tokens_map.json",
+          "bytes": 613,
+          "digest": "sha256:76862e765266b85aa9459767e33cbaf13970f327a0e88d1c65846c2ddd3a1ecd",
+          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/controlled_rlp_20261006-ordered-final/special_tokens_map.json"
+        },
+        {
+          "name": "tokenizer.json",
+          "bytes": 11421896,
+          "digest": "sha256:9c5ae00e602b8860cbd784ba82a8aa14e8feecec692e7076590d014d7b7fdafa",
+          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/controlled_rlp_20261006-ordered-final/tokenizer.json"
+        },
+        {
+          "name": "tokenizer_config.json",
+          "bytes": 4686,
+          "digest": "sha256:0a04a9d7d4a62b28482bdfe726c122756de85714fb64166ace92ae75b8f57614",
+          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/controlled_rlp_20261006-ordered-final/tokenizer_config.json"
+        },
+        {
+          "name": "training_args.bin",
+          "bytes": 7249,
+          "digest": "sha256:57e2759325e83642025bb0d09602019fe4a6527f98d2acdb2d7c024ff481dc33",
+          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/controlled_rlp_20261006-ordered-final/training_args.bin"
+        },
+        {
+          "name": "vocab.json",
+          "bytes": 2776833,
+          "digest": "sha256:ca10d7e9fb3ed18575dd1e277a2579c16d108e32f27439684afa0e10b1440910",
+          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/controlled_rlp_20261006-ordered-final/vocab.json"
+        }
+      ]
+    },
+    {
+      "label": "Controlled RLP shuffled final",
+      "source_run": "controlled_rlp_20261006",
+      "checkpoint": "shuffled-final",
+      "tag": "controlled_rlp_20261006-shuffled-final",
+      "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/tag/controlled_rlp_20261006-shuffled-final",
+      "source_files": [
+        {
+          "name": "acquisition_manifest.json",
+          "bytes": 7488,
+          "etag": "8313fc048630ce3e30f94c1bec746adb",
+          "assets": [
+            "acquisition_manifest.public.json"
+          ],
+          "redacted_fields": [
+            "<project-bucket>",
+            "<aws-account-id>"
+          ]
+        },
+        {
+          "name": "added_tokens.json",
+          "bytes": 605,
+          "etag": "b9a7a9cfe915c587f6fa31268b8529b0",
+          "assets": [
+            "added_tokens.json"
+          ],
+          "redacted_fields": []
+        },
+        {
+          "name": "chat_template.jinja",
+          "bytes": 2507,
+          "etag": "9a1b1065834e140093019c313c23b567",
+          "assets": [
+            "chat_template.jinja"
+          ],
+          "redacted_fields": []
+        },
+        {
+          "name": "checkpoint_ready.json",
+          "bytes": 546,
+          "etag": "2829f75e1ff4aa591f4a3001045e47a6",
+          "assets": [
+            "checkpoint_ready.public.json"
+          ],
+          "redacted_fields": [
+            "<project-bucket>",
+            "<aws-account-id>"
+          ]
+        },
+        {
+          "name": "config.json",
+          "bytes": 1227,
+          "etag": "f2b6c68953b742b4bcb97c9500745903",
+          "assets": [
+            "config.json"
+          ],
+          "redacted_fields": []
+        },
+        {
+          "name": "generation_config.json",
+          "bytes": 216,
+          "etag": "2571d4f44987105b00691ca00d8ef833",
+          "assets": [
+            "generation_config.json"
+          ],
+          "redacted_fields": []
+        },
+        {
+          "name": "merges.txt",
+          "bytes": 1671853,
+          "etag": "72dacf1de43bc354dc3c521e44ed0b24",
+          "assets": [
+            "merges.txt"
+          ],
+          "redacted_fields": []
+        },
+        {
+          "name": "model.safetensors",
+          "bytes": 1976163472,
+          "etag": "35d308c1324ddb6d1ec5b0341aa98e47-236",
+          "assets": [
+            "model.safetensors"
+          ],
+          "redacted_fields": []
+        },
+        {
+          "name": "special_tokens_map.json",
+          "bytes": 613,
+          "etag": "5708ee87a0925280424b5caa0906752f",
+          "assets": [
+            "special_tokens_map.json"
+          ],
+          "redacted_fields": []
+        },
+        {
+          "name": "tokenizer.json",
+          "bytes": 11421896,
+          "etag": "5a33d271dfd58fc351ead295e83a0ca5-2",
+          "assets": [
+            "tokenizer.json"
+          ],
+          "redacted_fields": []
+        },
+        {
+          "name": "tokenizer_config.json",
+          "bytes": 4686,
+          "etag": "51caf04fd31953889b85dc9a861f9c80",
+          "assets": [
+            "tokenizer_config.json"
+          ],
+          "redacted_fields": []
+        },
+        {
+          "name": "training_args.bin",
+          "bytes": 7249,
+          "etag": "75aa600768746cb0264401f437e915c2",
+          "assets": [
+            "training_args.bin"
+          ],
+          "redacted_fields": []
+        },
+        {
+          "name": "vocab.json",
+          "bytes": 2776833,
+          "etag": "613b8e4a622c4a2c90e9e1245fc540d6",
+          "assets": [
+            "vocab.json"
+          ],
+          "redacted_fields": []
+        }
+      ],
+      "assets": [
+        {
+          "name": "acquisition_manifest.public.json",
+          "bytes": 7448,
+          "digest": "sha256:d21592bcf654f0e33340cd42248466c5ccb8bfb8cd668b9cd5dfddd18655d081",
+          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/controlled_rlp_20261006-shuffled-final/acquisition_manifest.public.json"
+        },
+        {
+          "name": "added_tokens.json",
+          "bytes": 605,
+          "digest": "sha256:58b54bbe36fc752f79a24a271ef66a0a0830054b4dfad94bde757d851968060b",
+          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/controlled_rlp_20261006-shuffled-final/added_tokens.json"
+        },
+        {
+          "name": "chat_template.jinja",
+          "bytes": 2507,
+          "digest": "sha256:cd8e9439f0570856fd70470bf8889ebd8b5d1107207f67a5efb46e342330527f",
+          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/controlled_rlp_20261006-shuffled-final/chat_template.jinja"
+        },
+        {
+          "name": "checkpoint.json",
+          "bytes": 3221,
+          "digest": "sha256:2d29d40a5063972be63f6352413c56dcda88d942169ae4026f9ca450c1b75df5",
+          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/controlled_rlp_20261006-shuffled-final/checkpoint.json"
+        },
+        {
+          "name": "checkpoint_ready.public.json",
+          "bytes": 588,
+          "digest": "sha256:c6b181a41981183c582b79306a5af302d966916f1aa61ddc2d502fdf1b9f81b8",
+          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/controlled_rlp_20261006-shuffled-final/checkpoint_ready.public.json"
+        },
+        {
+          "name": "config.json",
+          "bytes": 1227,
+          "digest": "sha256:d5b6e60aaa72e74d9b13e3a941c8a62e98715ffd36668ab0fd1b303907c8b1f9",
+          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/controlled_rlp_20261006-shuffled-final/config.json"
+        },
+        {
+          "name": "generation_config.json",
+          "bytes": 216,
+          "digest": "sha256:0095b48e992bceff67bd7cf4074f5e2031f7220457ff771bc3e8bae3d029b191",
+          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/controlled_rlp_20261006-shuffled-final/generation_config.json"
+        },
+        {
+          "name": "LICENSE",
+          "bytes": 11343,
+          "digest": "sha256:832dd9e00a68dd83b3c3fb9f5588dad7dcf337a0db50f7d9483f310cd292e92e",
+          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/controlled_rlp_20261006-shuffled-final/LICENSE"
+        },
+        {
+          "name": "merges.txt",
+          "bytes": 1671853,
+          "digest": "sha256:8831e4f1a044471340f7c0a83d7bd71306a5b867e95fd870f74d0c5308a904d5",
+          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/controlled_rlp_20261006-shuffled-final/merges.txt"
+        },
+        {
+          "name": "model.safetensors",
+          "bytes": 1976163472,
+          "digest": "sha256:1a99fcbea821de00656506af1744f5ac160a99fb6b23e4dc67873b167c1eef94",
+          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/controlled_rlp_20261006-shuffled-final/model.safetensors"
+        },
+        {
+          "name": "special_tokens_map.json",
+          "bytes": 613,
+          "digest": "sha256:76862e765266b85aa9459767e33cbaf13970f327a0e88d1c65846c2ddd3a1ecd",
+          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/controlled_rlp_20261006-shuffled-final/special_tokens_map.json"
+        },
+        {
+          "name": "tokenizer.json",
+          "bytes": 11421896,
+          "digest": "sha256:9c5ae00e602b8860cbd784ba82a8aa14e8feecec692e7076590d014d7b7fdafa",
+          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/controlled_rlp_20261006-shuffled-final/tokenizer.json"
+        },
+        {
+          "name": "tokenizer_config.json",
+          "bytes": 4686,
+          "digest": "sha256:0a04a9d7d4a62b28482bdfe726c122756de85714fb64166ace92ae75b8f57614",
+          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/controlled_rlp_20261006-shuffled-final/tokenizer_config.json"
+        },
+        {
+          "name": "training_args.bin",
+          "bytes": 7249,
+          "digest": "sha256:7ae026d93561db6ae9cbba6837b9cea68aecb2240762666e9f1260267741a9df",
+          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/controlled_rlp_20261006-shuffled-final/training_args.bin"
+        },
+        {
+          "name": "vocab.json",
+          "bytes": 2776833,
+          "digest": "sha256:ca10d7e9fb3ed18575dd1e277a2579c16d108e32f27439684afa0e10b1440910",
+          "url": "https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/download/controlled_rlp_20261006-shuffled-final/vocab.json"
         }
       ]
     }

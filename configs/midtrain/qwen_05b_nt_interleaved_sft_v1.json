@@ -1,0 +1,20 @@
+{
+  "purpose": "Number-theory SFT on Lean-checked competition proofs, about half with informal reasoning between tactics; before the GPU pass-rate map and GRPO",
+  "initial_policy": "SFT v2 final checkpoint (lean_sft_20261009_v2, cpu-angad formal_rl/sft_checkpoints/v2_final)",
+  "data": "formal_rl/nt_sft_v5 from scripts/data/build_nt_sft_data.py --problems nt_splits_v3/sft_problems.txt on nt_pool_v2: 1,088 train + 65 eval-loss examples from 553 train-split problems (550 Goedel proofs with comments, 603 Lean Workbook proofs without). nt_splits_v3 keeps out of SFT the 25% held-out proof problems (the RL hole tasks come only from them), train statements with token Jaccard >= 0.85 to a validation or test statement or >= 0.7 to any miniF2F statement, and the 17 vacuous train statements; validation and test statements not read. Replaces nt_sft_v2 (1,593 + 96 rows, 813 problems) and nt_sft_v4. run_sft.py reads sft_train.jsonl and sft_val.jsonl, so stage train.jsonl and val.jsonl under those names",
+  "ablation_arm": "Interleaving ablation: the same config with data formal_rl/nt_sft_v5_nocomments (build_nt_sft_data.py --strip-comments, same problems file): the same 1,088 + 65 examples in the same order, with block and line comments removed from every proof",
+  "seed": 20261010,
+  "learning_rate": 1e-05,
+  "warmup_ratio": 0.03,
+  "epochs": 3,
+  "batch_size": 2,
+  "grad_accum": 32,
+  "max_length": 2048,
+  "logging_steps": 5,
+  "eval_steps": 25,
+  "eval_rows": 65,
+  "milestone_steps": [],
+  "precision": "FP32 master weights and AdamW moments, BF16 autocast",
+  "instance": "one NVIDIA L40S (AWS g6e.2xlarge), on demand",
+  "notes": "Token lengths measured on nt_sft_v1 (Qwen tokenizer, chat template): train median 300, p90 727, max 1,809; 44 of 1,611 exceed 1,024, none exceed 2,048. Batch 2 x 2,048 keeps at most 4,096 tokens per micro-batch, the size SFT v2 ran without OOM. Evaluation of this model needs max_new_tokens of at least 1,024, because commented proofs are longer than the 256-token cap used so far."
+}

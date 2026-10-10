@@ -2,8 +2,16 @@
 
 This project tests when reinforcement learning (RL) helps a small language model learn number theory and write Lean proofs under a fixed compute budget. The model is `Qwen/Qwen2.5-0.5B-Instruct`.
 
-- What we ran and found: [docs/EXPERIMENTS.md](docs/EXPERIMENTS.md)
-- Full report of every experiment, with the formal definitions: [docs/tex/project_report.pdf](docs/tex/project_report.pdf)
+## Read this first
+
+| Purpose | Location |
+| --- | --- |
+| Current project status | [Status](#status) |
+| Experiment catalogue, protocols, evidence, ownership, and decisions | [EXPERIMENTS.md](docs/EXPERIMENTS.md) |
+| Main report source. Edit this for project document requests | [project_report.tex](docs/tex/project_report.tex) |
+| Compiled report | [project_report.pdf](docs/tex/project_report.pdf) |
+| Reward exploit inventory | [REWARD_HACKING.md](docs/REWARD_HACKING.md) |
+| Agent rules and document ownership | [AGENTS.md](AGENTS.md) |
 
 ## Setup
 
@@ -53,20 +61,27 @@ Run each script from the repository root.
 
 ## Status
 
-This table is the only status record. Update it when a run finishes.
+This table is the only current execution status record. Update it from run evidence when status changes.
+The catalogue holds protocols and evidence links; the report holds scientific interpretation.
+Historical result values below are retained. This catalogue update does not recount them.
+See [evidence gaps and next actions](docs/EXPERIMENTS.md#adopted-inputs-and-next-actions) before reusing a score or launching a run.
 
-| Experiment | Config | Status |
-| --- | --- | --- |
-| LeanDojo data subset | `configs/data/leandojo_*.json` | Done. Lean replay not done |
-| Base model probe + GSM8K LoRA | `configs/eval/qwen_05b_probe.json` | Done. No accuracy gain |
-| Whole-proof GRPO | `configs/rl/qwen_05b_whole_proof_grpo.json` | Done. No learning signal |
-| Prerequisite curriculum GRPO | `configs/rl/qwen_05b_prerequisite_grpo*.json` | Done. Training skipped: no proof solved |
-| Assisted proof completion | `configs/rl/qwen_05b_completion_grpo.json` | Done. One task qualified; no held-out success |
-| RLP training + continuation | `configs/pretrain/qwen_05b_number_theory_rlp*.json` | Done. No accuracy gain |
-| FP32 RLP rerun | `configs/midtrain/qwen_05b_number_theory_rlp_fp32.json` | Done. No accuracy gain |
-| Primitive RLP curriculum | `configs/midtrain/qwen_05b_primitive_rlp.json` | Done. Held-out accuracy fell |
-| Saved-checkpoint evaluations | `configs/eval/` | Done. No complete-answer gain |
-| Local-action pilot | `configs/rl/qwen_05b_local_operator_grpo.json` | Done. Witness accuracy improved |
-| Controlled RLP comparison | `configs/midtrain/qwen_05b_controlled_rlp.json` | Ordered arm scored. Shuffled arm not scored |
-| Lean-verified evaluation | None | Proposed |
-| Interactive Lean RL (reward × curriculum) | None | Not started. Needs Anwesha's Lean environment and Abhinav's optimizer |
+| ID | Experiment | Config or entry point | Status |
+| --- | --- | --- | --- |
+| [EXP-001](docs/EXPERIMENTS.md#exp-001) | LeanDojo data subset | `configs/data/leandojo_*.json` | Done. Lean replay done: 5,921 of 8,273 training proofs accepted; task bank v2 keeps 2,150 theorems outside evaluation and dev files |
+| [EXP-002](docs/EXPERIMENTS.md#exp-002) | Base model probe + GSM8K LoRA | `configs/eval/qwen_05b_probe.json` | Done. No accuracy gain |
+| [EXP-004](docs/EXPERIMENTS.md#exp-004) | Whole-proof GRPO | `configs/rl/qwen_05b_whole_proof_grpo.json` | Done. No learning signal |
+| [EXP-005](docs/EXPERIMENTS.md#exp-005) | Prerequisite curriculum GRPO | `configs/rl/qwen_05b_prerequisite_grpo*.json` | Done. Training skipped: no proof solved |
+| [EXP-006](docs/EXPERIMENTS.md#exp-006) | Assisted proof completion | `configs/rl/qwen_05b_completion_grpo.json` | Done. One task qualified; no held-out success |
+| [EXP-007](docs/EXPERIMENTS.md#exp-007) | RLP training + continuation | `configs/pretrain/qwen_05b_number_theory_rlp*.json` | Done. No accuracy gain |
+| [EXP-008](docs/EXPERIMENTS.md#exp-008) | FP32 RLP rerun | `configs/midtrain/qwen_05b_number_theory_rlp_fp32.json` | Done. No accuracy gain |
+| [EXP-009](docs/EXPERIMENTS.md#exp-009) | Primitive RLP curriculum | `configs/midtrain/qwen_05b_primitive_rlp.json` | Done. Held-out accuracy fell |
+| [EXP-010](docs/EXPERIMENTS.md#exp-010) | Saved-checkpoint evaluations | `configs/eval/` | Done. No complete-answer gain |
+| [EXP-011](docs/EXPERIMENTS.md#exp-011) | Local-action pilot | `configs/rl/qwen_05b_local_operator_grpo.json` | Done. Witness accuracy improved |
+| [EXP-013](docs/EXPERIMENTS.md#exp-013) | Controlled RLP comparison | `configs/midtrain/qwen_05b_controlled_rlp.json` | Done. Both arms 0/18 fully correct; final core score 1.056 shuffled vs 0.500 ordered (sign test p = 0.18) |
+| [EXP-014](docs/EXPERIMENTS.md#exp-014) | Lean SFT on mathlib proofs | `configs/midtrain/qwen_05b_lean_sft_v1.json` | Done. Validation 2/43 theorems at 8 samples; 0/17 number-theory theorems |
+| [EXP-015](docs/EXPERIMENTS.md#exp-015) | Lean-verified evaluation | `scripts/eval/lean_eval_statements.py`, `scripts/eval/probe_nt_pool.py` | Done for the SFT model. 0/200 Lean Workbook number-theory statements; one standard tactic solves 8/200 |
+| [EXP-016](docs/EXPERIMENTS.md#exp-016) | Number-theory statement pool | `scripts/data/build_nt_pool.py` | Done. Pool v2: 4,306 Lean-checked statements (train 3,450, validation 420, test 436) |
+| [EXP-017](docs/EXPERIMENTS.md#exp-017) | Midsem RL data (splits, SFT data, RL tasks) | `scripts/data/build_nt_splits.py` | Done. Splits v3: SFT 553 problems, RL pool 2,234, held-out proofs 184 (454 proof-prefix tasks), DEV 300; leakage caps 0.85 to validation and test, 0.7 to miniF2F |
+| [EXP-018](docs/EXPERIMENTS.md#exp-018) | Interleaved number-theory SFT | `configs/midtrain/qwen_05b_nt_interleaved_sft_v1.json` | Ready. Not run (needs GPU approval) |
+| [EXP-019](docs/EXPERIMENTS.md#exp-019) | Interactive Lean RL (reward × curriculum) | `scripts/train/run_lean_grpo.py` | Not started on GPU. Trainer with Lean REPL reward passes CPU smoke tests and the engineering audit |

@@ -22,6 +22,7 @@ The [download index](configs/checkpoints.json) records source files, asset sizes
 | Checkpoint | Download |
 | --- | --- |
 | SFT final | [Release](https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/tag/lean_sft_20261009_v2-final) |
+| Primitive RLP step 118 | [Release](https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/tag/primitive_rlp_20261005-checkpoint-118) |
 
 Download all assets for a release into one directory:
 

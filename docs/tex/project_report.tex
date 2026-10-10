@@ -26,13 +26,13 @@
 \title{Efficient Reinforcement Learning for Small Formal Reasoners\\[2pt]
 \large Experiment record and formalization, 1 to 8 October 2026}
 \author{Manas Ravulapalli\\ \small Compiled from the project repository and run records}
-\date{9 October 2026}
+\date{10 October 2026}
 
 \begin{document}
 \maketitle
 
 \begin{abstract}
-This report records every experiment of the project from 1 to 8 October 2026, with the formal definitions behind them. The project asks whether reinforcement learning (RL) can teach \code{Qwen2.5-0.5B-Instruct} number theory and Lean~4 proofs under a fixed compute budget. We ran 13 experiments: data preparation, two capability baselines, three proof-RL studies with a terminal Lean reward, five knowledge-acquisition studies with an RLP reward, one evaluation series of saved checkpoints, and one RL pilot with a Lean-verified local reward. The model never produced an accepted Lean proof without assistance. Lean accepted 0 of 63 whole-proof attempts in the recounted local check, and the exported records of a larger sampling run show 0 of 273. RL with a terminal Lean reward gave no learning signal, because no sampled group had reward variation. In one RLP run, the prediction reward rose while held-out accuracy fell from 42/108 to 21/108. The only measured RL gain came from a Lean-checked witness reward on a narrow task, where validation accuracy rose from 0/8 to 6/8. A post hoc analysis shows that none of the 63 failed proof attempts was well-formed Lean~4. The report ends with a proposed study that has not run.
+This report records every experiment of the project from 1 to 8 October 2026, with the formal definitions behind them. The project asks whether reinforcement learning (RL) can teach \code{Qwen2.5-0.5B-Instruct} number theory and Lean~4 proofs under a fixed compute budget. We ran 13 experiments: data preparation, two capability baselines, three proof-RL studies with a terminal Lean reward, five knowledge-acquisition studies with an RLP reward, one evaluation series of saved checkpoints, and one RL pilot with a Lean-verified local reward. The model never produced an accepted Lean proof without assistance. Lean accepted 0 of 63 whole-proof attempts in the recounted local check, and the exported records of a larger sampling run show 0 of 273. RL with a terminal Lean reward gave no learning signal, because no sampled group had reward variation. In one RLP run, the prediction reward rose while held-out accuracy fell from 42/108 to 21/108. The only measured RL gain came from a Lean-checked witness reward on a narrow task, where validation accuracy rose from 0/8 to 6/8. A post hoc analysis shows that none of the 63 failed proof attempts was well-formed Lean~4. An audit of the Lean scorer on 9 and 10 October found nine kinds of input that it accepted and should have rejected, and a fix rejects all nine. A single tactic from a fixed list proves 28 of 420 validation statements, so a reward for accepted proofs can rise without proof skill. The Lean GRPO trainer has not run on a GPU, so no trained policy has used these weaknesses. The report ends with a proposed study that has not run.
 \end{abstract}
 
 \section*{Status of this document}
@@ -41,6 +41,7 @@ This report records every experiment of the project from 1 to 8 October 2026, wi
 \item The detailed run records are archived in Git commit \code{8fc8423} under \code{docs/results/} and \code{docs/decisions.md}. Each of those records names the CPU recount script that produced its counts.
 \item For this report, three independent checks re-read 89 counts of Experiments~1, 2, and 4 to 13 from the raw artifacts, and all 89 matched. We re-read the counts of \expref{3} and Section~\ref{sec:posthoc} directly. Appendix~\ref{app:provenance} lists the sources.
 \item Section~\ref{sec:posthoc} reports two analyses that we ran on 8 October 2026, after all training runs. Their scripts are in \code{scripts/audit/}.
+\item Section~\ref{sec:rewardaudit} reports an audit of the Lean reward that we ran on 9 and 10 October 2026. It adds no experiment to Table~\ref{tab:summary}. Its counts come from run reports on cpu-angad. Nobody re-read them from the raw files.
 \item The experiment descriptions in the formal terms of Section~\ref{sec:formalism} were written after the runs. They describe the designs. They do not reinterpret the results.
 \item Paths name the machine and a relative location, for example cpu-angad \pth{formal_rl/artifacts/} or S3 \pth{capstate/acq/formal_rl/}. Bucket names, addresses, and instance identifiers are kept out of the repository.
 \end{itemize}
@@ -89,6 +90,8 @@ This report covers 13 experiments. Table~\ref{tab:summary} lists them. The numbe
 \item The RLP reward can rise while correctness falls (\expref{9}). Correct training targets did not make the generated reasoning correct.
 \item No curriculum experiment produced a scored comparison of ordered against shuffled training.
 \item AI graders disagreed on 44 of 321 response views in \expref{10}. Correctness scores without a checker are noisy.
+\item Before a fix on 10 October, the scorer of the Lean GRPO trainer accepted 27 of 87 attack checks. After the fix, it accepted 0 of 87 (Section~\ref{sec:rewardaudit}).
+\item A single tactic from a fixed list proves 161 of 3,450 training statements and 28 of 420 validation statements. Another 17, 3, and 3 statements in the train, validation, and test splits have hypotheses that prove \code{False} (Section~\ref{sec:rewardaudit}).
 \end{enumerate}
 
 \section{Setup}
@@ -131,7 +134,7 @@ All Lean checks use Lean \code{v4.10.0-rc1} with mathlib commit \pth{29dcec074de
 \item The target is absent from the environment before the candidate runs.
 \item The proof uses only permitted axioms. \code{sorry}, \code{admit}, new axioms, and \code{native\_decide} are rejected as forbidden constructs.
 \end{enumerate}
-Each run that used Lean checked a true control and a false control before it scored candidates. A verifier infrastructure failure gives a null outcome, which Section~\ref{sec:signals} defines. The checker module is loaded from the run environment; its source is not in this repository.
+Each run that used Lean checked a true control and a false control before it scored candidates. A verifier infrastructure failure gives a null outcome, which Section~\ref{sec:signals} defines. The checker module is loaded from the run environment; its source is not in this repository. Section~\ref{sec:rewardaudit} audits the scorer of the later Lean-reward trainer, which builds on this checker.
 
 \subsection{Compute and accounting}
 GPU runs used single NVIDIA L40S instances on AWS, as Spot or on-demand leases with an independent termination guard on cpu-angad. CPU work, recounts, and evaluations of saved checkpoints ran on cpu-angad. The approved ceilings were \$10 per pilot on 3 October, \$64 in total on 4 October, and \$95 in total on 6 October. The run ledgers hold conservative cost reservations. They hold no billed amounts, so this report states no billed total.
@@ -716,6 +719,292 @@ References between training theorems & 344 & 1,402 \\
 
 \paragraph{Limits.} The linearity test compares state strings, and Lean has not replayed the proofs. Without cutting the nested proofs, most theorems allow at most two curriculum levels. The references are annotations, not kernel-checked dependencies.
 
+\section{Audit of the Lean reward, 9 and 10 October 2026}
+\label{sec:rewardaudit}
+
+\paragraph{Question.} Which inputs earn the Lean reward without a proof of a statement worth proving?
+
+\paragraph{Scope.} The audit covers the scorer of the Lean GRPO trainer (\pth{scripts/train/run_lean_grpo.py}). The probe and the pass-rate map share this scorer. The trainer has not run on a GPU, so no policy trained with this scorer has met an input of Sections~\ref{sec:scorerexploits} to~\ref{sec:weaker}. Those entries came from a script that we wrote or from a data audit. Entries R1 and R4 come from earlier experiments. A \emph{scorer exploit} is a completion that the scorer accepts although it is not a proof of the stated target. Experiments~3, 4, and~5 accepted no proof, so a false accept could not have raised their counts. This section does not re-audit the checker runs of Experiments~1 to 13. The same inventory, with the attack inputs, is in \pth{docs/REWARD_HACKING.md}.
+
+\begin{longtable}{@{}P{0.8cm}P{7.4cm}P{2.1cm}P{4.3cm}@{}}
+\caption{Inventory of inputs that earn the Lean reward without a proof of a statement worth proving. ``Exploit'' says whether the input needs a scorer exploit. SFT is supervised fine-tuning on Lean proofs.}\label{tab:rewardinv}\\
+\toprule
+ID & What earns reward & Exploit & Status \\
+\midrule
+\endfirsthead
+\toprule
+ID & What earns reward & Exploit & Status \\
+\midrule
+\endhead
+S1 & Forged axiom report from \code{trace} or \code{run\_tac} & Yes & Fixed \\
+S2 & Replaced \code{\#print axioms} elaborator & Yes & Fixed \\
+S3 & Command after the proof & Yes & Fixed \\
+S4 & Namespace shadowing of the target name & Yes & Fixed \\
+P1 & Valid proof followed by an extra declaration & Yes & Fixed \\
+P2 & Library search with \code{exact?} or \code{apply?} & No & Fixed by the forbidden-construct filter \\
+P3 & Library search with \code{observe} & No & Open \\
+T1 & One tactic on a statement that one tactic proves & No & Excluded from the RL pool. 99 statements remain in SFT problems \\
+T2 & Valid proof of a vacuous statement & No & Excluded from training. Detection is incomplete \\
+T3 & Valid proof of a mis-formalized statement & No & Partly filtered \\
+L1 & Recall of proofs from evaluation files & No & Fixed in task bank v3 \\
+L2 & Recall of near-duplicate training proofs & No & Capped, not removed \\
+L3 & Copy of the proof of a near-identical training statement & No & Measured as a baseline \\
+L4 & Proof that cites an evaluation theorem by name & No & Rule stated, not tested \\
+L5 & Dev set that shares files with SFT data & No & Replaced by a dev slice carved from train \\
+W1 & Goal closed through a sorried lemma in REPL tactic mode & Weaker check & Not used as the reward \\
+W2 & Five exploits in the old subprocess check & Weaker check & Open \\
+W3 & Trailing declaration in the batch-file check & Weaker check & Open for external proofs \\
+R1 & Correct witness with a wrong explanation & No & Observed in \expref{11} \\
+R2 & Constant answer & No & Measured as a baseline \\
+R3 & No-op tactics under a per-step reward & No & Control stated, not implemented \\
+R4 & Rising RLP reward with falling accuracy & No & Observed in \expref{9}. Cause untested \\
+N1 & Reward noise from batch-file neighbours & Not a gain & Fixed in the probe \\
+N2 & Reward that depends on machine load & Not a gain & Open \\
+N3 & Reward that favors short outputs & Not a gain & Open \\
+\bottomrule
+\end{longtable}
+
+\subsection{What the trainer pays}
+\label{sec:rewardpays}
+By Equation~\eqref{eq:verified}, the trainer gives reward 1 when the scorer accepts a completion, and 0 otherwise. The function \code{verify\_group} returns the verdict. The trainer, the probe (\pth{scripts/eval/probe_nt_pool.py}), and the pass-rate map (\pth{scripts/eval/pass_rate_map.py}) call it. It accepts a completion only if all of these hold:
+\begin{enumerate}
+\item The completion has no match of the pattern \code{FORBIDDEN}. A match gives a rejection without a Lean call.
+\item The completion is not empty, and every line is indented.
+\item The fixed prefix, the supplied steps, and the completion parse as one command.
+\item Lean reports no error within 20 seconds. A timeout or a REPL crash is a rejection.
+\item The target guard \code{TARGET\_ABSENT} of the checker passes.
+\item One info message sits at the line of the checker's \code{\#print axioms} command and names the target. It lists only \code{propext}, \code{Classical.choice}, and \code{Quot.sound}.
+\end{enumerate}
+The REPL is the Lean read-eval-print loop (leanprover-community/repl, tag \code{v4.10.0-rc1}). It checks each completion as one command in a loaded environment. The pattern \code{FORBIDDEN} is in \pth{scripts/eval/probe_start_depth.py}. It matches the words \code{sorry}, \code{admit}, \code{axiom}, \code{unsafe}, \code{native\_decide}, \code{set\_option}, \code{run\_tac}, \code{run\_conv}, \code{by\_elab}, \code{run\_cmd}, \code{run\_elab}, and \code{run\_meta}. It matches the symbol \code{\#}. It also matches \code{exact?}, \code{apply?}, \code{rw?}, \code{rw\_search?}, \code{hint}, and \code{library\_search}.
+
+Table~\ref{tab:rewardlabels} labels each reward component.
+
+\begin{table}[h]
+\centering
+\small
+\caption{Reward components and their labels.}
+\label{tab:rewardlabels}
+\begin{tabularx}{\textwidth}{@{}P{4.4cm}YP{3.6cm}@{}}
+\toprule
+Reward & Label & Status \\
+\midrule
+Binary \code{accepted} from \code{verify\_group} & Lean-verified & Implemented. Not run on a GPU \\
+Rewards shuffled within each group & Not Lean-verified for the completion that receives it. Control arm only & Implemented. Not run on a GPU \\
+Per-step reward & Heuristic. Lean computes it, but it measures progress, not proof & Designed. Not implemented \\
+RLP reward, Equation~\eqref{eq:rlp} & Heuristic. No Lean check & Run in Experiments 7, 8, 9, and 13 \\
+Witness reward, Equation~\eqref{eq:verified} & Lean-verified for the witness only & Run in \expref{11} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Inputs that the scorer accepted without a proof}
+\label{sec:scorerexploits}
+
+\paragraph{Method.} \pth{scripts/eval/check_checker_attacks.py} holds 29 attacks and 2 known-good controls. An attack is a test input that tries one exploit. Each case runs on 3 train statements, so one run makes 93 checks. The script scores each continuation with \code{verify\_group}, as the trainer does.
+
+\paragraph{Result.} The scorer before the fix (code folder \pth{train_code_v5}) accepted 27 of 87 attack checks. That is 9 attacks, each accepted on all 3 statements. Eight of the 9 prove nothing. Each closes the goal with \code{exact sorryAx \_ false}, and a true axiom report would list \code{sorryAx}. The ninth is a valid proof followed by an extra declaration. The pattern \code{FORBIDDEN} matches the word \code{sorry} but not \code{sorryAx}. The axiom report was therefore the only guard against \code{sorryAx}, and the attacks of Table~\ref{tab:attacks} defeated it.
+
+\begin{table}[h]
+\centering
+\small
+\caption{The 9 attacks that the scorer accepted before the fix. Each ran on 3 statements, from \pth{trainer_checker_v1/attacks_prefix2}.}
+\label{tab:attacks}
+\begin{tabularx}{\textwidth}{@{}lP{5.9cm}Y@{}}
+\toprule
+ID & Attack & Why the scorer accepted it \\
+\midrule
+S1 & \pth{trace_fake_no_axioms} & The proof prints a forged ``does not depend on any axioms'' line with \code{trace}. The parser accepted that text anywhere in the output \\
+S1 & \pth{trace_fake_axiom_list} & The proof prints a forged axiom list. The parser took the first match, and the forged line came before the real report \\
+S1 & \pth{run_tac_fake_report} & The same forged line, printed by a metaprogram \\
+S2 & \pth{run_tac_override_print_axioms} & A metaprogram adds a new elaborator for the \code{\#print axioms} command. The checker's own command then prints the forged report at the right line, with the right name \\
+S2 & \pth{by_elab_override_print_axioms} & The same elaborator, added through the term \code{by\_elab} \\
+S3 & \pth{command_elab_override} & A Lean command can start at any column. An indented \code{@[command\_elab]} definition after the proof was a new top-level command. The precheck rejected only unindented lines \\
+S3 & \pth{trailing_run_cmd_fake_report} & An indented \code{run\_cmd} after the proof prints the forged report \\
+S4 & \pth{namespace_shadow} & After \code{namespace Shadow}, the checker's \code{\#print axioms} named \code{Shadow.<name>}, whose report was clean. The scorer did not check which constant the report named \\
+P1 & \pth{trailing_theorem} & A valid proof followed by an extra \code{theorem}. This is a policy violation, not a false proof \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\paragraph{Fix.} Three rules in the shared scorer close these attacks.
+\begin{enumerate}
+\item The scorer reads axioms only from the one info message at the line of the \code{\#print axioms} command. The message must name the target (\code{axiom\_report} in \pth{scripts/eval/bench_lean_verifier.py}).
+\item A \code{run\_cmd} in the same REPL command parses the declaration with Lean's own parser. It fails with \code{EXTRA\_COMMAND} if a second command follows (\code{one\_command\_check}). It runs before the candidate text, so the candidate cannot change it.
+\item \code{FORBIDDEN} now matches \code{run\_tac}, \code{run\_conv}, \code{by\_elab}, \code{run\_cmd}, \code{run\_elab}, and \code{run\_meta}. Rules~1 and~2 cannot stop code that changes the \code{\#print axioms} elaborator.
+\end{enumerate}
+We switched off one rule at a time on the statement \pth{lean_workbook_1155}. Table~\ref{tab:ablation} shows that each rule is needed. After the fix, 0 of 87 attack checks were accepted and 6 of 6 controls were accepted (\pth{trainer_checker_v1/attacks_v9}, exit code 0). The controls ran after a REPL crash and a REPL timeout in the same call.
+
+\begin{table}[h]
+\centering
+\small
+\caption{Attacks accepted again when one rule is switched off, on \pth{lean_workbook_1155}.}
+\label{tab:ablation}
+\begin{tabularx}{\textwidth}{@{}P{6.4cm}Y@{}}
+\toprule
+Rule switched off & Attacks accepted again \\
+\midrule
+Rule 1: axiom report by position and name & \pth{trace_fake_no_axioms}, \pth{trace_fake_axiom_list} \\
+Rule 2: one-command check & \pth{command_elab_override}, \pth{trailing_theorem} \\
+Rule 3: \code{FORBIDDEN} additions & \pth{run_tac_override_print_axioms}, \pth{by_elab_override_print_axioms} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\paragraph{Earlier accepted proofs.} The fixed scorer re-scored the proofs that earlier runs accepted (Table~\ref{tab:rescore}). A text scan also looked for what each exploit needs: metaprogram words, \code{logInfo}, \code{trace}, \code{command\_elab}, and a line that starts with a command keyword. The scan covered 10,869 accepted external proofs. It found no metaprogram word and no such line. Five proofs matched the word ``depend'' inside Goedel comments. The 7 SFT proofs that time out at 20 seconds also time out on the scorer before the fix, and the fixed scorer accepts all 7 at a 120-second limit. No proof accepted in these runs used an exploit.
+
+\begin{table}[h]
+\centering
+\small
+\caption{Earlier accepted proofs, re-scored with the fixed scorer.}
+\label{tab:rescore}
+\begin{tabularx}{\textwidth}{@{}Yrr@{}}
+\toprule
+Source & Accepted before & Accepted by the fixed scorer \\
+\midrule
+\pth{train200_v3} shards (single tactic) & 24 & 24 \\
+\pth{train_v2_single_tactic} & 393 & 393 \\
+\pth{val_v2_single_tactic} & 55 & 55 \\
+\pth{nt_sft_v2} train and validation rows & 1,689 & 1,682, and 7 timeouts at 20 s \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\paragraph{Limits.} The re-scoring report does not list the LeanDojo 43-theorem evaluations or the step-level search runs. The attack list is finite, so a count of zero accepted attacks does not show that the scorer is sound. The scorer depends on \code{checker.py}, which is outside this repository.
+
+\subsection{Proofs that the project does not want paid}
+\label{sec:unwanted}
+\paragraph{Library search (P2).} The tactic \code{exact?} passed the acceptance check: Lean exited with code 0, printed ``Try this: exact \code{Nat.dvd\_trans} $h_1$ $h_2$'', and listed only allowed axioms. The single-tactic baseline on the 43 LeanDojo validation theorems was 13/43 with \code{exact?} and 9/43 without it. The baseline ran 430 attempts, 10 tactics on 43 theorems, and \code{exact?} alone solved 8 theorems. \code{FORBIDDEN} now blocks \code{exact?}, \code{apply?}, \code{rw?}, \code{rw\_search?}, \code{hint}, and \code{library\_search}. Use 9/43 as the baseline.
+
+\paragraph{The tactic \code{observe} (P3).} The Mathlib tactic \code{observe} is equivalent to \code{have hp : p := by exact?}. \code{FORBIDDEN} does not match it. This is not a soundness exploit, because Lean still checks the proof term. It matters only if the policy must name the lemma itself. No attack was run.
+
+\subsection{Valid proofs of statements without information}
+\label{sec:trivial}
+These entries need no scorer exploit. Lean accepts the proof, and the proof is correct. The reward measures the statement, not the policy.
+
+\paragraph{Single-tactic statements (T1).} A \emph{single-tactic statement} is a statement that one tactic from a fixed list of nine proves. The list is \code{aesop}, \code{tauto}, \code{simp\_all}, \code{omega}, \code{norm\_num}, \code{simp}, \code{rfl}, \code{linarith}, and \code{decide}. Of 3,450 train statements, 161 (4.7\%) are single-tactic statements. 393 of 31,050 candidates were accepted. By tactic, the accepted train candidates are \code{aesop} 97, \code{tauto} 73, \code{simp\_all} 71, \code{omega} 60, \code{norm\_num} 31, \code{simp} 30, \code{rfl} 14, \code{linarith} 9, and \code{decide} 8. Of 420 validation statements, 28 (6.7\%) are single-tactic statements, with 55 of 3,780 candidates accepted. On 200 train statements, the SFT model solved 0 (0 of 1,600 samples), and the nine single tactics solved 8 (24 of 1,800 candidates). On the LeanDojo validation set, the SFT model solved 3 of 43 theorems at 8 samples, and all 3 lie inside the 9 theorems that single tactics solve.
+
+A policy that learns to emit \code{omega} or \code{simp\_all} first would gain reward on these statements with no proof skill. At $n = 420$, an exact two-sided McNemar test at $\alpha = 0.05$ needs 6 newly solved statements and 0 losses. The 28 single-tactic validation statements exceed that floor. The primary metric of the midsemester study is therefore the 392 validation statements that no single tactic proves, reported next to the full 420. The RL pool holds 0 single-tactic statements. One drawback remains: the SFT problems still hold 99 of them, so the SFT model trains on their proofs.
+
+\paragraph{Vacuous statements (T2).} A \emph{vacuous statement} has hypotheses that prove \code{False}. Any conclusion follows, so the proof is trivial. \pth{scripts/eval/false_hypothesis_sweep.py} tries \code{exfalso} followed by one of 8 closing tactics on all 4,306 pool statements, which makes 34,448 candidates. A statement is vacuous when one candidate is accepted. Two synthetic controls checked the sweep. With $n \in \mathbb{N}$, the statement with hypothesis $n < 0$ and goal $n = 5$ was accepted by 8 of 8 tactics, and the statement with hypothesis $n < 3$ and goal $n < 5$ was rejected by 8 of 8. Table~\ref{tab:uninformative} gives the counts. All 17 vacuous train statements have proofs in \pth{nt_sft_v2}, and all 3 vacuous validation statements lie among the 28 single-tactic validation statements. Table~\ref{tab:vacuousex} gives five hits that we checked by hand.
+
+The sweep has two limits. Detection is incomplete: 16 statements had a timeout or a REPL crash and no accepted candidate, and they stay in the data. Also, \code{exfalso} does not introduce premises inside the goal, so the sweep tests only the hypotheses before the colon.
+
+\begin{table}[h]
+\centering
+\small
+\caption{Statements of \pth{nt_pool_v2} without information, by split. ``--'' means not measured. Sources: \pth{nt_probe/}, \pth{nt_false_hyp_v1/}, and \pth{nt_pool_v2/summary.json}.}
+\label{tab:uninformative}
+\begin{tabular}{@{}lrrr@{}}
+\toprule
+Count & Train & Validation & Test \\
+\midrule
+Statements & 3,450 & 420 & 436 \\
+Single-tactic statements & 161 & 28 & -- \\
+Vacuous statements & 17 & 3 & 3 \\
+Undetermined (timeout or crash, no accepted candidate) & 10 & 1 & 5 \\
+Dropped by the real-number filter & 68 & 9 & 9 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[h]
+\centering
+\small
+\caption{Five vacuous statements, checked by hand.}
+\label{tab:vacuousex}
+\begin{tabularx}{\textwidth}{@{}P{5.3cm}lY@{}}
+\toprule
+Statement & Split & Why the hypotheses are false \\
+\midrule
+\pth{lean_workbook_plus_14943} & train & $n = 5k + 1$ and $n = 5k - 1$ give $1 = -1$ \\
+\pth{lean_workbook_38542} & train & In $\mathbb{N}$, $3n - m + 5 \ge 5$, so it cannot equal 1 \\
+\pth{lean_workbook_plus_64022} & train & The recurrence at $n = 0$ gives $a_1 = a_0$, so $1 = 2$ \\
+\pth{lean_workbook_27418} & validation & $(n, p) = 1$ is an equation in $\mathbb{N} \times \mathbb{N}$, so $p = 1$, which contradicts \code{p.Prime} \\
+\pth{lean_workbook_50556} & test & In $\mathbb{N}$, $3 / 2 = 1$, so \code{h3p} says $p < n$, which contradicts \code{hp : n < p} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\paragraph{Mis-formalized statements (T3).} A \emph{mis-formalized statement} is a Lean statement that does not say what its source problem says. The statement \pth{lean_workbook_plus_38640}, $10^n \mid (5 + \sqrt{35})^{2n-1}$, is divisibility in a field, so it is trivially true. The pool filter checked only for $\mathbb{R}$ and $\mathbb{C}$. It now also matches the square-root sign, the symbol $\pi$, \code{Real.}, and \code{Complex.}, and it dropped 86 statements (Table~\ref{tab:uninformative}). Subtraction and division in $\mathbb{N}$ cause several vacuous statements, as Table~\ref{tab:vacuousex} shows. The filter does not catch three statements that the coordinator named: \pth{lean_workbook_48558} (a definition of \code{lcm}), \pth{lean_workbook_plus_52344} (a set tautology), and \pth{lean_workbook_plus_75144} (a closed count with no free variable). Of the 8 train statements that single tactics solved in the 200-statement run, at least 5 were trivial or mis-formalized.
+
+\subsection{Valid proofs that the policy can recall}
+\label{sec:recall}
+These entries need no scorer exploit. Reward rises because the policy recalls content, not because it proves something new. \emph{Contamination} is evaluation content in the training data, the prompts, or the RL tasks. The \emph{token Jaccard similarity} of two statements $a$ and $b$ is $J(a, b) = |T_a \cap T_b| / |T_a \cup T_b|$, where $T$ is the set of tokens of the statement text without its name and proof. A \emph{near-duplicate} pair has $J$ at or above a stated cap.
+
+\paragraph{Task bank overlap (L1).} 826 of the 1,007 accepted tasks of task bank v1 lie in the 26 LeanDojo evaluation files. 1,137 of its 1,350 records lie there. Task bank v3 had 0 of 4,632 records in evaluation files at the time of the check. RL tasks now come only from files outside the evaluation files.
+
+\paragraph{Near-duplicates (L2).} The split key hashes statements after it renames variables. It misses hypothesis-name and parenthesis variants. The token scan found 68 train statements at $J = 1.00$ to a validation or test statement. 13 of them are SFT problems. The key had missed all 68. Splits v3 exclude train statements at $J \ge 0.85$ to a validation or test statement, and at $J \ge 0.7$ to a miniF2F statement. They exclude 165 near-duplicates of a test statement, 127 of a validation statement, 34 of a miniF2F statement, 17 vacuous statements, and 16 miniF2F-check names. One statement can have several reasons. A cap leaves close statements below it: in splits v2, 192 of 420 validation statements have a train neighbour between 0.70 and 0.85. Report validation results by nearest-train-similarity band. The miniF2F statement \code{aime\_1994\_p3} equals \pth{lean_workbook_plus_44384} up to hypothesis names, and that statement and \pth{lean_workbook_plus_59411} are miniF2F near-duplicates that \pth{nt_sft_v2} contains.
+
+\paragraph{Copying the nearest training proof (L3).} \pth{scripts/eval/nearest_proof_baseline.py} takes no model. It pastes the Lean-accepted proofs of the 8 nearest train statements under each validation header. Table~\ref{tab:nearest} gives the counts. 5 of the 22 non-trivial solves copy a train statement at $J = 1.0$. All 5 neighbours have proofs in \pth{nt_sft_v2}. A model trained on \pth{nt_sft_v2} therefore saw proofs that copy-solve 5 validation statements, and its validation numbers need this caveat. The baseline pastes bodies verbatim. Renaming hypotheses would likely solve more, and we did not test it. Report this baseline next to every arm.
+
+\begin{table}[h]
+\centering
+\small
+\caption{Validation statements solved by copying a train proof, with no model (\pth{trainer_checker_v1/nearest_proof_v7} and \pth{nearest_proof_trainable_v8}). The non-trivial set excludes the 28 single-tactic statements.}
+\label{tab:nearest}
+\begin{tabular}{@{}lrr@{}}
+\toprule
+Library of train proofs & All 420 & Non-trivial 392 \\
+\midrule
+Full train split & 37 & 22 \\
+Trainable (285 statements dropped) & 26 & 12 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Citations of evaluation theorems (L4).} The external proof check found 43 citations of evaluation theorem names in accepted proofs, over 13 distinct names. The detector misses dot notation. A proof that cites a held-out theorem passes by lookup. The rule is to drop near-duplicate problems and citing proofs before use.
+
+\paragraph{Dev sets that share files (L5).} For the LeanDojo dev sets, 147 of 148 theorems (v1) and 263 of 266 theorems (v2) share a file with the SFT training set. Decisions on those sets measure recall. The number-theory study uses a 300-statement dev slice carved from train that is in neither the SFT data nor the RL pool.
+
+\subsection{Weaker checks that accept a non-proof}
+\label{sec:weaker}
+\paragraph{REPL tactic mode (W1).} The tactic mode of the REPL has no axiom check. In the step-level search over LeanDojo theorems, 9 closed paths for \code{Set.union\_diff\_left} in \pth{search_v1_sftfinal} were rejected on re-check, because the proofs use a lemma whose proof had been replaced by \code{sorry}. The fixed-list search \pth{search_v3_fixed}, which uses no model, closed 29 paths for the same theorem, and all were rejected. The same mode rejects 6 of 20 correct reference proofs. The GRPO reward uses the environment mode of the REPL, which checks axioms. It agrees with the subprocess check on 160 of 160 proofs. Every found proof needs an axiom check on re-check.
+
+\paragraph{Old subprocess check (W2).} The function \code{check} in \pth{scripts/eval/probe_start_depth.py} reads axioms from the whole Lean output and has no one-command check. By code reading, it keeps five exploits: \pth{trace_fake_no_axioms}, \pth{trace_fake_axiom_list}, \pth{command_elab_override}, \pth{trailing_theorem}, and \pth{namespace_shadow}. This was not tested. Three scripts call it: \pth{lean_eval_statements.py}, \pth{single_tactic_baseline.py}, and \pth{search_tactics.py}. The 9/43 baseline and the 3/43 SFT result come from them, and the re-scoring of Table~\ref{tab:rescore} does not list those runs. Do not use these scripts to score model output until they call \code{verify\_group}.
+
+\paragraph{Batch-file check (W3).} The function \code{check\_batch} in \pth{scripts/data/verify_external_proofs.py} reads each axiom report by line, so the forged reports of S1 and S2 cannot work there. It has no one-command check. It scores external proofs only, not model output.
+
+\subsection{Reward that covers part of the output, and reward noise}
+\label{sec:partial}
+\paragraph{Witness-only reward (R1).} In \expref{11}, Lean checked one witness. Correct witnesses on validation rose from 0/8 to 6/8, and error-free answers were 2/8 on validation and 0/4 held-out. The explanations around the witness often stayed wrong.
+
+\paragraph{Constant answers (R2).} The corpus audit of \expref{12} found that a constant answer solved every contradiction item. On the answer-task validation set, a constant answer scores 14/309: \code{gcd} 5/45, \code{pow\_mod} 6/45, \code{mod\_inverse} 2/45, and \code{witness} 1/45. A random answer scores 0/309.
+
+\paragraph{No-op tactics (R3).} A per-step reward would credit the fraction of generated tactics that elaborate before the first error. Tactics that elaborate and change nothing, for example \code{skip} or \code{have h := h}, would earn it. A subgoal reduction is not a proof. The planned control counts a tactic only if the goal state changes, keeps the per-step weight below the proof weight, and reads the ten highest-reward samples each round. None of this is implemented.
+
+\paragraph{RLP reward and accuracy (R4).} In \expref{9}, the RLP reward rose while held-out accuracy fell from 42/108 to 21/108. The reward is heuristic and has no Lean check. A train and evaluation mismatch is a possible cause, and no test isolated it.
+
+\paragraph{Batch-file neighbours (N1).} A candidate that ended after \code{by} or a bullet made Lean report the parse error in the next candidate's span. An unterminated block comment swallowed the rest of its file. In one test, 15 of 40 known-good proofs were rejected. The probe now scores with the REPL path. Re-scoring 1,229 old probe verdicts gave 0 flips.
+
+\paragraph{Timeouts (N2).} 7 of 1,689 SFT proofs need more than the 20-second limit under the load of cpu-angad. At a 120-second limit they take 24.6 to 84.1 seconds each. The single-tactic checks gave 23 timeouts and 11 REPL crashes in 31,050. The scorer gives reward 0 to a timeout and to a crash, whereas Equation~\eqref{eq:verified} reserves $\bot$ for verifier failure. A policy that avoids slow tactics would gain reward. This is an inference, not a measurement.
+
+\paragraph{Length cap (N3).} 253 of 1,600 first errors (15.8\%) of the SFT model were the 256-token cap. A binary reward pays outputs that stop early.
+
+\subsection{Checks before an RL gain counts, and open items}
+\label{sec:rewardchecks}
+\paragraph{Checks.} Run these before any RL gain is reported:
+\begin{enumerate}
+\item Split the solved set of every arm into single-tactic, vacuous, near-duplicate, and other statements. Report the rate on the other statements as the headline.
+\item Report the nearest-proof baseline of Table~\ref{tab:nearest} next to every arm.
+\item Run \pth{scripts/eval/check_checker_attacks.py} on the final scorer. Require 0 accepted attacks and all controls accepted.
+\item Run \pth{scripts/eval/rescore_accepted.py} on every accepted proof of the final run, and read the scan hits.
+\item Read the highest-reward samples of each round.
+\item Run the shuffled-reward arm. It keeps the reward rate and the share of mixed groups, and it breaks the link between a completion and its reward. A \emph{mixed group} holds both a reward of 0 and a reward of 1.
+\item Report the cap rate, the mean length, and the timeout count per arm.
+\end{enumerate}
+
+\paragraph{Open items.} These come from the trainer-and-checker report. As of 10 October, the decision log of \pth{docs/EXPERIMENTS.md} has no line on items 1 to 4 and 6.
+\begin{enumerate}
+\item Accept the three scorer rules as the reward check for every arm.
+\item Retire the old subprocess check, or move its three users to \code{verify\_group}.
+\item Decide whether \code{observe} joins \code{FORBIDDEN}.
+\item Keep the 20-second timeout, or raise it and pay more Lean time per step.
+\item Use the new SFT data for the midsemester arms, or report the caveat of Section~\ref{sec:recall}.
+\item Add a dated line to the decision log of \pth{docs/EXPERIMENTS.md} for the scorer change and for the removal of the Bernoulli random-reward arm.
+\end{enumerate}
+
+\paragraph{Remaining risks.} The REPL has no memory cap of its own, so a large computation can allocate memory before the 20-second timeout. Every job needs a systemd \code{MemoryMax}. Two older copies of \code{FORBIDDEN} remain, in \pth{scripts/data/replay_training_proofs.py} and \pth{scripts/data/build_sft_data.py}. They define weaker patterns and filter data. They do not score reward.
+
 \section{What the record shows}
 \label{sec:findings}
 
@@ -729,6 +1018,8 @@ References between training theorems & 344 & 1,402 \\
 
 \paragraph{Grading without a checker is noisy.} AI reviewers disagreed on 44 of 321 views in \expref{10}, and the primitive RLP corpus contained shortcut tasks (\expref{12}). This motivates Lean-checked endpoints where they exist.
 
+\paragraph{A Lean-checked reward is not a proof of skill.} Section~\ref{sec:rewardaudit} shows two limits. Before a fix on 10 October, the scorer of the Lean GRPO trainer accepted 9 kinds of input that are not proofs of the target. After the fix, it accepted none of the 29 attacks. Separately, a single tactic from a fixed list proves 28 of 420 validation statements, and copying the nearest training proof solves 22 of the 392 others. A rise in the accepted rate needs a split by statement type before it counts as proof skill.
+
 \subsection{Threats to validity}
 \begin{itemize}
 \item Samples are small. Validation sets have 8 to 56 items, the Nat test split has 15 theorems, and the false-prefix result rests on 2 examples.
@@ -737,6 +1028,8 @@ References between training theorems & 344 & 1,402 \\
 \item Pretraining exposure of the model to mathlib and to the authored concepts is unknown.
 \item No run measured GPU-active time, so cost comparisons use tokens and Lean calls only.
 \item The GPU sampling counts of \expref{3} come from an exported monitoring stream. Nobody recounted them independently.
+\item The counts of Section~\ref{sec:rewardaudit} come from run reports on cpu-angad. Nobody re-read them from the raw files.
+\item The attack list of Section~\ref{sec:rewardaudit} holds 29 inputs. A count of zero accepted attacks does not show that the scorer is sound.
 \end{itemize}
 
 \section{Proposed next study (not run)}
@@ -830,6 +1123,7 @@ Table~\ref{tab:provenance} names, for each experiment, the archived record and t
 12 & \pth{docs/results/07_rlp_corpus_audit.md} & \pth{artifacts/rlp_data_audit_v1/final/} & Yes \\
 13 & \pth{docs/results/08_controlled_rlp.md} & \pth{artifacts/mathematical_pretraining_v1/}; \pth{artifacts/controlled_ordered_review_20261006/run.json} and \pth{ordered_results_v2e/} & Yes \\
 PH & This report, Section~\ref{sec:posthoc} & \pth{scripts/audit/classify_proof_failures.py}; \pth{scripts/audit/curriculum_inventory.py} & Yes \\
+AU & This report, Section~\ref{sec:rewardaudit}; \pth{docs/REWARD_HACKING.md} & \pth{artifacts/notes/2026-10-10_trainer_checker_report.md}; \pth{artifacts/notes/2026-10-10_engineering_audit.md}; \pth{artifacts/notes/2026-10-10_data_build_report.md} (all three local); \pth{trainer_checker_v1/}; \pth{nt_false_hyp_v1/}; \pth{nt_probe/}; \pth{nt_splits_v3/} & No \\
 \bottomrule
 \end{longtable}
 

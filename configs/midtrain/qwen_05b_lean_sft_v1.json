@@ -1,0 +1,25 @@
+{
+  "purpose": "Lean 4 supervised fine-tuning before expert iteration and GRPO; teaches Lean 4 syntax and tactic use",
+  "initial_policy": "Qwen/Qwen2.5-0.5B-Instruct",
+  "initial_revision": "7ae557604adf67be50417f59c2c2f167def9a775",
+  "data": "LeanDojo Benchmark 4 random/train at mathlib 29dcec074de168ac2bf835a77ef68bbe069194c5, built by scripts/data/build_sft_data.py; files holding any of the 81 validation or test theorems excluded",
+  "seed": 20261009,
+  "learning_rate": 1e-05,
+  "warmup_ratio": 0.03,
+  "epochs": 1,
+  "batch_size": 4,
+  "grad_accum": 16,
+  "max_length": 1024,
+  "logging_steps": 20,
+  "eval_steps": 500,
+  "eval_rows": 2000,
+  "milestone_steps": [
+    300,
+    1500
+  ],
+  "precision": "FP32 master weights and AdamW moments, BF16 autocast",
+  "instance": "one NVIDIA L40S (AWS g6e.xlarge), on demand",
+  "lease_seconds": 14400,
+  "budget_usd": 145,
+  "history": "2026-10-09 first lease failed at step 0: CUDA OOM in the FP32 logits upcast at batch 16 x 1024; relaunched at batch 4 x 16 accumulation"
+}

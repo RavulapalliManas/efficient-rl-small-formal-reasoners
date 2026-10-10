@@ -1,0 +1,20 @@
+{
+  "purpose": "Number-theory proof SFT with informal comments and tactic variants. Mathlib proof continuations add syntax examples. Prepare the policy before GRPO.",
+  "initial_policy": "SFT v2 final checkpoint (lean_sft_20261009_v2, cpu-angad formal_rl/sft_checkpoints/v2_final)",
+  "data": "Use --data formal_rl/nt_sft_v8. The training split contains 5,812 examples. The loss-evaluation split contains 245 examples. Sources are admitted nt_sft_v5 proofs, nt_aug_v1, and syntax_sft_v3. Apply frozen nt_splits_v3 membership and forward-only held-out/DEV exclusions. The build supplies sft_train.jsonl and sft_val.jsonl aliases. Evidence: syntax_code_v3/logs/data_check_v2.json and nt_sft_v8/manifest.json",
+  "ablation_arm": "Use --data formal_rl/nt_sft_v8_nocomments with this same config and starting checkpoint. Both arms have the same examples, prompts, order, and theorem split. Comments are removed from proof targets; syntax continuations are identical in both arms",
+  "seed": 20261010,
+  "learning_rate": 1e-05,
+  "warmup_ratio": 0.03,
+  "epochs": 3,
+  "batch_size": 2,
+  "grad_accum": 32,
+  "max_length": 2048,
+  "logging_steps": 5,
+  "eval_steps": 25,
+  "eval_rows": 245,
+  "milestone_steps": [],
+  "precision": "FP32 master weights and AdamW moments, BF16 autocast",
+  "instance": "one NVIDIA L40S (AWS g6e.2xlarge), on demand",
+  "notes": "The corrected readiness audit counts input_ids with the saved Qwen tokenizer and chat template. Maximum length is 1,809 tokens. The audit covers 6,057 examples. No example exceeds max_length. Data coverage does not establish a training benefit. Syntax references pass scorer v11 with the scoped-attribute and trailing-comment context fixes. Cut states retain their earlier bank replay evidence. Run exp017-syntax-v3 archives the source and output records. This config does not authorize a GPU launch."
+}

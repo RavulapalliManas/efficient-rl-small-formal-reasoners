@@ -10,6 +10,10 @@ eval-loss split; validation and test statements are never read.
 --strip-comments removes block and line comments from every kept body (the interleaving ablation: the same proofs
 and examples, with the informal reasoning removed); has_comments still describes the original body.
 --problems keeps only the problems named in a file (one name per line; for example sft_problems.txt of build_nt_splits.py).
+--augmentations adds the accepted tactic-augmentation proofs through the same filters.
+--excluded-problems applies forward-only exclusions without changing the frozen split.
+--syntax appends a completed syntax build. Its theorem-level loss split and examples
+stay identical in the interleaved and comments-removed arms.
 
 Memory: pool, states, and ~11k proof rows (<300 MiB).
 """
@@ -49,10 +53,25 @@ def strip_comments(body):
     return "\n".join(line for line in lines if line.strip())
 
 
+def proof_rows(paths, augmentations, pool):
+    for path in paths:
+        yield from map(json.loads, path.open())
+    for path in augmentations:
+        for row in map(json.loads, path.open()):
+            if row["name"] not in pool:
+                continue
+            yield {"name": row["name"], "status": "accepted", "source": "tactic_augmentation",
+                   "text": header(pool[row["name"]]) + " := by\n" + row["text"]}
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--pool", type=Path, required=True)
     parser.add_argument("--proofs", type=Path, action="append", required=True)
+    parser.add_argument("--augmentations", type=Path, action="append", default=[],
+                        help="Accepted proofs.jsonl from build_nt_tactic_aug.py")
+    parser.add_argument("--syntax", type=Path, help="Completed build_syntax_sft.py output directory")
+    parser.add_argument("--excluded-problems", type=Path, help="Additional forward-only SFT exclusions")
     parser.add_argument("--states", type=Path, required=True, help="states.jsonl with name and state")
     parser.add_argument("--max-chars", type=int, default=4000)
     parser.add_argument("--strip-comments", action="store_true", help="remove comments from every kept body")
@@ -61,55 +80,68 @@ def main():
     args = parser.parse_args()
     pool = {r["name"]: r for r in map(json.loads, args.pool.open()) if r["split"] == "train"}
     keep = set(args.problems.read_text().split()) if args.problems else None
+    excluded = set(args.excluded_problems.read_text().split()) if args.excluded_problems else set()
     states = {r["name"]: r["state"] for r in map(json.loads, args.states.open()) if r["state"]}
     counts, seen = Counter(), set()
     args.output.mkdir(parents=True, exist_ok=False)
     with (args.output / "train.jsonl").open("x") as train, (args.output / "val.jsonl").open("x") as val:
-        for path in args.proofs:
-            for line in path.open():
-                r = json.loads(line)
-                counts["proof_rows"] += 1
-                if r["status"] != "accepted":
-                    counts["skipped_not_accepted"] += 1
-                    continue
-                row = pool.get(r["name"])
-                if row is None:
-                    counts["skipped_not_train_pool_name"] += 1
-                    continue
-                if keep is not None and r["name"] not in keep:
-                    counts["skipped_not_in_problems"] += 1
-                    continue
-                if r["name"] not in states:
-                    counts["skipped_no_state"] += 1
-                    continue
-                stmt = header(row)
-                body = body_of(r["text"], stmt)
-                if body is None:
-                    counts["skipped_statement_differs"] += 1
-                elif FORBIDDEN.search(body) or any(l.strip() and not l[0].isspace() for l in body.split("\n")):
-                    counts["skipped_forbidden_or_top_level"] += 1
-                elif len(body) > args.max_chars:
-                    counts["skipped_too_long"] += 1
-                elif (r["name"], body) in seen:
-                    counts["skipped_duplicate_body"] += 1
-                else:
-                    seen.add((r["name"], body))
-                    source = r["source"].split("_proof")[0]
-                    comments = "/-" in body or bool(re.search(r"^\s*--", body, re.M))
-                    if args.strip_comments:
-                        body = strip_comments(body)
-                    held = int(hashlib.sha256(r["name"].encode()).hexdigest(), 16) % 100 < 5
-                    (val if held else train).write(json.dumps({
-                        "format": "proof", "theorem": r["name"], "source": source, "has_comments": comments,
-                        "messages": [{"role": "user", "content": INSTRUCTION.format(state=states[r["name"]])},
-                                     {"role": "assistant", "content": "```lean\n" + stmt + " := by\n" + body + "\n```"}]},
-                        ensure_ascii=False) + "\n")
-                    counts["kept_" + ("val" if held else "train")] += 1
-                    counts[f"kept_{source}_{'with' if comments else 'without'}_comments"] += 1
+        for r in proof_rows(args.proofs, args.augmentations, pool):
+            counts["proof_rows"] += 1
+            if r["status"] != "accepted":
+                counts["skipped_not_accepted"] += 1
+                continue
+            row = pool.get(r["name"])
+            if row is None:
+                counts["skipped_not_train_pool_name"] += 1
+                continue
+            if keep is not None and r["name"] not in keep:
+                counts["skipped_not_in_problems"] += 1
+                continue
+            if r["name"] in excluded:
+                counts["skipped_additional_exclusion"] += 1
+                continue
+            if r["name"] not in states:
+                counts["skipped_no_state"] += 1
+                continue
+            stmt = header(row)
+            body = body_of(r["text"], stmt)
+            if body is None:
+                counts["skipped_statement_differs"] += 1
+            elif FORBIDDEN.search(body) or any(l.strip() and not l[0].isspace() for l in body.split("\n")):
+                counts["skipped_forbidden_or_top_level"] += 1
+            elif len(body) > args.max_chars:
+                counts["skipped_too_long"] += 1
+            elif (r["name"], body) in seen:
+                counts["skipped_duplicate_body"] += 1
+            else:
+                seen.add((r["name"], body))
+                source = r["source"].split("_proof")[0]
+                comments = "/-" in body or bool(re.search(r"^\s*--", body, re.M))
+                if args.strip_comments:
+                    body = strip_comments(body)
+                held = int(hashlib.sha256(r["name"].encode()).hexdigest(), 16) % 100 < 5
+                (val if held else train).write(json.dumps({
+                    "format": "proof", "theorem": r["name"], "source": source, "has_comments": comments,
+                    "messages": [{"role": "user", "content": INSTRUCTION.format(state=states[r["name"]])},
+                                 {"role": "assistant", "content": "```lean\n" + stmt + " := by\n" + body + "\n```"}]},
+                    ensure_ascii=False) + "\n")
+                counts["kept_" + ("val" if held else "train")] += 1
+                counts[f"kept_{source}_{'with' if comments else 'without'}_comments"] += 1
+        if args.syntax:
+            if not (args.syntax / "manifest.json").is_file():
+                raise RuntimeError("Syntax build has no completion manifest")
+            for split, out in (("train", train), ("val", val)):
+                for r in map(json.loads, (args.syntax / f"sft_{split}.jsonl").open()):
+                    out.write(json.dumps(r, ensure_ascii=False) + "\n")
+                    counts[f"kept_{split}"] += 1
+                    counts[f"kept_syntax_{split}"] += 1
     counts["problems"] = len({n for n, _ in seen})
     (args.output / "manifest.json").write_text(json.dumps({"counts": dict(counts), "max_chars": args.max_chars,
                                                            "pool": args.pool.name, "strip_comments": args.strip_comments,
-                                                           "problems_file": args.problems and args.problems.name},
+                                                           "problems_file": args.problems and args.problems.name,
+                                                           "excluded_problems_file": args.excluded_problems and args.excluded_problems.name,
+                                                           "augmentations": [p.parent.name + "/" + p.name for p in args.augmentations],
+                                                           "syntax": args.syntax and args.syntax.name},
                                                           indent=2) + "\n")
     print(json.dumps(dict(counts), indent=1), flush=True)
 

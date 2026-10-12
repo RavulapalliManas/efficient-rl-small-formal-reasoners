@@ -26,16 +26,27 @@
 \title{Efficient Reinforcement Learning for Small Formal Reasoners\\[2pt]
 \large Experiment record and formalization, 1 to 8 October 2026}
 \author{Manas Ravulapalli\\ \small Compiled from the project repository and run records}
-\date{10 October 2026}
+\date{12 October 2026}
 
 \begin{document}
 \maketitle
 
 \begin{abstract}
-This report records every experiment of the project from 1 to 8 October 2026, with the formal definitions behind them. The project asks whether reinforcement learning (RL) can teach \code{Qwen2.5-0.5B-Instruct} number theory and Lean~4 proofs under a fixed compute budget. We ran 13 experiments: data preparation, two capability baselines, three proof-RL studies with a terminal Lean reward, five knowledge-acquisition studies with an RLP reward, one evaluation series of saved checkpoints, and one RL pilot with a Lean-verified local reward. The model never produced an accepted Lean proof without assistance. Lean accepted 0 of 63 whole-proof attempts in the recounted local check, and the exported records of a larger sampling run show 0 of 273. RL with a terminal Lean reward gave no learning signal, because no sampled group had reward variation. In one RLP run, the prediction reward rose while held-out accuracy fell from 42/108 to 21/108. The only measured RL gain came from a Lean-checked witness reward on a narrow task, where validation accuracy rose from 0/8 to 6/8. A post hoc analysis shows that none of the 63 failed proof attempts was well-formed Lean~4. An audit of the Lean scorer on 9 and 10 October found nine kinds of input that it accepted and should have rejected, and a fix rejects all nine. A single tactic from a fixed list proves 28 of 420 validation statements, so a reward for accepted proofs can rise without proof skill. The Lean GRPO trainer has not run on a GPU, so no trained policy has used these weaknesses. The report ends with a proposed study that has not run.
+This report records every experiment of the project from 1 to 8 October 2026, with the formal definitions behind them. The project asks whether reinforcement learning (RL) can teach \code{Qwen2.5-0.5B-Instruct} number theory and Lean~4 proofs under a fixed compute budget. We ran 13 experiments: data preparation, two capability baselines, three proof-RL studies with a terminal Lean reward, five knowledge-acquisition studies with an RLP reward, one evaluation series of saved checkpoints, and one RL pilot with a Lean-verified local reward. In these early experiments, the model never produced an accepted Lean proof without assistance. Lean accepted 0 of 63 whole-proof attempts in the recounted local check, and the exported records of a larger sampling run show 0 of 273. RL with a terminal Lean reward gave no learning signal, because no sampled group had reward variation. In one RLP run, the prediction reward rose while held-out accuracy fell from 42/108 to 21/108. The only measured RL gain in this early record came from a Lean-checked witness reward on a narrow task, where validation accuracy rose from 0/8 to 6/8. A post hoc analysis shows that none of the 63 failed proof attempts was well-formed Lean~4. An audit of the Lean scorer on 9 and 10 October found nine kinds of input that it accepted and should have rejected, and a fix rejects all nine. A single tactic from a fixed list proves 28 of 420 validation statements, so a reward for accepted proofs can rise without proof skill. At the scorer-audit snapshot, the Lean GRPO trainer had not run on a GPU; that statement predates the later training in Section~\ref{sec:grpolineage}. The report ends with a proposed study that has not run.
 \end{abstract}
 
 \section*{Status of this document}
+The two-page companion \href{training_setup.pdf}{\emph{Lean-in-the-loop RL: setup and verification boundaries}}
+(source: \pth{docs/tex/training_setup.tex}) describes the prepared setup and ordered next work as of 11 October 2026.
+It separates step verification, private-target likelihood rewards, and complete-proof evaluation.
+That companion describes preparation at its stated date; it is not the current execution record.
+The historical sections below retain their original scope through 8 October.
+Section~\ref{sec:grpolineage} distinguishes subsequent GRPO training from the interactive REINFORCE and prepared PPO comparisons.
+The abstract's statements about absent unassisted proofs and absent GPU training describe the early studies and scorer-audit snapshot.
+They do not describe the later interleaved and recovery checkpoints.
+Current execution status remains in \pth{README.md}, with protocols and evidence indexed in \pth{docs/EXPERIMENTS.md}.
+Appendix~\ref{app:currentloop} adds the dated analysis of the recent Lean loop and its failure boundaries.
+Its unfinished checks are marked pending; it does not replace the historical results.
 \begin{itemize}
 \item Every count comes from a run record. Appendix~\ref{app:provenance} names the record and the raw artifact for each experiment.
 \item The detailed run records are archived in Git commit \code{8fc8423} under \code{docs/results/} and \code{docs/decisions.md}. Each of those records names the CPU recount script that produced its counts.
@@ -52,9 +63,80 @@ This report records every experiment of the project from 1 to 8 October 2026, wi
 \label{sec:intro}
 
 \subsection{Question and scope}
-The project asks when RL improves number-theory knowledge and Lean~4 proof construction in a model with about 500 million parameters, under a fixed compute budget. The midsemester goal is a model that generates some verified proofs. The longer goal is proof strategy on competition problems with RL in the loop. Neither goal is met yet.
+The project asks when RL improves number-theory knowledge and Lean~4 proof construction in a model with about 500 million parameters, under a fixed compute budget. The midsemester goal is a model that generates some verified proofs. The longer goal is proof strategy on competition problems with RL in the loop. Neither goal was met by the early experiments below. Subsequent proof demonstrations have a narrower scope than the longer goal.
 
 This report covers 13 experiments. Table~\ref{tab:summary} lists them. The numbers match \pth{docs/EXPERIMENTS.md}. The sections group the experiments by the question they answer.
+
+\paragraph{Midterm question adopted on 11 October.}
+Can verified demonstrations and solvable training tasks make RL improve our small prover? This question remains open. The current experiment status is maintained in \pth{README.md}; the historical results below do not establish this claim.
+
+A decisive comparison starts from the same checkpoint after supervised learning on Lean-verified training proofs. Compare continued supervised learning with GRPO on training tasks that produce both accepted and rejected attempts. Match the training compute budget and use identical evaluation settings. Select tasks and checkpoints without using held-out test outcomes.
+
+The primary endpoint is complete, unassisted Lean-accepted proofs on unseen theorems. Report generated tokens and Lean calls beside proof coverage. Assisted completions, valid intermediate tactics, and improved training reward do not establish this endpoint. The existing EXP-021 recovery protocol tests an added RL stage, but does not isolate RL from all additional training effects. Its limits remain part of the interpretation.
+
+\paragraph{Current failure diagnosis, 11 October.}
+EXP-021's frozen DEV recount finds no accepted proof in any arm. Each arm contains 64 attempts across 32 statements. In the RFT-plus-GRPO arm, the first errors classify as 43 proof-construction failures, 17 name or type-resolution errors, 3 syntax or structure errors, and 1 verifier timeout. The shared starting checkpoint has 41 proof-construction failures, 18 name or type-resolution errors, 4 syntax or structure errors, and 1 timeout. These are exclusive first-error locations, not causes of failed learning or judgments of informal mathematical reasoning. The separate tactic pilots rejected fenced actions before Lean execution. Their parser correction does not establish corrected policy training.
+
+The recount uses \pth{scripts/audit/classify_proof_failures.py} on raw \code{checked.jsonl} records. Its summaries and source snapshot reside in the EXP-021 \code{proof\_failure\_diagnostic/} archive indexed by \pth{docs/EXPERIMENTS.md}. EXP-022 prepares a PPO versus GRPO comparison from the same parent and with matched sampling. Its CPU checks establish adapter mechanics; proof improvement remains untested.
+
+\subsection{GRPO lineage and the current comparison}
+\label{sec:grpolineage}
+Group Relative Policy Optimization (GRPO) compares sampled responses to the other responses for the same prompt~\cite{trl}.
+The reward defines what this comparison teaches.
+The project uses this optimizer for both hidden-answer likelihood rewards and Lean-verified rewards; these objectives certify different things.
+Equation~\eqref{eq:adv} explains why equal rewards remove the task-reward policy gradient.
+This diagnosis applies to the early terminal-reward failures, not to every later checkpoint.
+
+\paragraph{Whole proofs and prerequisites.}
+Experiments~4 and~5 start from the original Instruct model and request complete proof bodies.
+The prerequisite study adds authored logic, arithmetic, divisibility and induction tasks, with decreasing support and a syntax-template retry.
+The sampled rewards provide no contrast, so these studies cannot establish an effect of curriculum order.
+Experiment~6 supplies a proof prefix and creates occasional accepted completions.
+Its lack of unassisted validation success prevents a claim that finishing a supplied proof transfers to constructing one.
+Their methods and historical counts remain in Section~\ref{sec:proofrl}.
+
+\paragraph{Local mathematical witnesses.}
+Experiment~11 starts from the primitive-RLP checkpoint and asks for an expression satisfying a supplied mathematical obligation.
+Lean certifies that expression, rather than a complete proof or the surrounding explanation.
+The local result in Section~\ref{sec:localaction} therefore measures witness generation.
+It does not establish complete-proof competence.
+
+\paragraph{Interleaved proof training.}
+EXP-020 starts from Lean SFT v2, adds a common supervised stage, then separates SFT/RLP and SFT/Lean-GRPO branches.
+The GRPO schedule begins with short proof-prefix completions, allows longer continuations in later stages, and finally includes whole-proof tasks.
+Supervised refreshes occur between RL stages.
+The terminal checkpoints are evaluated without those training prefixes.
+The catalogue's validation recount reports accepted complete proofs and concentration on the continuation \code{simp\_all} in the GRPO branch.
+It also records lower terminal GRPO completion than the common supervised parent on the primary population.
+These are saved verifier outcomes, not a fresh Lean replay.
+Additional supervised stages and different branch data prevent attribution of the comparison to the RL algorithm alone.
+The cause of the output concentration remains untested.
+
+\paragraph{Recovery before another GRPO stage.}
+EXP-021 retains the common supervised parent and compares continued SFT, rejection-sampling fine-tuning, and that fine-tuning followed by KL-regularized GRPO.
+Rejection-sampling fine-tuning means supervised training on generated training proofs that Lean accepts.
+The catalogue records completed recovery checkpoints but no accepted proof in its frozen DEV recount, including the shared starting checkpoint.
+Its first-error classifications locate failures; they do not establish why training failed.
+The comparison tests an added training stage and does not isolate the KL penalty or all effects of continued training.
+
+\paragraph{Interactive RL and PPO are separate methods.}
+The stepwise EXP-019 implementation uses on-policy REINFORCE with reward-to-go and a leave-one-out baseline.
+The policy samples tactics, receives Lean feedback, and continues from the accepted proof state.
+Grouping trajectories does not make this implementation GRPO.
+Its later narrow proof demonstrations do not establish undergraduate coverage or held-out generalization.
+EXP-022 prepares a matched whole-proof PPO/GRPO comparison.
+EXP-023 instead prepares interactive REINFORCE reward and curriculum comparisons, alongside a matched one-action PPO/REINFORCE comparison.
+Its latest GPU attempt completes supervised training but fails in the discarded PPO pilot before any RL arm runs.
+CPU checks of the repair do not establish full-model GPU execution or proof improvement.
+The recovery remains prepared and unlaunched at this report update.
+
+\paragraph{Evidence locations and presentation boundary.}
+The later protocols, raw-outcome locators, failure records and recount commands are indexed under EXP-019 to EXP-023 in \pth{docs/EXPERIMENTS.md}.
+EXP-020 uses \pth{configs/midtrain/qwen_05b_interleaved_training_v3.json} and \pth{interleaved_eval_20261010_v4/}.
+EXP-021 uses \pth{configs/midtrain/qwen_05b_monday_recovery.json} and its \code{proof\_failure\_diagnostic/} archive.
+The interactive entry point is \pth{scripts/train/run_tactic_rl.py}; the whole-proof entry point is \pth{scripts/train/run_lean_grpo.py}.
+This lineage update introduces no new numerical result or independent verifier certification.
+GRPO execution, accepted proofs and improvement over a matched parent are separate claims.
 
 \begin{table}[p]
 \centering
@@ -724,7 +806,7 @@ References between training theorems & 344 & 1,402 \\
 
 \paragraph{Question.} Which inputs earn the Lean reward without a proof of a statement worth proving?
 
-\paragraph{Scope.} The audit covers the scorer of the Lean GRPO trainer (\pth{scripts/train/run_lean_grpo.py}). The probe and the pass-rate map share this scorer. The trainer has not run on a GPU, so no policy trained with this scorer has met an input of Sections~\ref{sec:scorerexploits} to~\ref{sec:weaker}. Those entries came from a script that we wrote or from a data audit. Entries R1 and R4 come from earlier experiments. A \emph{scorer exploit} is a completion that the scorer accepts although it is not a proof of the stated target. Experiments~3, 4, and~5 accepted no proof, so a false accept could not have raised their counts. This section does not re-audit the checker runs of Experiments~1 to 13. The same inventory, with the attack inputs, is in \pth{docs/REWARD_HACKING.md}.
+\paragraph{Scope.} The audit covers the scorer of the Lean GRPO trainer (\pth{scripts/train/run_lean_grpo.py}). The probe and the pass-rate map share this scorer. At this audit snapshot, the trainer had not run on a GPU. The attack inputs in Sections~\ref{sec:scorerexploits} to~\ref{sec:weaker} were constructed audit cases, rather than observed policy exploitation. Later GRPO training is recorded separately in Section~\ref{sec:grpolineage}. Those entries came from a script that we wrote or from a data audit. Entries R1 and R4 come from earlier experiments. A \emph{scorer exploit} is a completion that the scorer accepts although it is not a proof of the stated target. Experiments~3, 4, and~5 accepted no proof, so a false accept could not have raised their counts. This section does not re-audit the checker runs of Experiments~1 to 13. The same inventory, with the attack inputs, is in \pth{docs/REWARD_HACKING.md}.
 
 \begin{longtable}{@{}P{0.8cm}P{7.4cm}P{2.1cm}P{4.3cm}@{}}
 \caption{Inventory of inputs that earn the Lean reward without a proof of a statement worth proving. ``Exploit'' says whether the input needs a scorer exploit. SFT is supervised fine-tuning on Lean proofs.}\label{tab:rewardinv}\\
@@ -1128,5 +1210,306 @@ AU & This report, Section~\ref{sec:rewardaudit}; \pth{docs/REWARD_HACKING.md} & 
 \end{longtable}
 
 Architecture values come from the model's \code{config.json} and the header of \code{model.safetensors}. Literature claims come from the cited sources, which we read on 8 October 2026.
+
+
+% Readers: midterm assessors who need to distinguish execution from proof improvement.
+% Denial: more verified intermediate steps need not yield more complete proofs.
+% Core contribution: separate generator, feedback, transition and delivery failures.
+% Insight: source contracts and sampled completion answer different questions.
+% ABT: Lean verifies proofs; completion remains low; audit each boundary independently.
+\section{Current Lean loop and failure analysis, 13 October}
+\label{app:currentloop}
+
+\subsection{The current experiment uses Lean during RL}
+The current comparison implements reinforcement learning with verifiable rewards (RLVR).
+The supervised parent supplies the starting policy.
+The policy receives a Lean goal state and generates a tactic block.
+Lean executes that block from the last verified proof state.
+An accepted state transition supplies the next observation.
+When all goals close, the verifier checks the complete original declaration before awarding positive proof reward.
+The recent completed branches use REINFORCE with a leave-one-out baseline, not PPO.
+This appendix describes those branches; it does not diagnose every historical checkpoint.
+
+The distinction between a valid step and a complete proof is essential.
+A step can split one goal into several goals, introduce an unhelpful hypothesis, or reach a state that the policy cannot finish.
+Such a step establishes execution validity, not mathematical progress.
+In the current error-feedback mode, a valid changed state receives no positive reward.
+Complete-proof acceptance receives positive reward.
+Recognized format, name, type and tactic errors receive heuristic penalties.
+These penalties classify Lean diagnostics; Lean does not certify their usefulness as a training objective.
+
+The verifier uses Lean \code{v4.10.0-rc1} with mathlib revision
+\pth{29dcec074de168ac2bf835a77ef68bbe069194c5}.
+The source identity receipt reports no mathlib mismatch.
+A full replay requires a single declaration, target absence, no reported error and a target-specific allowed-axiom report.
+Closing the interactive goals alone cannot produce a positive proof verdict.
+The frozen source is \pth{nt_expanded_paired_dev_20261012_v3/code/scripts/train/run_tactic_rl.py};
+the final check is \code{verify\_group} in its frozen \code{bench\_lean\_verifier.py}.
+
+\subsection{Reset and transition contracts are implemented, but fresh checks remain pending}
+Reset restores the cached root proof-state identifier, the root goals and the set of visited states.
+It clears the accepted tactic path, repair counter and last diagnostic.
+A new environment process rebuilds the root if the previous process closes.
+Each task owns its interactive episode.
+The source therefore implements episode reset; this source inspection is not a fresh runtime isolation test.
+
+The wrapper commits a new proof-state identifier only after Lean accepts a changed state or reports closed goals.
+A rejected block leaves the previous verified state and accepted path unchanged.
+An action can contain several tactics.
+If a later tactic fails, the wrapper rejects the complete block rather than committing its successful prefix.
+For permitted repair, the next observation includes the original verified goals and the last diagnostic.
+The proof path excludes the rejected action.
+
+The complete-proof verifier uses the original environment snapshot for each declaration attempt.
+A declaration from one completion is therefore not deliberately added to the next completion's verification environment.
+Timeout and process-exit outcomes remain failures.
+The source closes the affected process instead of treating missing feedback as acceptance.
+These contracts address reset, state transition and proof validity.
+They do not establish that every diagnostic reaches the policy correctly.
+
+Existing integration tests cover goal splitting, reset, rejected-action rollback, repair, multiline actions, forbidden axioms and full replay.
+Their selected execution is queued after the existing evaluations and targeted Lean reproductions.
+The tests use the unchanged existing test file against the frozen learner source.
+No fresh integration pass is reported here.
+A failed expectation, skipped check or resource cap must remain visible in the resulting record.
+
+\subsection{RL changes intermediate behavior without improving the measured endpoint}
+Table~\ref{tab:currentendpoint} gives completed native evaluation outcomes.
+An accepted attempt requires full replay of the original declaration.
+The denominators count generated attempts, except the final row, which counts distinct validation statements proved with two attempts per statement.
+DEV selects the supervised parent because neither RL branch proves a broader DEV statement.
+The composition population is exploratory; it does not establish family-held-out out-of-distribution performance.
+
+\begin{table}[htbp]
+\centering
+\caption{Completed endpoint outcomes. Unfinished populations remain pending.}
+\label{tab:currentendpoint}
+\begin{tabularx}{\textwidth}{@{}Yrrr@{}}
+\toprule
+Population and metric & Parent & Ordered RL & Shuffled RL \\
+\midrule
+Broader DEV, accepted attempts & 0/64 & 0/64 & 0/64 \\
+Easy retention, accepted attempts & 24/48 & 20/48 & 21/48 \\
+Combined goals, accepted attempts & 0/32 & 0/32 & 0/32 \\
+Component goals, accepted attempts & 1/64 & 3/64 & 0/64 \\
+Full validation, distinct statements & 3/392 & 1/392 & Pending \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The simple analysis compares the completed parent and ordered validation populations.
+Table~\ref{tab:firstaction} partitions their first actions.
+Ordered RL produces more valid changed states.
+Its completed proof count is lower despite those additional transitions.
+The observation does not establish catastrophic forgetting or a limit of the architecture.
+It identifies the need to measure completion separately from accepted intermediate actions.
+
+\begin{table}[htbp]
+\centering
+\caption{First-action outcomes on the same validation population, 784 attempts per model. A stopped attempt can reflect rejection or a resource/format guard.}
+\label{tab:firstaction}
+\begin{tabular}{@{}lrr@{}}
+\toprule
+First-action outcome & Parent & Ordered RL \\
+\midrule
+Stops immediately & 739 & 696 \\
+Valid changed state, continues & 40 & 88 \\
+Complete accepted proof & 5 & 0 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The parent proves three distinct statements; ordered RL proves a different statement.
+Their proved sets do not overlap in these samples.
+Ordered RL proves \code{lean\_workbook\_6386}, a gcd-divisibility application.
+It does not reproduce the parent's accepted empty-subset, congruence-addition or gcd/lcm proofs.
+The corresponding ordered attempts fail with proof-construction, syntax or unresolved-name diagnostics.
+None of those failures reports opaque exception number four.
+This rules out that recorded exception as the direct terminal diagnostic for these sampled differences.
+It does not determine what the model would produce with more samples.
+The same seed does not align random draws when trajectory lengths differ.
+
+The parent supplies a concrete basic number-theory example:
+\begin{verbatim}
+have h := Nat.gcd_mul_lcm a b
+simp only [hgcd, hlcm] at h
+linarith
+\end{verbatim}
+The native verifier accepts the complete original gcd/lcm statement for this generated path.
+A separate accepted statement permits the empty set as a witness.
+Its acceptance is formally valid, but it does not support a claim of substantive number-theory reasoning.
+The historical tactic screen therefore cannot certify semantic difficulty.
+
+\subsection{Repeated failures do not have one tactic as their explanation}
+The simple analysis detects textual occurrence of \code{simp\_all} in each generated trajectory.
+It does not establish that the tactic executes or causes the outcome.
+The parent contains that text in 174 of 784 trajectories.
+Ordered RL contains it in 311 of 784 trajectories.
+Table~\ref{tab:simpassociation} shows descriptive associations for ordered RL.
+
+\begin{table}[htbp]
+\centering
+\caption{Ordered validation outcomes grouped by generated text. Counts can overlap across outcome columns; this is not a causal comparison.}
+\label{tab:simpassociation}
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+Generated text & Trajectories & Accepted & Repeated state & Opaque \#4 \\
+\midrule
+Contains \code{simp\_all} & 311 & 0 & 4 & 112 \\
+Does not contain \code{simp\_all} & 473 & 1 & 42 & 98 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Most recorded ordered repeated-state failures occur without \code{simp\_all}.
+A diagnosis that attributes repetition to this tactic alone is unsupported.
+The association with opaque exceptions also has uncontrolled alternatives, including task difficulty and other tactics in the same block.
+A controlled intervention would change the policy's tactic choice while keeping the task and execution conditions fixed.
+No such intervention is reported.
+
+\subsection{Lost diagnostics can change the intended feedback signal}
+The core REINFORCE source contract uses original sampled token identifiers and disables dropout during sampling and differentiable replay.
+The loss uses sequence log probabilities and at most one update per sampled group.
+Groups with zero relative weights skip the optimizer update.
+The audit does not find a basic leave-one-out formula error.
+Runtime labels, generation logits and policy divergence were not saved, so this does not verify their numerical values.
+
+Positive relative advantage does not require positive absolute reward.
+A failed trajectory can receive positive weight if it receives less penalty than the other sampled trajectories.
+The \href{https://huggingface.co/docs/trl/v0.23.0/en/rloo_trainer#computing-the-advantage}{TRL leave-one-out description} explains this baseline.
+Table~\ref{tab:opaquecredit} counts the exact first diagnostic \code{internal exception \#4} in TRAIN.
+All such actions receive zero immediate reward.
+Recognized ordinary tactic errors can receive a negative penalty.
+The difference can change which failed actions the optimizer favors.
+
+\begin{table}[htbp]
+\centering
+\caption{Saved TRAIN diagnostic and relative-credit counts. Positive advantage is not positive proof reward.}
+\label{tab:opaquecredit}
+\begin{tabularx}{\textwidth}{@{}Yrr@{}}
+\toprule
+Action measurement & Ordered & Shuffled \\
+\midrule
+Exact first diagnostic \code{internal exception \#4} & 186 & 183 \\
+Those actions with zero immediate reward & 186 & 183 \\
+Positive advantage in a group with no proof & 98 & 114 \\
+Total generated actions & 2007 & 2047 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+An opaque exception does not establish a process crash or a model-independent Lean defect.
+The \href{https://raw.githubusercontent.com/leanprover/lean4/v4.10.0-rc1/src/Lean/Elab/Exception.lean}{pinned Lean source} defines internal tactic-abort exceptions.
+The source audit identifies an interface path that can lose the underlying structured diagnostic.
+The exact runtime exception mapping remains pending.
+Lost feedback is a candidate training defect; its causal effect on proof completion remains untested.
+A reward ablation must recover the diagnostic and compare runs from the same parent with fixed tasks, schedules, budgets and endpoint verifier.
+
+\subsection{Uniform occurrence does not provide a complete prerequisite curriculum}
+The ordered and shuffled schedules preserve the same admitted task multiset.
+Each theorem parent receives equal occurrence.
+The intermediate application stage covers 9 of 22 parents.
+The intermediate composition stage covers 11 of 22 parents.
+Both intermediate stages cover 6 of 22 parents.
+This leaves many parents without a complete bridge between supplied-answer closure and independent proof construction.
+The earliest structure tasks include the answer as a hypothesis.
+Their acceptance demonstrates closure with assistance, not discovering that answer.
+
+Warm supervised prompts match the current step-prompt format and use raw unfenced targets.
+The recorded warmstart token audit finds no truncation.
+These observations weaken a generic prompt-format explanation.
+They do not verify runtime label masks or establish sufficient proof training.
+The matched frozen-checkpoint diagnostic will compare whole-goal and supplied-answer completion under identical repair settings.
+Training acceptance itself cannot supply that comparison: the policy changes during training, and the main endpoint uses a different repair budget.
+
+\subsection{Proof delivery has a separate serialization defect}
+The native wrapper preserves the relative indentation of accepted tactic blocks when assembling the full proof.
+The audited frozen exporter strips leading whitespace before dedenting.
+This changes the indentation of some multiline bodies.
+In the saved composition delivery records, both altered multiline bodies fail fresh export replay.
+Both unchanged single-line bodies pass that saved replay.
+The source/text audit identifies a downstream delivery defect.
+It cannot explain the absence of native combined-goal proofs.
+
+Standalone compilation and native REPL verification also use different memory controls.
+A saved standalone accepted-proof delivery hits its unchanged internal memory limit.
+An import-only control is required before attributing that failure to the proof.
+The queued runtime reproductions preserve the original limits and compare original text, exported text, imports and selected accepted demonstrations.
+No failed file is repaired or counted as accepted by this analysis.
+
+\subsection{Evidence boundaries and next checks}
+The completed evidence supports basic lemma application by some current checkpoints and low independent completion on the evaluated tasks.
+It supports source-level reset and rollback contracts, a serialization defect and a diagnostic-feedback concern.
+It does not establish reliable undergraduate-level proof capability, a causal curriculum effect, reward exploitation or proof gain from PPO.
+Full TEST and shuffled full validation remain unfinished at this snapshot.
+They are not entered as zero results.
+
+The next checks use existing resources in sequence: full-population assessment, matched whole-versus-assisted assessment, targeted Lean reproductions and the selected existing loop integration tests.
+The integration tests can falsify the source-level reset, rollback and final-verification interpretation.
+The matched assessment can reveal sampled deterioration or assistance dependence.
+Neither check alone establishes why training changes the policy.
+A separately controlled training intervention would be needed for that causal question.
+
+\subsection{Environment repairs after the source audit}
+The maintained exporter at \pth{scripts/eval/export_tactic_proofs.py} now passes raw tactic text to the existing indentation-preserving wrapper.
+Its focused tests reproduce the old multiline failure and then check the replay body, exported file and archive after repair.
+Rejected actions from a permitted repair remain outside the final proof body.
+These tests substitute the verifier; they do not establish a fresh Lean replay.
+The original frozen exporter and recorded outcomes remain unchanged.
+Future exports must select the maintained command explicitly.
+
+The diagnostic classifier now recognizes the audited expected-term, expected-token, forbidden-tab and unexpected-end parser errors.
+The existing reward consumer applies its syntax penalty to those recognized cases.
+Unresolved internal exceptions remain separate.
+No blanket internal-error penalty or change to the leave-one-out estimator is introduced.
+The pinned REPL patch at \pth{patches/lean_repl_v4.10.0_rc1_diagnostics.patch} attempts to recover newly logged error messages before conversion discards them.
+It handles the named tactic-abort exception and preserves other exceptions.
+Its isolated Lean compilation and original-versus-patched reproduction remain pending.
+It is not installed in the running evaluation environment.
+
+The future curriculum scheduler rejects missing application or composition starts instead of silently substituting earlier tasks.
+It rejects application labels that refer to absent, whole-goal or supplied-answer starts.
+The complete-schedule checks retain uniform parent occurrence and identical ordered/shuffled multisets.
+This prevents a false completeness claim; it does not construct the missing verified intermediate tasks.
+The current task package therefore remains incomplete for this stricter curriculum contract.
+Additional starts require fresh verification before training admission.
+
+\subsection{Published small provers guide interface design, not predicted success}
+\href{https://arxiv.org/html/2502.08908v1}{Lean-Qwen0.5B} uses the same nominal Qwen2.5-0.5B family, supervised adaptation and GRPO.
+Its RL reward compares generated tactics with reference tactics, and inference uses LeanDojo proof search.
+That design is a limited precedent for small-model Lean generation, not evidence for our terminal verifier reward.
+\href{https://huggingface.co/AI-MO/Kimina-Prover-RL-0.6B}{Kimina-Prover-RL-0.6B} supplies a near-size RL-trained Lean analogue initialized from a distilled model.
+Its nominal family name does not imply an exact 500M parameter count.
+Its larger supervision and search budgets prevent direct comparison with our sampled outcomes.
+\href{https://github.com/lean-dojo/ReProver}{ReProver} supplies released Lean 4 tactic-generation and premise-retrieval models.
+Its supervised retrieval design is a reference for usable mathematical context, not a measured RL contribution to this project.
+
+The \href{https://raw.githubusercontent.com/lean-dojo/LeanDojo/main/src/lean_dojo/interaction/dojo.py}{LeanDojo interaction implementation} separates ordinary Lean errors, completed proofs, proof abandonment and process/protocol crashes.
+Those distinctions motivate preserving diagnostics rather than treating every rejected request as the same failure.
+Original proof context and accepted text must also survive replay and export.
+The project retains its pinned Lean/mathlib pair; adopting an interface contract does not require an untested dependency migration.
+
+\subsection{The next causal study remains a separate experiment}
+A larger study should freeze one shared parent after basics training, then compare RL with the unchanged parent, expert iteration and a shuffled-reward control.
+Basics improvement belongs to a separate comparison before RL.
+Use replicated seeds and select checkpoints on DEV only.
+Plot complete-proof performance against generated tokens at fixed checkpoints.
+Declare common token, Lean-call and wall-time ceilings, and report actual usage for every arm.
+Different algorithms need not exhaust all resource ceilings simultaneously, so equal ceilings alone do not establish equal realized cost.
+The task map must use the same interactive prompting, repair and verification contract as training.
+Sampled mixed outcomes provide evidence of solvable tasks, but do not determine the underlying success probability exactly.
+No larger SFT, task-map sampling or algorithm comparison is launched by the source repairs above.
+
+\paragraph{Reproduction sources.}
+Endpoint counts come from \pth{nt_expanded_paired_dev_20261012_v3/results.json},
+\pth{nt_composition_eval_20261012_v1/results.json} and completed validation raw outcomes in
+\pth{nt_posttraining_eval_20261012_v1/}.
+The simple saved-record command and controls reside in
+\pth{nt_deep_diagnosis_20261012_v1/simple_analysis_v1/source.py}, \pth{result.json} and \pth{receipt.json}.
+Training source and reward findings reside in \pth{training_mechanism.json},
+\pth{training_mechanism_warmstart.json} and \pth{training_mechanism_internal_errors.json} under the same deep-audit directory.
+The loop and export claims reside in \pth{lean_boundary.json}.
+Runtime checks remain separately owned by \pth{runtime_probe_v1/} and \pth{loop_environment_v1/}.
+These are remote run-relative paths; infrastructure identifiers are not required to reproduce the interpretation.
 
 \end{document}

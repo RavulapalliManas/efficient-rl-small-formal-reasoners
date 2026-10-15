@@ -197,7 +197,7 @@ The original statement that every count matches raw files is not verified by thi
 
 - Config: `configs/data/leandojo_*.json`.
 - Code: [`scripts/data/prepare_leandojo.py`](../scripts/data/prepare_leandojo.py).
-- Evidence locator: `artifacts/leandojo_nat_v1/frozen/; artifacts/leandojo_number_theory_v2/`.
+- Evidence locator: `artifacts/leandojo_nat_v1/frozen/; artifacts/leandojo_number_theory_v2/`. Moved on 15 October 2026 to cpu-angad `formal_rl/mac_artifacts_archive_20261015/` (same relative paths, checksum-verified).
 - Historical record: Git commit `8fc8423`, `docs/results/01_data_preparation.md`.
 
 We filtered LeanDojo Benchmark 4 to arithmetic and number-theory files and kept the official random splits. We removed training theorems that overlap validation or test text. Text checks do not prove the splits are independent. Script: `scripts/data/prepare_leandojo.py`. Configs: `configs/data/leandojo_*.json`.
@@ -208,7 +208,7 @@ We filtered LeanDojo Benchmark 4 to arithmetic and number-theory files and kept 
 
 - Config: `configs/eval/qwen_05b_probe.json; configs/midtrain/qwen_05b_gsm8k_lora.yaml`.
 - Code: [`scripts/eval/probe_qwen.py`](../scripts/eval/probe_qwen.py).
-- Evidence locator: `local artifacts/qwen_05b_probe/comparison.json`.
+- Evidence locator: `local artifacts/qwen_05b_probe/comparison.json`. Moved on 15 October 2026 to cpu-angad `formal_rl/mac_artifacts_archive_20261015/` (same relative paths, checksum-verified).
 - Historical record: Git commit `8fc8423`, `docs/results/02_qwen_capability_probe.md`.
 
 We tested the base model on 24 GSM8K and 20 MATH number-theory questions, then trained a small LoRA on GSM8K. Validation loss fell from 0.701403 to 0.514280, but accuracy did not improve. Script: `scripts/eval/probe_qwen.py`.
@@ -219,7 +219,7 @@ We tested the base model on 24 GSM8K and 20 MATH number-theory questions, then t
 
 - Config: `configs/eval/qwen_05b_probe.json`.
 - Code: [`scripts/eval/probe_qwen.py`](../scripts/eval/probe_qwen.py); [`scripts/audit/classify_proof_failures.py`](../scripts/audit/classify_proof_failures.py).
-- Evidence locator: `local artifacts/qwen_05b_instruct_proof/summary.json; cpu-angad tensorboard_pilot_20261003/events/`.
+- Evidence locator: `local artifacts/qwen_05b_instruct_proof/summary.json; cpu-angad tensorboard_pilot_20261003/events/`. Moved on 15 October 2026 to cpu-angad `formal_rl/mac_artifacts_archive_20261015/` (same relative paths, checksum-verified).
 - Historical record: Git commit `8fc8423`, `docs/results/02_qwen_capability_probe.md`.
 - Gap: GPU sampling counts came from exported monitoring records; the historical note states that an independent recount was not done.
 
@@ -580,6 +580,7 @@ Implementation source: [TRL 0.24 PPO trainer](https://huggingface.co/docs/trl/v0
 
 ## Decision log
 
+- 2026-10-15 IST: Manas approves moving local data off the Mac. `artifacts/leandojo_nat_v1`, `artifacts/qwen_05b_instruct_proof` and `artifacts/qwen_05b_probe` (14,896 files, 3.7 GB) are copied to cpu-angad `formal_rl/mac_artifacts_archive_20261015/` with rsync (exit 0). `sha256sum -c` of the Mac manifest (`manifest_mac.sha256`, kept in that directory) exits 0 with no mismatch, and the remote file count is 14,896. The local copies are then deleted. `artifacts/notes/` and `artifacts/figures/` stay local as notes the catalogue cites. The EXP-002 configs `configs/eval/qwen_05b_probe.json` and `configs/midtrain/qwen_05b_gsm8k_lora.yaml` keep their historical local paths; fetch the data back before rerunning them. Access now goes through the `cpu-angad` SSH alias (private setup note in `.private/infrastructure.md`).
 - 2026-10-15 IST: Manas asks for a detailed TeX diagram of the Lean-in-the-loop architecture. An Opus subagent wrote the standalone TikZ source `docs/tex/figures/lean_loop_architecture.tex` and its PDF (latexmk exit 0, no errors or overfull boxes). It shows the state, the token and step levels of the policy, Lean's REPL, solvers and kernel, every transition branch, the reward, the leave-one-out update and what each part supplies. Root checked the content against `run_tactic_rl.py` and the EXP-023 pipeline settings and labelled the numbers as EXP-023 settings. The main report does not include it yet; that change belongs to the report owner.
 - 2026-10-15 IST: Manas approves the 3 open choices of the [EXP-024 protocol](#exp-024-protocol-undergraduate-number-theory-sft-14-october-2026): held-out topics 6 (quadratic residues) and 7 (arithmetic functions); evaluation with 12 actions, 384 action tokens and a 3,072-token prompt; 2 training seeds per arm. The syllabus stage starts.
 - 2026-10-14 IST: Manas sets the goal before the 21 October midterm: answer undergraduate-level number-theory questions, including long-answer and unseen problem types, then study how that training generalizes. "Safety data" means robustness data: long-answer questions and unseen number-theory problem types. It does not mean retention data, leak checks or negative examples. Mathlib coverage check: the cpu-angad copy `lean_env_full/mathlib` contains Bézout (`gcd_eq_gcd_ab`), CRT, Fermat (`pow_card_sub_one_eq_one`), Euler (`pow_totient`), Wilson, orders, Euler's criterion, quadratic reciprocity, sums of two squares, Pythagorean triples, FLT n = 4, arithmetic functions and lifting-the-exponent results. Its revision against the pinned `29dcec07` was not confirmed, because the copy has no Git metadata or manifest.
@@ -2353,3 +2354,27 @@ The rows below are the full README rows as they stood before that edit, copied w
 - EXP-020: | [EXP-020](#exp-020) | Alternating SFT with RLP and Lean GRPO | `configs/midtrain/qwen_05b_interleaved_training_v3.json` | Recovery v4 training and fixed validation scoring completed. Raw-verdict recount: initial 0/392, common SFT 13/392, final SFT/GRPO 6/392, final SFT/RLP 15/392 non-trivial statements solved, with 8 unassisted samples per statement. The standard-tactic baseline solves 0/392. Common SFT improves over initial; terminal GRPO falls below common SFT. Extra SFT refreshes prevent RL-only attribution. The historical CPU evaluation watcher remains active but waits for missing generation artifacts; no model or Lean-scoring child is running at the latest check. RLP informal mathematical grading and efficient RL search remain unverified. Preserve the prior failures and interrupted run |
 - EXP-021: | [EXP-021](#exp-021) | Monday recovery: verified distillation before Lean RL | `configs/midtrain/qwen_05b_monday_recovery.json` | Recovery stages and checkpoint archives complete. Independent raw DEV recount finds no accepted proof in any arm, including the shared start. Each arm has 64 attempts on 32 statements. Latest GRPO first failures: 43 proof construction, 17 name/type resolution, 3 syntax/structure, 1 timeout. These are diagnostic locations, not causes. Tactic pilots have no updates after rejecting fenced actions before Lean. The parser correction is checked; corrected training remains pending. Useful proof improvement remains unverified |
 - EXP-022: | [EXP-022](#exp-022) | PPO versus GRPO with the same Lean reward | `scripts/train/lean_ppo.py`, `configs/rl/qwen_05b_lean_{ppo,grpo}_comparison.json` | Adapter and paired configs prepared. Boundary reproductions exposed loader-prefetch prompt-width corruption and internal-PAD scoring misalignment. EXP-023 corrects both in the shared adapter and records focused passing CPU checks. Actual Lean PPO training, GPU memory, and proof benefit remain unverified. See the [readiness review](#ppo-readiness-review) |
+
+### README status prose before condensing, 15 October 2026
+
+The README replaced its two EXP-019 paragraphs with a short summary. The original text, copied word for word:
+
+EXP-019 native parity RL and all paired evaluations completed for the midterm delivery by 12 October at 23:00 IST.
+The [run config](../configs/rl/qwen_05b_tactic_native_parity.json) reuses the corrected Lean loop and completed native calibration.
+The trained checkpoint is `midterm_native_rl_20261011_v1/train/final/` in remote storage.
+Four complete native number-theory proofs from this checkpoint pass fresh replay and exported-file compilation.
+The unchanged common SFT parent remains selected within this comparison because the RL final loses a DEV theorem.
+Weights, tokenizer, raw outcomes and proof archives are preserved. No new paid GPU lease starts in this run.
+See the [completion record](#native-parity-midterm-completion) for denominators, paths and limits.
+
+The [fixed-mixture follow-up](../configs/rl/qwen_05b_tactic_mixed_followup.json) completes training and paired assessment in its separate storage retry.
+The selected checkpoint is `midterm_mixed_rl_20261012_v2/train/final/` in remote storage.
+26/48 DEV proof attempts pass Lean, versus the unchanged SFT parent's 18/48, across the same three theorems and paired seeds.
+15/128 native proof attempts pass, versus the parent's 9/128, on the original 32 number-theory roots.
+Seven distinct native proofs pass fresh replay and standalone compilation with the target absent and allowed axioms.
+The actual weights change, and no parent-covered DEV theorem is lost in either seed.
+The [registered criterion](#fixed-mixture-midterm-completion) selects this RL final for the narrow midterm comparison.
+The first attempt fails at export because its filesystem is full; its traces remain preserved.
+Full-context DEV compilation fails at the unchanged memory limit. Three portable DEV-a files compile with narrower imports.
+The portable check stops at DEV-b's missing `dvd_add` import; that file fails and the remaining files are unchecked.
+These small training-domain and DEV panels do not establish held-out generalization. No new GPU lease starts.

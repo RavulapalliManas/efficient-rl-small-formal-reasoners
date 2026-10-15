@@ -44,7 +44,7 @@ import zipfile
 
 sys.path[:0] = [str(Path(__file__).resolve().parents[1] / d) for d in ("data", "audit", "eval")]
 from prepare_grpo_pilot import load_checker  # noqa: E402
-from probe_start_depth import FORBIDDEN  # noqa: E402
+from probe_start_depth import FORBIDDEN, lean_code  # noqa: E402
 from replay_training_proofs import ALLOWED_AXIOMS, axioms_of, load, proof_body, question  # noqa: E402
 from verify_external_proofs import HEADER  # noqa: E402
 
@@ -95,9 +95,18 @@ def split_prefix(prefix):
             head = stripped[:len(stripped) - len(last)]
             continue
         attribute = re.search(r"(?:^|\n)(@\[[^\n]*(?:\n[ \t]+[^\n]*)*)$", stripped)
-        if attribute and attribute.group(1).count("[") == attribute.group(1).count("]"):
-            head = stripped[:attribute.start(1)]
-            continue
+        if attribute:
+            # Only a standalone attribute belongs to the next declaration. A complete
+            # attributed lemma must remain available in the environment prefix.
+            code = re.sub(r'"(?:\\.|[^"\\])*"|«[^»]*»', 'x', lean_code(attribute.group(1)))
+            depth = 0
+            for index, char in enumerate(code[1:], start=1):
+                depth += (char == "[") - (char == "]")
+                if depth == 0:
+                    break
+            if depth == 0 and not code[index + 1:].strip():
+                head = stripped[:attribute.start(1)]
+                continue
         return head, prefix[len(head):]
 
 

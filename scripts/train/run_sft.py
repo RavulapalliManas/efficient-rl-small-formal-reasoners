@@ -47,14 +47,18 @@ def main():
     train = rows(args.data / "sft_train.jsonl", args.limit)
     val = rows(args.data / "sft_val.jsonl", config.get("eval_rows"))
     tokenizer = AutoTokenizer.from_pretrained(args.model)
+    # Refuse rather than truncate: the loss sits on the completion at the end of each row, so truncation cuts the target.
+    lengths = [len(tokenizer.apply_chat_template(r["prompt"] + r["completion"], tokenize=True)) for d in (train, val) for r in d]
+    if max(lengths) >= config["max_length"]:
+        raise SystemExit(f"{sum(n >= config['max_length'] for n in lengths)} rows reach max_length {config['max_length']}; drop them in the data build")
     model = AutoModelForCausalLM.from_pretrained(args.model, dtype=torch.float32)
     settings = SFTConfig(
         output_dir=str(args.output), seed=config["seed"], learning_rate=config["learning_rate"],
         lr_scheduler_type="cosine", warmup_ratio=config["warmup_ratio"], num_train_epochs=config["epochs"],
         per_device_train_batch_size=config["batch_size"], gradient_accumulation_steps=config["grad_accum"],
         per_device_eval_batch_size=config["batch_size"], max_length=config["max_length"],
-        bf16=torch.cuda.is_available(), gradient_checkpointing=False, logging_steps=config["logging_steps"],
-        eval_strategy="steps", eval_steps=config["eval_steps"], save_strategy="steps", save_steps=10**9,
+        bf16=torch.cuda.is_available(), gradient_checkpointing=config.get("gradient_checkpointing", False), logging_steps=config["logging_steps"],
+        eval_strategy="steps", eval_steps=config["eval_steps"], save_strategy=config.get("save_strategy", "steps"), save_steps=10**9,
         report_to=["tensorboard"], logging_dir=str(args.output / "tb"), dataloader_num_workers=2,
         max_steps=config.get("max_steps", -1))
     trainer = SFTTrainer(model=model, args=settings, train_dataset=train, eval_dataset=val,
@@ -63,7 +67,7 @@ def main():
     result = trainer.train()
     trainer.save_model(str(args.output / "final"))
     tokenizer.save_pretrained(str(args.output / "final"))
-    record = {"train_rows": len(train), "val_rows": len(val), "config": config,
+    record = {"train_rows": len(train), "val_rows": len(val), "config": config, "max_row_tokens": max(lengths),
               "global_steps": trainer.state.global_step, "train_seconds": time.monotonic() - start,
               "train_loss": result.training_loss, "log_history": trainer.state.log_history,
               "cuda": torch.cuda.get_device_name(0) if torch.cuda.is_available() else None,

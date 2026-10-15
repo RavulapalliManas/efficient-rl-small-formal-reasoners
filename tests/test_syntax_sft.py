@@ -10,6 +10,19 @@ import build_syntax_sft
 
 
 class SyntaxDataTest(unittest.TestCase):
+    def test_complete_attributed_lemma_stays_in_environment(self):
+        for lemma in (
+                '@[simp] lemma previous : True := by simp [True.intro]\n',
+                '@[simp] lemma previous : True :=\n  by simp [True.intro]\n'):
+            prefix = 'import Mathlib\n' + lemma
+            self.assertEqual(split_prefix(prefix), (prefix, ''))
+
+    def test_attribute_only_suffix_moves_without_previous_lemma(self):
+        head = 'import Mathlib\n@[simp] lemma previous : True := by trivial\n'
+        for tail in ('@[simp]\n', '@[simp,\n  my_attribute [nested [argument]]]\n',
+                     '@[my_attribute "closing ] bracket"]\n'):
+            self.assertEqual(split_prefix(head + tail), (head, tail))
+
     def test_doc_comment_with_trailing_line_comment(self):
         prefix = "import Mathlib\n/-- A declaration description. -/\n-- Porting note\n"
         head, tail = split_prefix(prefix)

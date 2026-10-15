@@ -165,6 +165,19 @@ def score_with(respond, unit, texts):
 UNIT = {"task_id": "pool:t1", "kind": "statement", "name": "t1", "header": "theorem t1 : True", "given_steps": []}
 
 
+class ReplOutputTest(unittest.TestCase):
+    def test_detailed_error_response_preserves_the_lean_cause(self):
+        response = {"message": "Lean error:\nunknown identifier 'missing_fixture'"}
+        code, output = bench_lean_verifier.repl_output(response)
+        self.assertEqual(code, 1)
+        self.assertEqual(bench_lean_verifier.first_error(output), "unknown identifier 'missing_fixture'")
+
+    def test_opaque_error_response_remains_an_error(self):
+        code, output = bench_lean_verifier.repl_output({"message": "Lean error:\ninternal exception #4"})
+        self.assertEqual(code, 1)
+        self.assertEqual(output, "error: internal exception #4")
+
+
 class AxiomReportTest(unittest.TestCase):
     """Regression for the forged-report and namespace-shadow attacks (check_checker_attacks.py, 2026-10-10)."""
 

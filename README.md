@@ -125,25 +125,10 @@ On held-out problem types, no arm differs from the warmstart W (Holm-adjusted p 
 The ordered curriculum shows no advantage over shuffling, and the efficiency claim is invalid because the token gate failed.
 See the [current handoff](docs/EXPERIMENTS.md#handoff-final-curriculum-run-results-14-october) for evidence and next steps.
 
-EXP-019 native parity RL and all paired evaluations completed for the midterm delivery by 12 October at 23:00 IST.
-The [run config](configs/rl/qwen_05b_tactic_native_parity.json) reuses the corrected Lean loop and completed native calibration.
-The trained checkpoint is `midterm_native_rl_20261011_v1/train/final/` in remote storage.
-Four complete native number-theory proofs from this checkpoint pass fresh replay and exported-file compilation.
-The unchanged common SFT parent remains selected within this comparison because the RL final loses a DEV theorem.
-Weights, tokenizer, raw outcomes and proof archives are preserved. No new paid GPU lease starts in this run.
-See the [completion record](docs/EXPERIMENTS.md#native-parity-midterm-completion) for denominators, paths and limits.
-
-The [fixed-mixture follow-up](configs/rl/qwen_05b_tactic_mixed_followup.json) completes training and paired assessment in its separate storage retry.
-The selected checkpoint is `midterm_mixed_rl_20261012_v2/train/final/` in remote storage.
-26/48 DEV proof attempts pass Lean, versus the unchanged SFT parent's 18/48, across the same three theorems and paired seeds.
-15/128 native proof attempts pass, versus the parent's 9/128, on the original 32 number-theory roots.
-Seven distinct native proofs pass fresh replay and standalone compilation with the target absent and allowed axioms.
-The actual weights change, and no parent-covered DEV theorem is lost in either seed.
-The [registered criterion](docs/EXPERIMENTS.md#fixed-mixture-midterm-completion) selects this RL final for the narrow midterm comparison.
-The first attempt fails at export because its filesystem is full; its traces remain preserved.
-Full-context DEV compilation fails at the unchanged memory limit. Three portable DEV-a files compile with narrower imports.
-The portable check stops at DEV-b's missing `dvd_add` import; that file fails and the remaining files are unchecked.
-These small training-domain and DEV panels do not establish held-out generalization. No new GPU lease starts.
+EXP-019 midterm runs (native parity and fixed mixture) completed by 12 October.
+The fixed-mixture RL final passes 26/48 DEV attempts against the SFT parent's 18/48 on three theorems.
+These small panels do not establish held-out generalization.
+See the [native parity record](docs/EXPERIMENTS.md#native-parity-midterm-completion) and the [fixed-mixture record](docs/EXPERIMENTS.md#fixed-mixture-midterm-completion).
 
 | ID | Experiment | Config or entry point | Status |
 | --- | --- | --- | --- |

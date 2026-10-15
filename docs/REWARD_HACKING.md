@@ -336,6 +336,24 @@ These come from the trainer-and-checker report. As of 10 October, the decision l
 5. Use the new SFT data for the midsem arms, or report the `nt_sft_v2` caveat from L3.
 6. Append a dated line to the decision log of `docs/EXPERIMENTS.md` for the scorer change and for the removal of the Bernoulli random-reward arm. Another session holds uncommitted edits in that file.
 
+## Tactic-level pilot, 11 October 2026 IST
+
+The new `run_tactic_rl.py` pilot assigns a bounded heuristic bonus when displayed goals change. Redundant hypotheses and variable renaming can earn that bonus. The bonus can favor longer successful paths. It does not certify proof progress or search efficiency. Repeated displayed states terminate without additional credit; this does not detect every semantic cycle.
+
+Full-proof reward requires the existing `verify_group` target and axiom checks. Closing all tactic-mode goals alone receives no terminal reward. The CPU fixtures exercise complete-proof replay and forbidden/no-op cases. These checks do not establish an exhaustive security guarantee. Compare against `qwen_05b_tactic_rl_terminal.json` at recorded costs, and inspect rewarded paths before interpreting a gain. Raw sampled token IDs remain intact when the action is grouped for the REPL.
+
+Evidence is `tactic_rl_smoke_20261011_v3/checks.log`, `out/trainer_command/`, and the corresponding durable `tactic_smoke_v3/` records. The actual model smoke produces no reward and performs no optimizer update. The positive optimizer check uses a planted tiny policy. Neither establishes learned proof performance.
+
+### Local diagnostic feedback, 11 October 2026
+
+The opt-in `error_feedback_v1` arm replaces the goal-text bonus with penalties derived from the first Lean error. Its weights are heuristic. Whole-proof acceptance remains the positive reward. The terminal-only and earlier goal-text modes remain separate controls. Sources and real Lean fixtures are archived under EXP-021 `reward_feedback_check_v2/`; its first retry failure remains under `reward_feedback_check_v1/`.
+
+- Valid inactivity can outperform an invalid attempt. `skip` and valid unfinished steps receive zero reward, while classified errors receive negative reward. A policy can improve its average return without proving more theorems. Complete-proof coverage is the endpoint.
+- First-error categories are incomplete. Unknown diagnostics remain neutral; an unresolved identifier can be a local variable or an unavailable import, rather than an invented library lemma. Report the recorded diagnostic instead of claiming a hallucination count.
+- Local validity does not certify strategy. Renaming, redundant true hypotheses, and changed goal counts receive no positive credit. The arm has no learned proof-state potential and no policy-invariance guarantee.
+- Errors terminate episodes in the historical default. The new opt-in comparison allows one rejected-action repair from the last verified state, within the same caps. Forbidden code, infrastructure failures, repeated states, and rejected whole-proof replay still terminate. Retrieval and backtracking remain separate interventions.
+- Repair can increase success through additional interaction rather than learned knowledge. Give both reward arms the same retry allowance and compare the unchanged parent with the same inference protocol. Preserve rejected-action likelihoods and penalties; never insert the rejected tactic into the proof path.
+
 ## Sources
 
 All paths are on cpu-angad or in the local `artifacts/notes/` folder, which is outside Git. `<R>` is the `formal_rl` data root. The data root and the machine address are in the private note.

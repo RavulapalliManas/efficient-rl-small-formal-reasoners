@@ -1,0 +1,32 @@
+{
+  "experiment_id": "EXP-019",
+  "run_id": "exp019-highschool-data-s20261011-v3",
+  "training_authorized": false,
+  "source": {
+    "repo": "EleutherAI/hendrycks_math",
+    "revision": "21a5633873b6a120296cce3e2df9d5550074f4a3",
+    "split": "train",
+    "subjects": ["prealgebra", "algebra", "number_theory", "counting_and_probability", "geometry", "intermediate_algebra", "precalculus"]
+  },
+  "core_levels": [1, 2, 3],
+  "extension_levels": [4, 5],
+  "unclassified_difficulty": "Preserve source rows; exclude from the level-stratified pilot without assigning a difficulty",
+  "math_train_per_subject_level": 8,
+  "math_dev_per_subject_level": 4,
+  "gsm_train_presentations": 128,
+  "gsm_dev_items": 32,
+  "seed": 20261011,
+  "split_rule": "Salted normalized-question hash within subject and level; exact duplicates grouped; DEV frozen before training selection",
+  "near_duplicate_jaccard": 0.85,
+  "diagram_policy": "Exclude Asymptote and image-dependent questions from this text-only pilot; preserve source and exclusion records",
+  "max_prompt_tokens": 1024,
+  "private_target_margin_tokens": 32,
+  "curriculum": "GSM arithmetic first; then MATH levels 1, 2, 3, with equal subject quotas within each level",
+  "knowledge_assessment": "Frozen no-update diagnostic on internal DEV; source coverage does not establish model competence",
+  "limitations": [
+    "MATH levels describe competition difficulty, not school grades or validated prerequisite order.",
+    "Lexical exclusions do not establish semantic independence or absence from pretraining.",
+    "Informal answers and private likelihood targets are not Lean proofs.",
+    "No model assessment or training is authorized by this data config."
+  ]
+}

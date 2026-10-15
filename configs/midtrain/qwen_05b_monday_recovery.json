@@ -1,0 +1,84 @@
+{
+  "purpose": "Exploratory Monday recovery: train-only verified proof distillation, supervised control, then KL-regularized Lean GRPO. Prepared protocol, not launch approval.",
+  "experiment_id": "EXP-021",
+  "run_id": "exp021-recovery-s20261012-v1",
+  "deadline_ist": "2026-10-12T23:00:00+05:30",
+  "initial_policy": "Immutable EXP-020 common_sft checkpoint; resolve and record its weights digest before launch",
+  "max_wall_seconds": 6600,
+  "prerequisites": [
+    "Freeze train-only collection membership outside DEV, validation, test, and existing near-duplicate exclusions",
+    "Collect whole-proof samples with probe_nt_pool.py and the adopted v11 scorer with context fixes",
+    "Build inputs/rft using build_rft_data.py; require nonempty train and loss-validation files; create sft_train.jsonl and sft_val.jsonl aliases for run_sft.py",
+    "Preserve the original collection verdicts and generation budget, including rejected samples",
+    "Record resolved inputs, scorer identity, model digest, source snapshot, costs, and launch approval"
+  ],
+  "stages": [
+    {
+      "id": "sft_control",
+      "kind": "sft",
+      "config": "code/configs/midtrain/qwen_05b_nt_interleaved_sft_v1.json",
+      "data": "inputs/nt_sft",
+      "max_wall_seconds": 1800,
+      "overrides": {
+        "seed": 20261012,
+        "max_steps": 24,
+        "batch_size": 4,
+        "grad_accum": 16,
+        "eval_steps": 24,
+        "logging_steps": 1,
+        "milestone_steps": []
+      }
+    },
+    {
+      "id": "rft",
+      "kind": "sft",
+      "config": "code/configs/midtrain/qwen_05b_nt_interleaved_sft_v1.json",
+      "data": "inputs/rft",
+      "max_wall_seconds": 1800,
+      "overrides": {
+        "seed": 20261012,
+        "max_steps": 24,
+        "batch_size": 4,
+        "grad_accum": 16,
+        "eval_steps": 24,
+        "logging_steps": 1,
+        "milestone_steps": []
+      }
+    },
+    {
+      "id": "rft_grpo",
+      "parent": "rft",
+      "kind": "grpo",
+      "config": "code/configs/rl/qwen_05b_lean_grpo_smoke.json",
+      "max_wall_seconds": 2400,
+      "overrides": {
+        "seed": 20261012,
+        "max_steps": 48,
+        "prompts_per_step": 2,
+        "num_generations": 8,
+        "max_completion_tokens": 256,
+        "bf16": true,
+        "repetition_penalty": 1.0,
+        "beta": 0.02,
+        "max_wall_seconds": 2100,
+        "max_generated_tokens": 196608,
+        "max_lean_calls": 768,
+        "save_steps": 24,
+        "save_total_limit": 2,
+        "curriculum_include_whole": true,
+        "curriculum_max_lines_remaining": 3,
+        "balance_by_problem": true
+      },
+      "arguments": {
+        "pool": "inputs/pool_v2.jsonl",
+        "tasks": "inputs/tasks.jsonl",
+        "exclude-names": "inputs/dev.txt",
+        "checker": "inputs/checker.py",
+        "environment": "inputs/lean_env",
+        "repl": "inputs/repl",
+        "eval": ["inputs/eval_validation.zip"]
+      }
+    }
+  ],
+  "inference_boundary": "SFT versus RFT matches optimizer steps, not target tokens. RFT versus RFT_GRPO measures an added training stage; it does not isolate KL or RL from all continued-training effects. Select checkpoints on DEV only. Report assisted training and unassisted proof evaluation separately."
+}

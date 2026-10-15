@@ -1,0 +1,23 @@
+{
+  "purpose": "Preparation candidate for fixed short-task learning, before curriculum comparisons. Reuse all twelve public one-block signal states and freeze their order repeated four times. Terminal success only; fixed STEP prompt, no premise cards, no repair, RLP, local penalties or adaptive sampling. Parent, task schedule and evaluation membership must be resolved in run artifacts before launch. No paid launch authorized.",
+  "run_id": "exp019-tactic-fixed-short-s20261011-v1",
+  "seed": 20261011,
+  "lean": "leanprover/lean4:v4.10.0-rc1",
+  "mathlib": "29dcec074de168ac2bf835a77ef68bbe069194c5",
+  "group_size": 4,
+  "max_groups": 48,
+  "max_episode_steps": 4,
+  "max_prompt_tokens": 1024,
+  "max_action_tokens": 64,
+  "reward_mode": "goal_change_v1",
+  "exploration_bonus": 0.0,
+  "curriculum_max_lines_remaining": 3,
+  "learning_rate": 1e-06,
+  "cpu_threads": 4,
+  "lean_timeout_seconds": 20,
+  "lean_setup_timeout_seconds": 120,
+  "max_wall_seconds": 3600,
+  "max_generated_tokens": 49152,
+  "max_lean_calls": 1728,
+  "max_repair_attempts": 0
+}

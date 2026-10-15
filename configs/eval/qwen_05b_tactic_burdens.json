@@ -1,0 +1,30 @@
+{
+  "run_id": "exp019-tactic-burdens-dev-common-sft-s20261011-v1",
+  "seed": 20261011,
+  "samples": 8,
+  "lean": "leanprover/lean4:v4.10.0-rc1",
+  "mathlib": "29dcec074de168ac2bf835a77ef68bbe069194c5",
+  "cpu_threads": 4,
+  "batch_size": 4,
+  "temperature": 1.0,
+  "max_prompt_tokens": 1536,
+  "max_action_tokens": 64,
+  "max_primary_tokens": 81920,
+  "max_primary_lean_calls": 3200,
+  "max_generated_tokens": 163840,
+  "max_lean_calls": 6400,
+  "max_wall_seconds": 7200,
+  "continuation_steps": 2,
+  "lean_timeout_seconds": 20,
+  "lean_setup_timeout_seconds": 120,
+  "training_authorized": false,
+  "scope": "Exploratory frozen DEV interface and curated premise assistance. No guaranteed oracle for unwitnessed states.",
+  "length_comparison": {
+    "status": "prepared_only_not_authorized_for_launch",
+    "condition": "B",
+    "action_caps": [64, 128],
+    "sampling": "Same frozen states, eight samples, seed, temperature and parser in both arms",
+    "selection": "Freeze the comparison population before generation; report capped and EOS status separately",
+    "limitation": "A separate output-length experiment; do not pool with the primary A-D matrix"
+  }
+}

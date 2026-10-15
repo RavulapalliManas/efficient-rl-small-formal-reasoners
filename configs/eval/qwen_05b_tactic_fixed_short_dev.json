@@ -1,0 +1,23 @@
+{
+  "purpose": "Paired fresh evaluation on the three RL-parent-disjoint validation elementary tasks. Use --evaluation-names with the existing exposure-limited panel. Resolve CHECKPOINT in each distinct run artifact; same hardware, precision, seed, prompt and limits for parent and final. Final-only composition tasks remain excluded. No optimizer or paid launch authorized.",
+  "run_id": "exp019-tactic-fixed-short-dev-CHECKPOINT-s20261011-v1",
+  "seed": 20261013,
+  "lean": "leanprover/lean4:v4.10.0-rc1",
+  "mathlib": "29dcec074de168ac2bf835a77ef68bbe069194c5",
+  "group_size": 8,
+  "max_groups": 3,
+  "max_episode_steps": 4,
+  "max_prompt_tokens": 1024,
+  "max_action_tokens": 64,
+  "reward_mode": "goal_change_v1",
+  "exploration_bonus": 0.0,
+  "curriculum_max_lines_remaining": 3,
+  "learning_rate": 1e-06,
+  "cpu_threads": 4,
+  "lean_timeout_seconds": 20,
+  "lean_setup_timeout_seconds": 120,
+  "max_wall_seconds": 900,
+  "max_generated_tokens": 6144,
+  "max_lean_calls": 216,
+  "max_repair_attempts": 0
+}

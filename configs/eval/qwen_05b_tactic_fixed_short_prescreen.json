@@ -1,0 +1,23 @@
+{
+  "purpose": "Optimizer-disabled repeated frozen sampling before fixed-task learning. Freeze the original twelve short states in their original order repeated three times; preserve null, all-success, mixed, partial and censored groups. Same CPU FP32 policy/interface as the subsequent pilot. Require an exact state to produce mixed outcomes in at least two complete groups before training. No GPU launch.",
+  "run_id": "exp019-tactic-fixed-short-prescreen-s20261012-v1",
+  "seed": 20261012,
+  "lean": "leanprover/lean4:v4.10.0-rc1",
+  "mathlib": "29dcec074de168ac2bf835a77ef68bbe069194c5",
+  "group_size": 4,
+  "max_groups": 36,
+  "max_episode_steps": 4,
+  "max_prompt_tokens": 1024,
+  "max_action_tokens": 64,
+  "reward_mode": "goal_change_v1",
+  "exploration_bonus": 0.0,
+  "curriculum_max_lines_remaining": 3,
+  "learning_rate": 1e-06,
+  "cpu_threads": 4,
+  "lean_timeout_seconds": 20,
+  "lean_setup_timeout_seconds": 120,
+  "max_wall_seconds": 1800,
+  "max_generated_tokens": 36864,
+  "max_lean_calls": 1296,
+  "max_repair_attempts": 0
+}

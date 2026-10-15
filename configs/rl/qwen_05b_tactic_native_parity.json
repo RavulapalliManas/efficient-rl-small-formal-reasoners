@@ -1,0 +1,23 @@
+{
+  "purpose": "Midterm native Lean RL pilot. Train from the original starts of Nat.not_even_iff and Nat.not_even_one, selected by completed frozen calibration. Freeze their alternating schedule before training. Binary full-proof reward; no supplied prefix, repair, progress bonus, RLP or SFT stage. Selection is on the existing frozen DEV panel. Original-root bank evaluation is a training-domain diagnostic, not held-out generalization.",
+  "run_id": "exp019-native-parity-train-s20261016-v1",
+  "seed": 20261016,
+  "lean": "leanprover/lean4:v4.10.0-rc1",
+  "mathlib": "29dcec074de168ac2bf835a77ef68bbe069194c5",
+  "group_size": 4,
+  "max_groups": 24,
+  "max_episode_steps": 4,
+  "max_prompt_tokens": 1024,
+  "max_action_tokens": 64,
+  "reward_mode": "goal_change_v1",
+  "exploration_bonus": 0.0,
+  "curriculum_max_lines_remaining": 3,
+  "learning_rate": 1e-06,
+  "cpu_threads": 4,
+  "lean_timeout_seconds": 20,
+  "lean_setup_timeout_seconds": 120,
+  "max_wall_seconds": 1800,
+  "max_generated_tokens": 24576,
+  "max_lean_calls": 960,
+  "max_repair_attempts": 0
+}

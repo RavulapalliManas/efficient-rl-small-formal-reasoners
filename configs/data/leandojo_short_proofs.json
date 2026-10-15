@@ -1,0 +1,14 @@
+{
+  "purpose": "Original LeanDojo TRAIN short proofs for binary-reward interactive RL preparation. Length bands are proxies; measure frozen-policy difficulty before selecting a training mix. No training or paid launch.",
+  "seed": 20261011,
+  "source": {
+    "url": "https://github.com/leanprover-community/mathlib4",
+    "commit": "29dcec074de168ac2bf835a77ef68bbe069194c5"
+  },
+  "lean": "leanprover/lean4:v4.10.0-rc1",
+  "max_theorems": 64,
+  "max_reference_blocks": 6,
+  "max_reference_chars": 2048,
+  "suffix_blocks": [1, 2],
+  "families": ["arithmetic", "integer_arithmetic", "gcd", "congruences", "primes", "divisors", "factorial", "binomial", "modular_arithmetic"]
+}

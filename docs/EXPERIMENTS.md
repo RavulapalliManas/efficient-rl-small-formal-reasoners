@@ -5,6 +5,33 @@ This is the experiment catalogue, protocol record, and decision log for this rep
 The [TeX report](tex/project_report.tex) owns scientific narrative and interpretation.
 The [reward inventory](REWARD_HACKING.md) owns exploit details.
 
+## How to read this file
+
+Start at the [experiment register](#experiment-register). It has one row per experiment ID, with links to the record, the outcome entries and the report section.
+The parts of this file, in order:
+
+1. Rules: the [catalogue rules](#catalogue-rules) and the [record contract](#record-contract).
+2. The [experiment register](#experiment-register).
+3. [Adopted inputs and next actions](#adopted-inputs-and-next-actions), a checkpoint last edited on 10 October 2026.
+4. Historical setup, results summary, records of EXP-001 to EXP-013, interpretation and next steps.
+5. [Later records](#later-experiment-and-audit-records) of EXP-014 to EXP-022, AUD-001 and AUD-002.
+6. The [decision log](#decision-log).
+7. Records of EXP-023 to EXP-030.
+8. The [data handoff for Abhinav](#data-handoff-for-abhinav-20-october-2026-ist), 20 October 2026.
+9. [README status text before condensing](#readme-status-text-before-condensing-20-october-2026), 20 October 2026.
+
+Dated entries sit under the section that was last when they were written, not always under their own experiment:
+
+- The EXP-019 midterm entries and the PPO readiness review follow the decision log.
+- The 15 and 16 October entries for EXP-023, and the benchmark contract of 16 October, sit under the EXP-024 heading.
+- The 17 and 18 October entries for EXP-025, EXP-026 and EXP-027 sit under the EXP-027 heading.
+- The results of EXP-026 and EXP-027, dated 19 October, sit under the EXP-028 heading.
+
+The register's Results column links these entries wherever they sit.
+The decision log has two blocks. Entries from 20 October back to 11 October run newest first. Below them, entries from 24 September to 11 October run oldest first.
+Some recount entries name scripts such as `scripts/p4_why.py` and `scripts/build_ledger.py`. These paths are inside the private run directory `.private/ops/report_recount_20261019_v1/`, not in this repository.
+Line numbers cited in older notes refer to earlier versions of this file. Commit `8242e9f` holds the last version before this reading guide.
+
 ## Catalogue rules
 
 An experiment asks a research question. A run is one execution, including an arm, seed, retry, or rescore.
@@ -95,37 +122,46 @@ The original experiment numbers remain stable. Later records extend the catalogu
 Kinds distinguish research experiments, data builds, evaluations, and audits.
 Current execution status appears in the README, not in this register.
 
-| ID | Kind | Question or purpose | Record |
-| --- | --- | --- | --- |
-| EXP-001 | Data build | Can we prepare an isolated LeanDojo theorem subset? | [Record](#exp-001) |
-| EXP-002 | Baseline | Does GSM8K LoRA change informal math accuracy? | [Record](#exp-002) |
-| EXP-003 | Baseline | Can the unchanged Instruct model generate accepted Lean proofs? | [Record](#exp-003) |
-| EXP-004 | Experiment | Does family order change whole-proof GRPO learning? | [Record](#exp-004) |
-| EXP-005 | Experiment | Do prerequisite tasks produce an initial Lean success signal? | [Record](#exp-005) |
-| EXP-006 | Experiment | Does a proof prefix make curriculum comparison feasible? | [Record](#exp-006) |
-| EXP-007 | Experiment | Does RLP training improve independently generated answers? | [Record](#exp-007) |
-| EXP-008 | Audit and rerun | Are RLP updates lost through optimizer precision? | [Record](#exp-008) |
-| EXP-009 | Experiment | Does primitive-first RLP improve held-out answers? | [Record](#exp-009) |
-| EXP-010 | Evaluation | Which capabilities change across saved RLP checkpoints? | [Record](#exp-010) |
-| EXP-011 | Experiment | Can a Lean reward improve local witness generation? | [Record](#exp-011) |
-| EXP-012 | Data audit | Are the RLP answers and rule conditions valid? | [Record](#exp-012) |
-| EXP-013 | Experiment | Does ordered assistance differ from shuffled assistance? | [Record](#exp-013) |
-| EXP-014 | Experiment | Does proof SFT provide a useful starting checkpoint? | [Record](#exp-014) |
-| EXP-015 | Evaluation | Does the SFT checkpoint solve target theorems beyond a fixed tactic baseline? | [Record](#exp-015) |
-| EXP-016 | Data build | Can external statements support a number-theory evaluation pool? | [Record](#exp-016) |
-| EXP-017 | Data build | Can SFT, RL tasks, and development decisions use distinct admitted data? | [Record](#exp-017) |
-| EXP-018 | Experiment | Does informal reasoning between Lean steps improve the starting policy? | [Record](#exp-018) |
-| EXP-019 | Experiment | Does Lean-reward GRPO improve held-out proof completion at matched cost? | [Record](#exp-019) |
-| AUD-001 | Audit | Which proof errors and available starting points inform task selection? | [Record](#aud-001) |
-| AUD-002 | Audit | Can scorer exploits or data exposure invalidate the reward? | [Record](#aud-002) |
-| EXP-025 | Data build | Can the broader corpus provide reproducible benchmark and training inputs? | [Record](#exp-025) |
-| EXP-026 | Prospective experiment | How do unchanged Qwen, SFT and SFT + RLVR differ in generalization? | [Revised protocol](#generalization-experiment-revised-framing-16-october-2026) |
-| EXP-027 | Prospective experiment | Does curriculum improve familiar benchmark performance, generalization, or both? | [Protocol](#exp-027) |
-| EXP-028 | Prospective screen | Do step search, automation fallback, lemma retrieval, search-mined SFT and pass-rate-filtered RL raise held-out acceptance over S? | [Protocol](#exp-028) |
-| EXP-029 | Prospective experiment | Do the RL arms differ from S at 8 attempts on the screened 164-theorem selection set and on the 62 RL_filtered tasks? | [Protocol](#exp-029) |
-| EXP-030 | Exploratory pilot | Do per-action Lean-error penalties make REINFORCE close more proofs than the terminal proof reward alone? | [Protocol](#exp-030) |
+| ID | Kind | Question or purpose | Record | Results | Report |
+| --- | --- | --- | --- | --- | --- |
+| EXP-001 | Data build | Can we prepare an isolated LeanDojo theorem subset? | [Record](#exp-001) | [Summary](#historical-result-summary) | [§4.1](tex/project_report.pdf#page=8) |
+| EXP-002 | Baseline | Does GSM8K LoRA change informal math accuracy? | [Record](#exp-002) | [Summary](#historical-result-summary) | [§4.1](tex/project_report.pdf#page=8) |
+| EXP-003 | Baseline | Can the unchanged Instruct model generate accepted Lean proofs? | [Record](#exp-003) | [Summary](#historical-result-summary) | [§4.1](tex/project_report.pdf#page=8) |
+| EXP-004 | Experiment | Does family order change whole-proof GRPO learning? | [Record](#exp-004) | [Summary](#historical-result-summary) | [§4.2](tex/project_report.pdf#page=8) |
+| EXP-005 | Experiment | Do prerequisite tasks produce an initial Lean success signal? | [Record](#exp-005) | [Summary](#historical-result-summary) | [§4.2](tex/project_report.pdf#page=8) |
+| EXP-006 | Experiment | Does a proof prefix make curriculum comparison feasible? | [Record](#exp-006) | [Summary](#historical-result-summary) | [§4.2](tex/project_report.pdf#page=8) |
+| EXP-007 | Experiment | Does RLP training improve independently generated answers? | [Record](#exp-007) | [Summary](#historical-result-summary) | [§4.3](tex/project_report.pdf#page=9) |
+| EXP-008 | Audit and rerun | Are RLP updates lost through optimizer precision? | [Record](#exp-008) | [Summary](#historical-result-summary) | [§4.3](tex/project_report.pdf#page=9) |
+| EXP-009 | Experiment | Does primitive-first RLP improve held-out answers? | [Record](#exp-009) | [Summary](#historical-result-summary) | [§4.3](tex/project_report.pdf#page=9) |
+| EXP-010 | Evaluation | Which capabilities change across saved RLP checkpoints? | [Record](#exp-010) | [Summary](#historical-result-summary) | [§4.3](tex/project_report.pdf#page=9) |
+| EXP-011 | Experiment | Can a Lean reward improve local witness generation? | [Record](#exp-011) | [Summary](#historical-result-summary) | [§4.4](tex/project_report.pdf#page=9) |
+| EXP-012 | Data audit | Are the RLP answers and rule conditions valid? | [Record](#exp-012) | [Summary](#historical-result-summary) | [§4.3](tex/project_report.pdf#page=9) |
+| EXP-013 | Experiment | Does ordered assistance differ from shuffled assistance? | [Record](#exp-013) | [Summary](#historical-result-summary) | [§4.3](tex/project_report.pdf#page=9) |
+| EXP-014 | Experiment | Does proof SFT provide a useful starting checkpoint? | [Record](#exp-014) | In record | [§4.5](tex/project_report.pdf#page=10) |
+| EXP-015 | Evaluation | Does the SFT checkpoint solve target theorems beyond a fixed tactic baseline? | [Record](#exp-015) | In record | [§4.5](tex/project_report.pdf#page=10) |
+| EXP-016 | Data build | Can external statements support a number-theory evaluation pool? | [Record](#exp-016) | In record | [§4.5](tex/project_report.pdf#page=10) |
+| EXP-017 | Data build | Can SFT, RL tasks, and development decisions use distinct admitted data? | [Record](#exp-017) | In record | [§4.5](tex/project_report.pdf#page=10) |
+| EXP-018 | Experiment | Does informal reasoning between Lean steps improve the starting policy? | [Record](#exp-018) | Not run | [§4.5](tex/project_report.pdf#page=10) |
+| EXP-019 | Experiment | Does Lean-reward GRPO improve held-out proof completion at matched cost? | [Record](#exp-019) | [Native parity](#native-parity-midterm-completion); [fixed mixture](#fixed-mixture-midterm-completion) | [§4.5](tex/project_report.pdf#page=10); [§4.6](tex/project_report.pdf#page=10) |
+| EXP-020 | Exploratory pilot | Can alternating supervised proof practice with either hidden-target RLP or Lean-verified GRPO improve full proof completion? | [Record](#exp-020) | [Validation recount](#exp-020-validation-recount-11-october-2026) | [§4.5](tex/project_report.pdf#page=10) |
+| EXP-021 | Experiment | Test verified proof distillation before another Lean RL stage | [Record](#exp-021) | [Decision log](#decision-log), 11 October | [§4.5](tex/project_report.pdf#page=10) |
+| EXP-022 | Experiment | Does a learned value function help where within-prompt binary rewards rarely vary? | [Record](#exp-022) | Not run | [§4.5](tex/project_report.pdf#page=10) |
+| EXP-023 | Experiment | Broader complete proofs, PPO and REINFORCE, an error-aware reward, and curriculum experiments | [Record](#exp-023) | [Final run](#handoff-final-curriculum-run-results-14-october); [held-out pass@k](#exp-023-held-out-passk-15-october-2026); [recount](#exp-023-saved-question-recount-outcome-15-october-2026) | [§4.7](tex/project_report.pdf#page=11); [§7.1](tex/project_report.pdf#page=16) |
+| EXP-024 | Experiment | Does SFT on Lean-verified undergraduate number-theory data make the model solve more problems than the same amount of SFT on the old data? | [Record](#exp-024) | [Corpus v0](#exp-024-corpus-v0-outcome-15-october-2026); [screen](#exp-024-screen-part-2-outcome-15-october-2026); no training | Not in the report |
+| AUD-001 | Audit | Which proof errors and available starting points inform task selection? | [Record](#aud-001) | In record | Section removed in commit `c612b21` |
+| AUD-002 | Audit | Can scorer exploits or data exposure invalidate the reward? | [Record](#aud-002) | In record; [reward inventory](REWARD_HACKING.md) | [§5](tex/project_report.pdf#page=12); [§6](tex/project_report.pdf#page=12) |
+| EXP-025 | Data build | Can the broader corpus provide reproducible benchmark and training inputs? | [Record](#exp-025) | [Expanded dataset](#exp-025-expanded-dataset-outcome-16-october-2026); [filtered release](#filtered-release-outcome-17-october-2026); [prerequisite release](#checked-prerequisite-release-outcome-17-october-2026); [full-corpus mapping](#full-corpus-mapping-outcome-17-october-2026) | [§8](tex/project_report.pdf#page=16); [Appendix A](tex/project_report.pdf#page=37) |
+| EXP-026 | Prospective experiment | How do unchanged Qwen, SFT and SFT + RLVR differ in generalization? | [Revised protocol](#generalization-experiment-revised-framing-16-october-2026) | [R and E3](#r-result-and-e3-result-19-october-2026-ist); [dev_R](#dev_r-result-rl-shifts-s-toward-repeated-short-actions-19-october-2026-ist); [E7](#e7-result-r-on-the-selection-set-19-october-2026-ist) | [§8](tex/project_report.pdf#page=16); [§9](tex/project_report.pdf#page=22) |
+| EXP-027 | Prospective experiment | Does curriculum improve familiar benchmark performance, generalization, or both? | [Protocol](#exp-027) | [C](#c-result-curriculum-order-raises-train-acceptance-and-narrows-the-policy-19-october-2026-ist); [dev_C](#dev_c-result-and-main-lease-end-19-october-2026-ist) | [§8](tex/project_report.pdf#page=16); [§9.4](tex/project_report.pdf#page=28) |
+| EXP-028 | Prospective screen | Do step search, automation fallback, lemma retrieval, search-mined SFT and pass-rate-filtered RL raise held-out acceptance over S? | [Protocol](#exp-028) | [E0](#e0-result-18-october-2026-ist); [E2](#e2-result-and-lemma-data-18-october-2026-ist); [E5 and E3](#e5-result-and-the-e3-comparison-19-october-2026-ist); [E6](#e6-result-filtered-rl-on-the-selection-set-19-october-2026-ist); [RL_filtered](#rl_filtered-result-learning-on-the-62-filtered-train-tasks-19-october-2026-ist); [Kimina probe](#kimina-capability-probe-result-19-october-2026-ist); [why-analysis](#analysis-why-rl-raises-train-acceptance-without-a-held-out-gain-20-october-2026-ist) | [§9](tex/project_report.pdf#page=22); [§9.6](tex/project_report.pdf#page=29) |
+| EXP-029 | Prospective experiment | Do the RL arms differ from S at 8 attempts on the screened 164-theorem selection set and on the 62 RL_filtered tasks? | [Protocol](#exp-029) | Not run; [stop](#exp-029-stop) | [§10](tex/project_report.pdf#page=33) |
+| EXP-030 | Exploratory pilot | Do per-action Lean-error penalties make REINFORCE close more proofs than the terminal proof reward alone? | [Protocol](#exp-030) | Not run; [stop](#exp-030-stop) | [§10](tex/project_report.pdf#page=33) |
+
+Results links the outcome entries. Report names the section of `docs/tex/project_report.pdf` in its build of 20 October 2026 and links that page.
 
 ## Adopted inputs and next actions
+
+This checkpoint was last edited on 10 October 2026 (commit `81edb68`). It does not cover EXP-020 to EXP-030. For current status, see the [README](../README.md#status).
 
 This is a protocol checkpoint, not a report of live machine state.
 The decision log adopts `nt_pool_v2`, `nt_splits_v3`, and scorer `train_code_v11`.
@@ -485,6 +521,7 @@ Existing cut states are not re-traced. No SFT or RL training runs in this data b
 - Config: Historical post hoc analysis; no single frozen config indexed.
 - Code: [`scripts/audit/classify_proof_failures.py`](../scripts/audit/classify_proof_failures.py); [`scripts/audit/curriculum_inventory.py`](../scripts/audit/curriculum_inventory.py).
 - Evidence locator: `Source paths are in the report section labelled sec:posthoc.`
+- Correction, 20 October 2026: the current report has no label `sec:posthoc`. Commit `c612b21` removed that section; `git show c612b21^:docs/tex/project_report.tex` shows it.
 - Source record: [`project_report.tex`](../docs/tex/project_report.tex).
 - Boundary or gap: This is a post hoc diagnostic, not a registered curriculum-effect test.
 
@@ -586,6 +623,9 @@ Implementation source: [TRL 0.24 PPO trainer](https://huggingface.co/docs/trl/v0
 
 ## Decision log
 
+Entries from 20 October back to 11 October run newest first. Below them, entries from 24 September to 11 October run oldest first.
+
+- 2026-10-20 IST: Manas asks to fix the repository organization, so that newcomers can find code, configs, records and results. No code, config, test or report file moves or changes. The new `scripts/README.md` indexes every script with its docstring purpose, the experiments that name it and its importers. The new `configs/README.md` maps every config to its experiment and names the source of each mapping. The README gains a layout tree, a "Not in Git" section and status rows for EXP-003, EXP-012, EXP-029, EXP-030, AUD-001 and AUD-002, newest first. Five long status cells keep whole sentences only; their full text is in [README status text before condensing](#readme-status-text-before-condensing-20-october-2026). The register gains EXP-020 to EXP-024 and Results and Report columns, and a [reading guide](#how-to-read-this-file) explains the order of this file and its misfiled entries. The README appendix link now points to report page 37, where Appendix A starts; page 24 holds Table 12.
 - 2026-10-20 IST: Manas asks for a detailed description of every dataset, how it was created, and a handoff with extremely detailed instructions for Abhinav. The new section [Data handoff for Abhinav](#data-handoff-for-abhinav-20-october-2026-ist) records them, and the README links it. Three read-only audits (records, builder code, archive) and read-only downloads of the small archives with SHA-256 checks support it; every checked hash matches. The audits find that a fresh clone cannot rebuild the chain, that `build_nt_benchmark.py verify` admits no candidate at `main`, and that every archived copy expires between 11 and 19 November 2026. No dataset is rebuilt, and nothing is written to the archive.
 - 2026-10-20 IST: Manas asks to record the why-analysis, its motivation and setup, and the stop in this catalogue and in the report, with diagrams. The EXP-028 entry "Analysis: why RL raises TRAIN acceptance without a held-out gain, 20 October 2026 IST" and the stop entries under EXP-029 and EXP-030 record them. `docs/tex/project_report.tex` gains Sections `sec:oct19-setup` (the version 2.2 MDP as these runs use it, with a table and a diagram), `sec:oct20-why` and `sec:oct20-not-run`. `scripts/report/make_report_figures.py` gains `fig_oct20_why`. Nothing is committed.
 - 2026-10-20 IST: Manas stops all experiments and asks for analysis only. Lease6 is not launched, and EXP-029 and EXP-030 do not run; see their stop entries. Manas then asks whether the missing held-out gain comes from the RL update or from the reward. A read-only analysis of saved records answers it in the EXP-028 analysis entry of 20 October. It adds four recount scripts, `p4_why.py`, `p4b_tests.py`, `p4c_format.py` and `p4d_train_format.py`; `p4d_train_format.py` traces two counts of the limits line below.
@@ -2662,6 +2702,8 @@ The final archive command returns exit 0 and confirms the object through `head-o
 
 ## EXP-026
 
+The R results of 19 October sit under EXP-028: [R and E3](#r-result-and-e3-result-19-october-2026-ist), [dev_R](#dev_r-result-rl-shifts-s-toward-repeated-short-actions-19-october-2026-ist) and [E7](#e7-result-r-on-the-selection-set-19-october-2026-ist).
+
 ### Generalization experiment: revised framing, 16 October 2026
 
 This amendment supersedes the initial curriculum-only draft below, following Manas's correction. There are two major scientific experiments: this generalization experiment and [EXP-027, curriculum](#exp-027). Benchmark preparation, model calibration, proof export and optimizer implementation support these experiments; they are not additional major experiments.
@@ -2790,6 +2832,8 @@ The focused follow-up review finds no material issue against those named control
 Document verification: `latexmk -pdf -quiet -cd -interaction=nonstopmode -halt-on-error docs/tex/project_report.tex` returns exit 0. The final log contains no unresolved references, duplicate references or box warnings. The updated PDF contains the dated section and the new source citations. Text extraction exposed typographic conversion of command flags; breakable literal formatting corrects the flags and preserves their argument spaces. `uv run pre-commit run --files README.md docs/EXPERIMENTS.md docs/tex/project_report.tex` passes the applicable hooks, exit 0. `git diff --check` returns exit 0. No historical-result recertification, model sampling, training, commit, push or message to Abhinav occurs.
 
 ## EXP-027
+
+The C results of 19 October sit under EXP-028: [C](#c-result-curriculum-order-raises-train-acceptance-and-narrows-the-policy-19-october-2026-ist) and [dev_C](#dev_c-result-and-main-lease-end-19-october-2026-ist).
 
 ### Curriculum experiment: revised framing, 16 October 2026
 
@@ -5704,6 +5748,8 @@ Manas sets a total budget of about USD 50 and prefers an L4. The lease5 program 
 - Checks: 39 private lease tests pass (exit 0); the lease dry run exits 0; 92 tactic RL unit tests pass with 4 torch-only skips (exit 0).
 - Open before launch: Manas approves the live quote; the guard role is created.
 
+<a id="exp-029-stop"></a>
+
 #### Stop, 20 October 2026 IST
 
 Manas stops all experiments before any launch approval: "I don't want to run any more experiments."
@@ -5751,6 +5797,8 @@ A partial action is scored by the failure that stopped it. The discount stays 0.
 
 R_dense shares lease6 (EXP-029 amendment) with a 21,900 s stage cap. The real-Lean `dense_check` stage (`test_real_v2_error_feedback_penalties`) must pass before R_dense starts. Not approved; no instance exists; nothing is uploaded.
 
+<a id="exp-030-stop"></a>
+
 #### Stop, 20 October 2026 IST
 
 EXP-030 does not run, because Manas stops all experiments (EXP-029 stop entry).
@@ -5760,6 +5808,57 @@ Correction to the reward table above: the code keeps the reward of an action's o
 The question of EXP-030 stays open. No result about a dense reward exists.
 
 ## Data handoff for Abhinav, 20 October 2026 IST
+
+#### Start here: one page for Abhinav
+
+Read this page first. The numbered sections below it are reference material; open them only when this page points you there.
+
+Your experiment, EXP-026, compares three models on the same tasks ([protocol](#generalization-experiment-revised-framing-16-october-2026)):
+
+- B: the unchanged `Qwen/Qwen2.5-0.5B-Instruct`.
+- S: B after the project SFT on 1,880 action rows.
+- R: S after REINFORCE on the 506 TRAIN roots in a shuffled order.
+
+All three models already exist. The main lease trained S and R on 18 and 19 October. Results so far:
+
+- DEV: B, S and R each solve 0 of the 8 DEV roots (32 attempts per model). DEV cannot separate them yet.
+- The 164-theorem selection set (EXP-028): S solves 1 of 163 assessed theorems and R solves 1 of 164. B was not measured on it.
+- TEST: not opened.
+
+Use exactly these, and nothing else:
+
+| You need | Use | Where |
+| --- | --- | --- |
+| Code | Branch `main` | GitHub |
+| Training data | `validated_v2`: 506 TRAIN roots and 1,880 SFT action rows | `data.tar.gz` (section 4.1) |
+| DEV, for every choice | 8 roots from `release_v3` | `dev_pool.jsonl` and `dev_names.txt` in `inputs.tar.gz` (sections 4.2 and 4.10) |
+| TEST, for the final measurement only | 21 roots from `release_v3`, opened only after Manas approves | Not staged (section 4.2) |
+| Models | B, S and R | Section 4.9 |
+| Lean | `environment.tar.gz`, plus the checker and REPL in `inputs.tar.gz` | Section 4.10 |
+| Commands and settings | What the main lease ran | Section 7 |
+
+These sets look like DEV or TEST, but they are not yours. Do not use them for choices:
+
+| Name you will see | What it is |
+| --- | --- |
+| `tasks_dev.jsonl` with 164 rows, config `configs/data/nt_validation_v1.json` | The EXP-028 selection set. Earlier runs already used it to choose arms, so results on it are exploratory. The 8-row `release_v3/benchmark/tasks_dev.jsonl` is your DEV |
+| `sft_action/sft_val.jsonl` (125 rows) | The SFT loss monitor. It holds TRAIN theorems |
+| `calibration/tasks.jsonl` (32 rows) | TRAIN roots for a calibration run |
+| `prepared_v1` DEV 34 and TEST 82 | The earlier EXP-025 package. The cleanup reduced them to your DEV 8 and TEST 21 |
+| `nt_benchmark_v1` DEV 9 and TEST 16 | The EXP-025 pilot. Not used |
+| `id_val` (40), held-out (142), `retention` (3), `external` (64) | Panels of the older EXP-023 curriculum study |
+| `nt_pool_v2` validation (420) and the EXP-019 DEV (3 theorems) | Historical sets |
+| `curriculum_validation` in `evaluation_reservations.json` | Not built |
+
+Branches: use `main`. The other branches (`midsem-rl-pipeline`, `docs/repo-navigation`, `docs/lean-reward-audit`) are older working branches, and `main` contains all of them. Ignore them.
+
+People: Manas owns the data, the curriculum experiment and every approval. Anwesha owns the Lean environment. You own EXP-026.
+
+Your first three steps:
+
+1. Ask Manas for read access to the archive bucket, its name and prefix, and the private run configs.
+2. Fetch and verify the data with section 6. Report every mismatch to Manas.
+3. Agree your evaluation panels with Manas before any run. DEV 8 is at the floor for all three models, so it cannot show a difference.
 
 Manas asks for a detailed description of every dataset of the number-theory study, how each one was created, and step-by-step instructions that Abhinav can follow.
 This section is that handoff. Abhinav owns the generalization experiment (EXP-026). Manas owns the data and the curriculum experiment (EXP-027).
@@ -6421,3 +6520,27 @@ Two points that the records left open are settled by the files:
 - Scripts and outputs: `.private/ops/abhinav_data_handoff_20261020_v1/` (`fetch_test.py`, `fetch_inputs.py`, `member_checks.py`, `result.json`, `inputs_check.txt`, `member_checks.txt`, and the three audit files).
 - An independent check of the new text against these sources found 15 problems on 20 October; this text corrects all 15.
 - No Lean, model, GPU or GCP job ran, and nothing was written to the archive.
+
+## README status text before condensing, 20 October 2026
+
+Manas asks for a repository that newcomers can navigate. The README status table now keeps whole sentences only in its five longest cells, and two older status paragraphs leave the README.
+The text below is that README text as it stood before the edit, copied word for word. Only relative link targets change, so that they resolve from this file. It is historical status text and is not recounted.
+
+- EXP-026: | [EXP-026](#exp-026) | Generalization, Abhinav: unchanged Qwen, SFT, and SFT + RLVR | [Revised protocol](#generalization-experiment-revised-framing-16-october-2026); [current data and model contract](#current-data-and-model-contract-closure-18-october-2026-ist) | The clean study uses fresh SFT from pinned B because historical S trained on examples that invoke a reserved DEV target lemma. The [on-demand L40S main lease](#spot-first-amendment-and-launch-18-october-2026-ist) ran from 16:09 IST on 18 October to 07:12 IST on 19 October and terminated (estimated compute USD 33.77 of USD 102.31 reserved). Fresh S trained; B, S and R each solve 0 of 8 DEV roots. R accepts 164 of 4,048 TRAIN attempts with no detected learning (first against second visit, p = 0.93) and solves 1 of 164 held-out theorems in EXP-028 (E7), no gain over S. RL shifts R toward short, malformed actions (DEV format errors 37 to 113 of 192) |
+- EXP-027: | [EXP-027](#exp-027) | Curriculum, Manas: benchmark performance and generalization | [Protocol and execution guide](#exp-027); [common data and execution plan](#common-data-and-curriculum-execution-plan-18-october-2026-ist); [report plan](tex/project_report.pdf); `scripts/train/run_tactic_rl.py --task-order` | Full AI source review covers 536 canonical roots and 548 TRAIN proof variants; the primary projection retains 506 roots, and both order files contain 1,012 groups with equal task multiplicities. Annotations have no human confirmation or measured prerequisite necessity. C (prerequisite-first) accepts 255 of 4,048 TRAIN attempts against R's 164 on the same tasks (per-task p = 0.0002), with the gain inside the first pass. C narrows onto `omega`, `simp` and `simp_all` (mean action length 10.4 tokens in the last quarter). C solves 0 of 8 DEV roots; the held-out R/C contrast is not yet measured |
+- EXP-028: | [EXP-028](#exp-028) | Low-acceptance remedies: step search, automation fallback, lemma retrieval, search-mined SFT, pass-rate-filtered RL | `scripts/train/run_tactic_rl.py` options; `scripts/data/build_search_sft.py`, `add_premises_sft.py`, `build_premise_corpus.py` | Registered 18 October; four leases ran on 18 and 19 October and all terminated (estimated compute USD 52.28 of USD 165.32 reserved). No remedy arm is promoted on the 164-theorem held-out set: S solves 1 (E0); search (E2), lemma retrieval (E3), the SFT seed control (E5), R (E7) and pass-rate-filtered RL (E6) solve 0 to 2. E4 did not run: the S_mined SFT stage failed on a data-builder defect, now fixed. RL_filtered raises acceptance on its 62 TRAIN tasks from 0.31 to 0.60 (p = 0.0001), without measurable transfer. Kimina-Prover-Distill-0.6B solves 47 and 40 of 164 within 8 samples in two draws (56 in either). vLLM lockstep rollout is 4.06 times faster than sequential (timing only; the backend check has not yet passed) |
+- EXP-025: | [EXP-025](#exp-025) | Broader benchmark and data pipeline | [Builder](../scripts/data/build_nt_benchmark.py), [expanded config](../configs/data/nt_benchmark_v2.json); [checked prerequisite release](#checked-prerequisite-release-outcome-17-october-2026); [full-corpus mapping](#full-corpus-mapping-outcome-17-october-2026) | `validated_v2/` supersedes the initial common projection for new consumers. Fresh strict replay accepts all 580 source proofs, and every canonical source root reconstructs under v2. The filtered release retains 1,880 TRAIN actions and 125 separate loss-validation actions. All retained rows pass the actual consumer checks without truncation. Every source record has a retained or quarantine disposition; no records remain pending. Source certificates and frozen evaluation reservations remain bound. Public pretraining exposure and complete semantic alias independence remain unresolved |
+- EXP-024: | [EXP-024](#exp-024) | Undergraduate number-theory SFT: new data against equal-token old data | `scripts/train/run_sft.py`, `scripts/eval/curriculum_metrics.py` | Protocol approved 15 October. Mathlib identity check, syllabus, corpus v0 (40,732 problems) and single-tactic screen done; no training or evaluation yet. A separate [recovery data revision](#recovery-data-preparation-18-october-2026-ist) passes CPU verification and is archived for a future run. It adds format and Lean-error recovery observations, preserves the recorded prerequisite categories and split assignments, and quarantines one theorem whose source action hits the live cycle guard. The active EXP-026 pilot stays fixed; no learning gain is measured for the new dataset |
+
+The two status paragraphs, copied word for word:
+
+EXP-023 final curriculum run completed on 13 October (GPU run v2 plus a CPU evaluation of `id_val` and `external_clean`).
+On new questions of the trained problem types (`id_val`), RL raised accepted attempts from 148/320 to 208-242/320 (family test p ≤ 0.0011).
+On held-out problem types, no arm differs from the warmstart W (Holm-adjusted p = 1); S1-S2 rise and S3-S4 fall.
+The ordered curriculum shows no advantage over shuffling, and the efficiency claim is invalid because the token gate failed.
+See the [current handoff](#handoff-final-curriculum-run-results-14-october) for evidence and next steps.
+
+EXP-019 midterm runs (native parity and fixed mixture) completed by 12 October.
+The fixed-mixture RL final passes 26/48 DEV attempts against the SFT parent's 18/48 on three theorems.
+These small panels do not establish held-out generalization.
+See the [native parity record](#native-parity-midterm-completion) and the [fixed-mixture record](#fixed-mixture-midterm-completion).

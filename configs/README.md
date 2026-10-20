@@ -5,12 +5,12 @@ Changed settings go into a new versioned file, for example `qwen_05b_interleaved
 [scripts/README.md](../scripts/README.md) describes the scripts that read these files.
 
 The run configs of the 18 and 19 October leases (EXP-026 to EXP-028) are private launch inputs, not files in this folder.
-[Section 7 of the data handoff](../docs/EXPERIMENTS.md#7-step-by-step-run-with-this-data-as-the-main-lease-did) lists the settings of the main-lease configs.
+[Section 7 of the data handoff](../docs/EXPERIMENTS.md#7-step-by-step-run-with-this-data-as-the-main-run-did) lists the settings of the main-run configs.
 [`checkpoints.json`](checkpoints.json) is the download index of the published checkpoints. See [Checkpoints](../README.md#checkpoints).
 
 ## Every config
 
-Purpose is the first sentence of the config's `purpose` field, or a dash when the config has none.
+Purpose is the first sentence of the config's `purpose` field, or a dash when the config has none. Where that sentence uses an older name for a thing in the names table on the start page in docs/EXPERIMENTS.md, Purpose uses the current name.
 Experiment comes from the source that the Source column names, in this order of preference:
 
 1. The config's own `experiment_id` or `experiment` field.
@@ -34,9 +34,9 @@ Inputs of dataset builds and selections.
 | [`data/mathematical_rlp_review_v1.json`](data/mathematical_rlp_review_v1.json) | – | EXP-012 | catalogue and README |
 | [`data/nt_benchmark_v1.json`](data/nt_benchmark_v1.json) | Bounded exploratory benchmark build from the existing broader corpus. | EXP-025 | declared `experiment` |
 | [`data/nt_benchmark_v2.json`](data/nt_benchmark_v2.json) | Expanded exploratory SFT/RL dataset from the existing broader corpus. | EXP-025 | declared `experiment` |
-| [`data/nt_expanded_tactic_v1.json`](data/nt_expanded_tactic_v1.json) | Freeze broader TRAIN-source proof roots and separate DEV roots before model sampling. | EXP-023 | declared `experiment_id` |
+| [`data/nt_expanded_tactic_v1.json`](data/nt_expanded_tactic_v1.json) | Freeze broader TRAIN-source theorems and separate DEV theorems before model sampling. | EXP-023 | declared `experiment_id` |
 | [`data/nt_sft_recovery_v1.json`](data/nt_sft_recovery_v1.json) | Separate recovery-augmented action dataset; no active pilot change or model launch. | not recorded | not recorded |
-| [`data/nt_validation_v1.json`](data/nt_validation_v1.json) | Held-out curriculum-validation set for EXP-028 screening. | EXP-028 | declared `experiment` |
+| [`data/nt_validation_v1.json`](data/nt_validation_v1.json) | Held-out selection set for EXP-028 screening. | EXP-028 | declared `experiment` |
 | [`data/undergrad_nt_v1.json`](data/undergrad_nt_v1.json) | – | EXP-024 | declared `experiment` |
 
 ### eval/
@@ -58,7 +58,7 @@ Settings of evaluations, probes and grading.
 | [`eval/qwen_05b_heldout_parent_v1prompt.json`](eval/qwen_05b_heldout_parent_v1prompt.json) | EXP-023 held-out baseline. | EXP-023 | declared `experiment_id` |
 | [`eval/qwen_05b_leandojo_short_calibration.json`](eval/qwen_05b_leandojo_short_calibration.json) | Frozen native LeanDojo calibration. | EXP-019 | `run_id` prefix |
 | [`eval/qwen_05b_nt_expanded_calibration.json`](eval/qwen_05b_nt_expanded_calibration.json) | Frozen training-only parent calibration. | EXP-023 | declared `experiment_id` |
-| [`eval/qwen_05b_nt_expanded_dev.json`](eval/qwen_05b_nt_expanded_dev.json) | Frozen original broader DEV roots, with --evaluation-names and no optimizer. | EXP-023 | declared `experiment_id` |
+| [`eval/qwen_05b_nt_expanded_dev.json`](eval/qwen_05b_nt_expanded_dev.json) | Frozen original broader DEV theorems, with --evaluation-names and no optimizer. | EXP-023 | declared `experiment_id` |
 | [`eval/qwen_05b_nt_retention_dev.json`](eval/qwen_05b_nt_retention_dev.json) | Frozen elementary DEV retention panel from the completed mixed RL study. | EXP-023 | declared `experiment_id` |
 | [`eval/qwen_05b_prerequisite_sft_dev_v1.json`](eval/qwen_05b_prerequisite_sft_dev_v1.json) | Matched optimizer-disabled pilot evaluation of the fresh parent and final interactive SFT checkpoint on all retained release_v3 DEV statements. | EXP-026 | declared `experiment_id` |
 | [`eval/qwen_05b_prerequisite_sft_dev_v2.json`](eval/qwen_05b_prerequisite_sft_dev_v2.json) | Matched optimizer-disabled pilot evaluation of the fresh parent and final interactive SFT checkpoint on all retained release_v3 DEV statements. | EXP-026 | declared `experiment_id` |
@@ -67,7 +67,7 @@ Settings of evaluations, probes and grading.
 | [`eval/qwen_05b_tactic_comparison_dev.json`](eval/qwen_05b_tactic_comparison_dev.json) | Matched unassisted DEV evaluation for EXP019 comparison; no optimizer. | EXP-019 | `run_id` prefix |
 | [`eval/qwen_05b_tactic_curriculum_signal.json`](eval/qwen_05b_tactic_curriculum_signal.json) | Frozen training-state signal assessment. | EXP-019 | `run_id` prefix |
 | [`eval/qwen_05b_tactic_dev.json`](eval/qwen_05b_tactic_dev.json) | Frozen DEV interactive proof evaluation; no optimizer; statements without proof prefixes | EXP-019 | `run_id` prefix |
-| [`eval/qwen_05b_tactic_fixed_short_dev.json`](eval/qwen_05b_tactic_fixed_short_dev.json) | Paired fresh evaluation on the three RL-parent-disjoint validation elementary tasks. | EXP-019 | `run_id` prefix |
+| [`eval/qwen_05b_tactic_fixed_short_dev.json`](eval/qwen_05b_tactic_fixed_short_dev.json) | Paired fresh evaluation on the three RL-parent-disjoint validation elementary theorems. | EXP-019 | `run_id` prefix |
 | [`eval/qwen_05b_tactic_fixed_short_prescreen.json`](eval/qwen_05b_tactic_fixed_short_prescreen.json) | Optimizer-disabled repeated frozen sampling before fixed-task learning. | EXP-019 | `run_id` prefix |
 
 ### pretrain/
@@ -101,7 +101,7 @@ SFT, RLP and interleaved training runs.
 | [`midtrain/qwen_05b_prerequisite_interactive_sft_v2.json`](midtrain/qwen_05b_prerequisite_interactive_sft_v2.json) | Initial interactive number-theory SFT pilot on the checked prerequisite action release. | EXP-026 | declared `experiment_id` |
 | [`midtrain/qwen_05b_primitive_rlp.json`](midtrain/qwen_05b_primitive_rlp.json) | – | EXP-009 | catalogue and README |
 | [`midtrain/qwen_05b_tactic_continued_sft_comparison.json`](midtrain/qwen_05b_tactic_continued_sft_comparison.json) | Exploratory continued-SFT candidate for EXP-019. | EXP-019 | declared `experiment_id` |
-| [`midtrain/qwen_05b_v21_warmstart.json`](midtrain/qwen_05b_v21_warmstart.json) | Format warmstart for environment v2.1: teach the parent to answer the v2.1 observation with one ```lean fence of up to 4 tactics that ends at the closing fence. | EXP-023 | declared `experiment_id` |
+| [`midtrain/qwen_05b_v21_warmstart.json`](midtrain/qwen_05b_v21_warmstart.json) | Format warmstart for environment version 2.1: teach the parent to answer the v2.1 observation with one ```lean fence of up to 4 tactics that ends at the closing fence. | EXP-023 | declared `experiment_id` |
 
 ### rl/
 

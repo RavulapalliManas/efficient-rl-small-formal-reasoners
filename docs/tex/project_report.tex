@@ -46,30 +46,30 @@
 
 \noindent\textit{Reading dates.} Historical sections retain their original reporting cutoff.
 Section~\ref{sec:curriculum-generalization} adds the prospective study designed on 16 October 2026.
-Appendix~\ref{app:evaluation-questions} describes every DEV and TEST question from the 17 October review pack.
-Section~\ref{sec:oct19-results} adds the EXP-028 and main-study results of 18 and 19 October 2026.
+Appendix~\ref{app:evaluation-questions} describes every DEV and TEST theorem from the 17 October review pack.
+Section~\ref{sec:oct19-results} adds the EXP-028 and main-run results of 18 and 19 October 2026.
 Section~\ref{sec:oct20-why} adds a read-only analysis of those results from 20 October 2026, and Section~\ref{sec:oct20-not-run} records two follow-up designs that did not run.
 Current execution status remains in the README; dated protocols and evidence remain in \pth{docs/EXPERIMENTS.md}.
 
 \begin{abstract}
 This report asks whether reinforcement learning (RL) can teach a small language model, \code{Qwen2.5-0.5B-Instruct}, to write Lean~4 proofs of elementary number theory.
 We formulate proof writing as a Markov decision process (MDP) with a reward of 1 only for a complete proof that Lean accepts.
-Most experiments failed for one main reason: when the model never succeeds, the RL update is exactly zero.
-RL helped only on tasks that the model could already solve some of the time.
+Most experiments failed for one main reason: when Lean accepts no attempt, the RL update is exactly zero.
+RL helped only on theorems that the model could already prove some of the time.
 We also found ways to obtain the reward without proof skill, and several engineering faults.
 \end{abstract}
 
 \noindent\fbox{\parbox{\dimexpr\textwidth-2\fboxsep-2\fboxrule}{
 \textbf{Main findings}
 \begin{enumerate}[leftmargin=*]
-\item RL needs the model to succeed some of the time. With no success, the gradient is zero (Section~\ref{sec:zero}).
+\item RL needs some accepted attempts. With no accepted attempt, the gradient is zero (Section~\ref{sec:zero}).
 \item The first barrier was the Lean language, not the mathematics (Section~\ref{sec:cold}).
 \item A reward that does not check correctness can increase while accuracy decreases (Section~\ref{sec:rlpexp}).
-\item RL helped twice, both times on tasks that the model could already solve some of the time (Sections~\ref{sec:local} and~\ref{sec:interactive}).
+\item RL helped twice, both times on theorems that the model could already prove some of the time (Sections~\ref{sec:local} and~\ref{sec:interactive}).
 \item A Lean acceptance does not always show skill: the checker had faults, and some statements are trivial (Section~\ref{sec:cheat}).
 \item The plan recorded on 13 October uses a corrected environment, a curriculum ordered by proof structure, and a cleaned held-out panel (Section~\ref{sec:next}).
-\item In the runs of 18 and 19 October, filtered and curriculum-ordered RL again raised acceptance only on their training tasks, in one run each. No arm showed a detected held-out gain over S (Section~\ref{sec:oct19-results}).
-\item A read-only analysis of these runs finds no sign of a fault in the RL update: on the 62 \code{RL\_filtered} tasks, acceptance rises from 0.306 to 0.597. The reward is rarely nonzero: R's first visit finds a proof on 46 of 506 TRAIN tasks. RL concentrates on \code{simp\_all} actions with a lemma list. On the selection set, 326 of \code{RL\_filtered}'s 328 first actions start this way, and Lean rejects 224 of them at the first tactic. No run tests this account (Section~\ref{sec:oct20-why}).
+\item In the runs of 18 and 19 October, filtered and curriculum-ordered RL again raised acceptance only on their training theorems, in one run each. No arm showed a detected held-out gain over S (Section~\ref{sec:oct19-results}).
+\item A read-only analysis of these runs finds no sign of a fault in the RL update: on the 62 \code{RL\_filtered} theorems, acceptance rises from 0.306 to 0.597. The reward is rarely nonzero: R's first visit finds a proof on 46 of 506 TRAIN theorems. RL concentrates on \code{simp\_all} actions with a lemma list. On the selection set, 326 of \code{RL\_filtered}'s 328 first actions start this way, and Lean rejects 224 of them at the first tactic. No run tests this account (Section~\ref{sec:oct20-why}).
 \end{enumerate}
 }}
 
@@ -80,13 +80,13 @@ We also found ways to obtain the reward without proof skill, and several enginee
 We want a small language model that writes proofs that the proof assistant Lean~4 can check.
 The topic is school and early-university number theory: parity, divisibility, gcd and lcm, primes, and congruences.
 The midterm goal was a model that produces some complete proofs that Lean accepts.
-The goal for the end of the semester is proof strategy on competition-style problems.
+The goal for the end of the semester is proof strategy on competition-style theorems.
 
 \paragraph{Motivation.}
 \begin{enumerate}
-\item \textbf{Efficiency.} We want the most proofs for a fixed compute budget. We study the \emph{curriculum} (which tasks, in which order) and the \emph{distribution of reward} over proof steps.
+\item \textbf{Efficiency.} We want the most proofs for a fixed compute budget. We study the \emph{curriculum} (which theorems, in which order) and the \emph{distribution of reward} over the actions of a proof.
 \item \textbf{Checked learning.} A model that learns without a checker can learn false statements. Lean should check the model while it learns, not only at the end.
-\item \textbf{One model for informal and formal steps.} The model writes a short informal step and then its Lean step. A separate translator would add errors and compute.
+\item \textbf{One model for informal and formal reasoning.} The model writes a short informal argument and then its Lean tactic. A separate translator would add errors and compute.
 \item \textbf{No human graders.} Lean gives an exact reward. This setting is called RL with verifiable rewards (RLVR). The reward is \emph{sparse}: a signal comes only from a complete proof.
 \end{enumerate}
 
@@ -104,7 +104,7 @@ Table~\ref{tab:example} shows a small example that we wrote to explain the idea,
 \label{tab:example}
 \begin{tabularx}{\textwidth}{@{}rP{4.6cm}P{4.3cm}Y@{}}
 \toprule
-Step & Goal before the step & Tactic (the action) & Effect \\
+Action & Goal before the action & Tactic (the action) & Effect \\
 \midrule
 1 & $a \mid c$, given $a \mid b$, $b \mid c$ & \code{obtain $\langle$k, hk$\rangle$ := h1} & Adds $b = a k$ \\
 2 & $a \mid c$, given $b = ak$, $b \mid c$ & \code{obtain $\langle$l, hl$\rangle$ := h2} & Adds $c = b l$ \\
@@ -154,7 +154,7 @@ We used two formulations, which differ only in the size of one action (Figure~\r
 \node[box, right=of a1] (a2) {Lean checks\\once};
 \node[box, right=of a2] (a3) {$r = 1$ or $0$};
 \foreach \x/\y in {a0/a1, a1/a2, a2/a3} \draw[arr] (\x) -- (\y);
-\node[font=\small\bfseries, anchor=west] at (-1.2, -1.15) {B: one tactic per step (interactive)};
+\node[font=\small\bfseries, anchor=west] at (-1.2, -1.15) {B: one tactic per action (interactive)};
 \node[plain] (b0) at (0,-2.1) {Theorem};
 \node[box, right=of b0] (b1) {Model:\\tactic};
 \node[box, right=of b1] (b2) {Lean:\\new goals};
@@ -178,10 +178,10 @@ Table~\ref{tab:mdp} defines Formulation B, and Figure~\ref{fig:mdpgraph} shows i
 \toprule
 Part & Definition \\
 \midrule
-State $s_t$ & The current Lean goals. At $t = 0$, the theorem. In an \emph{assisted} task, part of a known proof is applied first \\
-Action $a_t$ & A short tactic block (at most 64 tokens in the main run) \\
+State $s_t$ & The current Lean goals. At $t = 0$, the theorem. In an \emph{assisted} attempt, part of a known proof is applied first \\
+Action $a_t$ & A short tactic block (at most 64 tokens in the main configuration of this version) \\
 Transition & Lean runs the block. If it succeeds, the new goals are $s_{t+1}$ \\
-End of episode & No goals remain (then Lean checks the full proof), Lean reports an error, or the step budget is used (4 actions) \\
+End of episode & No goals remain (then Lean checks the full proof), Lean reports an error, or the action budget is used (4 actions) \\
 Reward & 1 at the end if Lean accepts the full proof, otherwise 0 \\
 Discount & $\gamma = 1$ \\
 \bottomrule
@@ -197,7 +197,7 @@ Discount & $\gamma = 1$ \\
 \node[diamond, draw, thick, aspect=1.6, align=center, font=\small, inner sep=1pt, right=1.3cm of s2] (chk) {No goals\\left?\\Lean checks\\full proof};
 \node[good, above right=0.1cm and 1.0cm of chk] (win) {Accepted\\$r = 1$};
 \node[bad, below right=0.1cm and 1.0cm of chk] (lose) {Rejected\\$r = 0$};
-\node[bad, below=1.5cm of s1] (err) {Lean error or step budget used: episode ends, $r = 0$};
+\node[bad, below=1.5cm of s1] (err) {Lean error or action budget used: episode ends, $r = 0$};
 \draw[arr] (s0) -- node[above, note] {$a_0$} (s1);
 \draw[arr] (s1) -- node[above, note] {$a_1$} (s2);
 \draw[arr] (s2) -- node[above, note] {$a_2$} (chk);
@@ -211,15 +211,15 @@ Discount & $\gamma = 1$ \\
 \end{figure}
 
 Version 1 has three defects.
-The model does not see the remaining steps, the theorem, or the proof so far.
-With a step limit that the model cannot see, the process is not exactly Markov.
+The model does not see the remaining actions, the theorem, or the proof so far.
+With an action limit that the model cannot see, the process is not exactly Markov.
 One error ends the episode.
 Section~\ref{sec:next} corrects these defects.
 
 \subsection{Learning algorithm}
 We maximize the expected return $J(\theta) = \mathbb{E}_{\tau \sim \pi_\theta}\big[\sum_t \gamma^t r_t\big]$.
 The only reward is at the end, so the return of an episode $\tau$ is $R(\tau) \in \{0, 1\}$.
-For one theorem, we sample $G$ episodes and use the REINFORCE estimator~\cite{williams1992}
+For one theorem, we sample $G$ episodes (one episode is one attempt) and use the REINFORCE estimator~\cite{williams1992}
 \begin{equation}
 \nabla_\theta J(\theta) \approx \frac{1}{G}\sum_{i=1}^{G} A_i \, \nabla_\theta \log \pi_\theta(\tau_i).
 \label{eq:pg}
@@ -233,11 +233,11 @@ A_i^{\text{GRPO}} = \frac{R_i - \bar R}{s_R + \varepsilon},
 \end{equation}
 where $\bar R$ and $s_R$ are the mean and standard deviation of the $G$ rewards.
 
-\subsection{Main consequence: no success, no learning}
+\subsection{Main consequence: no accepted attempt, no learning}
 \label{sec:zero}
 If all $G$ attempts fail, every $R_i = 0$, so every $A_i = 0$, and the update in Equation~\eqref{eq:pg} is exactly zero.
-The same is true when all attempts succeed.
-The model learns only from \emph{mixed groups}, which contain at least one success and one failure (Figure~\ref{fig:groups}).
+The same is true when Lean accepts all attempts.
+The model learns only from \emph{mixed groups}, which contain at least one accepted and one rejected attempt (Figure~\ref{fig:groups}).
 
 \begin{figure}[!htbp]
 \centering
@@ -253,15 +253,15 @@ The model learns only from \emph{mixed groups}, which contain at least one succe
 \foreach \i/\r/\c in {0/1/green!15,1/0/red!10,2/0/red!10,3/0/red!10} \node[cell, fill=\c] at (0.8*\i+0.4, -1.1) {$\r$};
 \draw[arr] (3.4, -1.1) -- (4.3, -1.1);
 \foreach \i/\a in {0/{+1},1/{-1/3},2/{-1/3},3/{-1/3}} \node[cell, minimum width=0.95cm] at (1.0*\i+4.9, -1.1) {$\a$};
-\node[font=\small, anchor=west, align=left] at (8.8, -1.1) {The success becomes more likely,\\the failures less likely};
+\node[font=\small, anchor=west, align=left] at (8.8, -1.1) {The accepted attempt: more likely;\\the failures: less likely};
 \node[font=\small] at (1.6, 0.65) {Rewards $R_i$};
 \node[font=\small] at (6.4, 0.65) {RLOO advantages $A_i$};
 \end{tikzpicture}
-\caption{A group needs both a success and a failure ($G = 4$).}
+\caption{A group needs both an accepted and a rejected attempt ($G = 4$).}
 \label{fig:groups}
 \end{figure}
 
-If the model succeeds with probability $p$ per attempt, a group of $G$ independent attempts is mixed with probability
+If Lean accepts each attempt with probability $p$, a group of $G$ independent attempts is mixed with probability
 \begin{equation}
 P_{\text{mix}}(p, G) = 1 - p^{G} - (1-p)^{G}.
 \label{eq:pmix}
@@ -296,7 +296,7 @@ We call it a \emph{heuristic} reward.
 \node[font=\small\bfseries, anchor=west] at (-1.0, -1.25) {Lean reward};
 \node[plain] (t) at (0,-2.2) {Theorem};
 \node[box, right=of t] (p) {Model writes\\a proof};
-\node[box, right=of p] (l) {Lean checks\\every step};
+\node[box, right=of p] (l) {Lean checks\\every tactic};
 \node[good, right=of l] (r2) {Reward 1 only\\if correct};
 \foreach \a/\b in {t/p, p/l, l/r2} \draw[arr] (\a) -- (\b);
 \end{tikzpicture}
@@ -323,19 +323,19 @@ One standard tactic proves 28 of the 420 validation statements without a model, 
 Source & Content & Use \\
 \midrule
 LeanDojo Benchmark 4~\cite{leandojo} & Theorems and tactic proofs from mathlib; number-theory subset of 706 training, 17 validation, 15 test theorems & Supervised training; short proofs for interactive RL \\
-Lean Workbook~\cite{leanworkbook} & Competition-style problems as Lean statements & Pool of 4,306 number-theory statements that Lean checks \\
+Lean Workbook~\cite{leanworkbook} & Competition-style theorems as Lean statements & Pool of 4,306 number-theory statements that Lean checks \\
 Number-theory SFT set & 5,812 examples: Lean-accepted proofs, mathlib syntax examples, proof variants & Second supervised stage \\
-Hand-written Lean tasks & Logic, arithmetic, divisibility, induction & Experiments 5, 6; DEV of Experiment 19 \\
-Hand-written arithmetic tasks & 448 questions on gcd, inverses, primes, congruences & RLP (Experiment 9) \\
+Hand-written Lean theorems & Logic, arithmetic, divisibility, induction & Experiments 5, 6; DEV of Experiment 19 \\
+Hand-written arithmetic questions & 448 questions on gcd, inverses, primes, congruences & RLP (Experiment 9) \\
 Open textbook (Judson) & Chapters of \emph{Abstract Algebra: Theory and Applications} & RLP (Experiment 7) \\
-Curriculum templates & 192 training tasks in 5 stages and 152 held-out tasks, all checked by Lean & Final run (Section~\ref{sec:next}) \\
+Curriculum templates & 192 training theorems in 5 stages and 152 held-out theorems, all checked by Lean & Final run (Section~\ref{sec:next}) \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
 Table~\ref{tab:data} lists the data.
 Figure~\ref{fig:splits} shows how we keep test data out of training.
-Renamed copies of one problem always go to the same split, and we never train on the DEV set.
+Renamed copies of one theorem always go to the same split, and we never train on the DEV set.
 
 \begin{figure}[!htbp]
 \centering
@@ -357,10 +357,10 @@ Renamed copies of one problem always go to the same split, and we never train on
 
 \paragraph{Training stages.}
 All models come from one chain of checkpoints (Figure~\ref{fig:pipeline}).
-SFT v2 is one pass over Lean proofs from the LeanDojo training files (4,526 steps of 64 examples), without any file that contains a validation or test theorem.
+SFT v2 is one epoch over Lean proofs from the LeanDojo training files (4,526 optimizer updates of 64 examples), without any file that contains a validation or test theorem.
 Common SFT is a second supervised stage on the number-theory SFT set.
 Supervised fine-tuning (SFT) copies existing proofs.
-RL learns from the model's own attempts, so some attempts must succeed.
+RL learns from the model's own attempts, so Lean must accept some attempts.
 
 \begin{figure}[!htbp]
 \centering
@@ -380,12 +380,12 @@ RL learns from the model's own attempts, so some attempts must succeed.
 \end{figure}
 
 \paragraph{Curricula.}
-RL needs tasks that the model can solve some of the time.
-A \emph{curriculum} starts with easier versions of a task.
-We made tasks easier in three ways: we supplied knowledge in the prompt, we supplied part of the proof (a \emph{reverse curriculum}~\cite{r3}, Figure~\ref{fig:reverse}), or we asked for one step instead of a whole proof.
+RL needs theorems that the model can prove some of the time.
+A \emph{curriculum} starts with easier versions of a theorem.
+We made theorems easier to prove in three ways: we supplied knowledge in the prompt, we supplied part of the proof (a \emph{reverse curriculum}~\cite{r3}, Figure~\ref{fig:reverse}), or we asked for one action instead of a whole proof.
 Most known proofs are short: 85\% of the linear tactic proofs in our LeanDojo pool have one or two tactics, and only 24 have five or more.
 Therefore a reverse curriculum on these proofs has few levels.
-To test whether \emph{order} matters, an \emph{ordered} arm and a \emph{shuffled} arm receive the same tasks the same number of times.
+To test whether \emph{order} matters, an \emph{ordered} arm and a \emph{shuffled} arm receive the same theorems the same number of times.
 Table~\ref{tab:curricula} lists the curriculum of each experiment.
 
 \begin{figure}[!htbp]
@@ -416,13 +416,13 @@ Table~\ref{tab:curricula} lists the curriculum of each experiment.
 \label{tab:curricula}
 \begin{tabularx}{\textwidth}{@{}P{1.0cm}P{4.2cm}YP{2.3cm}@{}}
 \toprule
-Exp. & Tasks & Order and support & Comparison \\
+Exp. & Training data & Order and support & Comparison \\
 \midrule
 4 & LeanDojo number-theory theorems & Grouped by topic & Random order \\
-5 & Hand-written Lean tasks & Logic, arithmetic, divisibility, induction; support decreases & Random order \\
+5 & Hand-written Lean theorems & Logic, arithmetic, divisibility, induction; support decreases & Random order \\
 6 & Theorems with part of the proof given & Missing expression, then tactic, then body & Random order \\
-9 & 448 arithmetic tasks & Prerequisites first, with replay & None \\
-13 & 72 tasks in 5 versions & Support decreases from full information to none & Shuffled order \\
+9 & 448 arithmetic questions & Prerequisites first, with replay & None \\
+13 & 72 questions in 5 versions & Support decreases from full information to none & Shuffled order \\
 20 & Number-theory proofs & Short proof endings, longer endings, whole proofs & SFT parent \\
 19 & 3 practice proof endings & Fixed mixture & SFT parent \\
 23 & 22 Lean Workbook theorems & Structure, lemma use, combined steps, whole proof & Shuffled order \\
@@ -449,9 +449,9 @@ A cause is \emph{tested} when an experiment could have shown it to be false; oth
   0/{Exp.~1--3: data, baselines, unchanged model}/{0/273 accepted; Lean syntax errors}/red!10,
   1/{Exp.~4--6: whole-proof GRPO}/{No mixed groups, zero gradient}/red!10,
   2/{Exp.~7--13: RLP reward on knowledge}/{Reward up; accuracy 42 to 21 of 108}/red!10,
-  3/{Exp.~11: one given proof step}/{Validation 0/8 to 6/8}/green!15,
+  3/{Exp.~11: one missing proof expression}/{Validation 0/8 to 6/8}/green!15,
   4/{Exp.~14--22: SFT, then whole-proof RL}/{GRPO 6/392, below SFT 13/392}/red!10,
-  5/{Exp.~19: interactive RL on mixed tasks}/{DEV 18/48 to 26/48 (3 theorems)}/green!15,
+  5/{Exp.~19: interactive RL on mixed theorems}/{DEV 18/48 to 26/48 (3 theorems)}/green!15,
   6/{Exp.~23: interactive RL with a curriculum}/{No gain: 1/392 vs.\ parent 3/392}/red!10,
   7/{Next: corrected environment, structure curriculum}/{In preparation}/gray!12}
 {
@@ -459,7 +459,7 @@ A cause is \emph{tested} when an experiment could have shown it to be false; oth
   \node[res=\c, right=0.5cm of e\y] (r\y) {\r};
   \draw[arr] (e\y) -- (r\y);
 }
-\foreach \a/\b/\w in {0/1/{try RL directly}, 1/2/{no Lean signal: teach knowledge first}, 2/3/{reward misleads: keep Lean, reduce the task}, 3/4/{small tasks work: teach Lean first}, 4/5/{whole proofs too hard: use single steps}, 5/6/{narrow gain: extend with a curriculum}, 6/7/{correct the environment and the tasks}}
+\foreach \a/\b/\w in {0/1/{try RL directly}, 1/2/{no Lean signal: teach knowledge first}, 2/3/{reward misleads: keep Lean, reduce the goal}, 3/4/{small goals work: teach Lean first}, 4/5/{whole proofs too hard: use single actions}, 5/6/{narrow gain: extend with a curriculum}, 6/7/{correct the environment and the tasks}}
   \draw[arr, gray] (e\a.south) -- node[pos=0.5, xshift=0.15cm, why] {\w} (e\b.north);
 \end{tikzpicture}
 \caption{The sequence of experiments. Red: failure. Green: RL gain. Grey: in preparation.}
@@ -505,10 +505,10 @@ The first barrier is the language (\emph{tested}: the classification reads Lean'
 \subsection{Whole-proof RL from the unchanged model (Experiments 4 to 6)}
 \label{sec:terminal}
 We ran GRPO in Formulation A with $G = 4$.
-In Experiment~4, Lean accepted no proof, no group was mixed, and the gradient was zero for all 32 steps.
+In Experiment~4, Lean accepted no proof, no group was mixed, and the gradient was zero for all 32 optimizer updates.
 Validation stayed at 0 of 8 theorems.
-In Experiment~5, easier hand-written tasks gave 0 of 256 accepted proofs, so we did not train.
-In Experiment~6, with one expression missing from a given proof, 2 of 64 attempts passed, but only one theorem gave mixed groups, and held-out attempts stayed at 0 of 16.
+In Experiment~5, easier hand-written theorems gave 0 of 256 accepted proofs, so we did not train.
+In Experiment~6, with one expression missing from a given proof, Lean accepted 2 of 64 attempts, but only one theorem gave mixed groups, and held-out attempts stayed at 0 of 16.
 
 \emph{Why it failed} (\emph{tested}): every group had reward 0, so every update was 0 (Section~\ref{sec:zero}).
 Therefore Experiment~4 gives no information about curriculum order.
@@ -520,7 +520,7 @@ Lean gave no signal, so we tried to teach knowledge first with the RLP reward.
 \begin{itemize}
 \item Experiment 7 (textbook text): held-out accuracy was 11/48 before and after.
 \item Experiment 8: only 8,557,971 of 494,032,768 weights had changed, because low-precision (BF16) rounding discards small updates. With full precision, accuracy stayed at 11/48.
-\item Experiment 9 (448 arithmetic tasks): the reward increased, but held-out accuracy decreased from 42/108 to 21/108 (Figure~\ref{fig:rlpdiv}). Answers without a readable number increased from 17 to 69, and answers at the length limit from 15 to 36.
+\item Experiment 9 (448 arithmetic questions): the reward increased, but held-out accuracy decreased from 42/108 to 21/108 (Figure~\ref{fig:rlpdiv}). Answers without a readable number increased from 17 to 69, and answers at the length limit from 15 to 36.
 \item Experiment 10: an early checkpoint improved at recognizing concepts (7 to 14 of 32), not at using them. Two AI graders disagreed on 44 of 321 answers.
 \item Experiment 12: all 612 numeric answers in the data were correct, but 160 of 448 rules omitted a condition (for example, $\gcd(a, n) = 1$ for a modular inverse). A constant answer solved every proof-by-contradiction item.
 \item Experiment 13 (decreasing support): 0 of 18 answers were fully correct at all five checkpoints.
@@ -540,9 +540,9 @@ A deliberately false line of reasoning increased the reward in both inspected ex
 A \emph{candidate} reason for the accuracy decrease is that training supplied the start of the answer format, but the test did not.
 
 %----------------------------------------------------------------------
-\subsection{A smaller task (Experiment 11)}
+\subsection{A smaller goal (Experiment 11)}
 \label{sec:local}
-We reduced the task to one proof step with the mathematics supplied (Figure~\ref{fig:exp11}), and ran GRPO with $G = 8$.
+We reduced the proof to one missing expression with the mathematics supplied (Figure~\ref{fig:exp11}), and ran GRPO with $G = 8$.
 Validation accuracy increased from 0/8 to 6/8, and held-out accuracy from 0/4 to 2/4.
 It worked because some groups were mixed.
 The sets are small, and Lean checked only the expression: only 2 of 8 explanations had no mathematical error.
@@ -556,14 +556,14 @@ The sets are small, and Lean checked only the expression: only 2 of 8 explanatio
 \node[good, right=of l] (r) {$r = 1$};
 \draw[arr] (g) -- (m); \draw[arr] (m) -- (l); \draw[arr] (l) -- (r);
 \end{tikzpicture}
-\caption{The one-step task of Experiment 11. Lean checks the expression, not the explanation.}
+\caption{The one-expression goal of Experiment 11. Lean checks the expression, not the explanation.}
 \label{fig:exp11}
 \end{figure}
 
 %----------------------------------------------------------------------
 \subsection{Supervised training, then whole-proof RL (Experiments 14 to 22)}
 \label{sec:sftrl}
-After SFT v2, the model solved 0 of the 392 non-trivial validation statements (2 of all 420).
+After SFT v2, the model proved 0 of the 392 non-trivial validation statements (2 of all 420).
 On 200 training statements it proved 0 in 1,600 attempts.
 The most frequent first errors were an invented lemma name (582), a failed rewrite (329), and the length limit (253).
 The barrier moved from syntax to library knowledge.
@@ -571,7 +571,7 @@ The barrier moved from syntax to library knowledge.
 Experiment~20 added a common SFT stage, then alternated SFT with whole-proof GRPO in one branch and with RLP in another (Figure~\ref{fig:interleaved}).
 Common SFT increased the count from 0 to 13.
 The GRPO branch ended at 6, below its parent, and the RLP branch at 15.
-The GRPO model wrote the single tactic \code{simp\_all} in 1,637 of 3,360 samples; the parent did so in 62.
+The GRPO model wrote the single tactic \code{simp\_all} in 1,637 of 3,360 attempts; the parent did so in 62.
 
 \begin{figure}[!htbp]
 \centering
@@ -583,18 +583,18 @@ The GRPO model wrote the single tactic \code{simp\_all} in 1,637 of 3,360 sample
 Experiment~21 used rejection-sampling fine-tuning (RFT: train on sampled proofs that Lean accepts~\cite{deepseekprover15}), then GRPO.
 On DEV (64 attempts per model), no model had an accepted proof.
 The first errors of the final model were proof construction (43), unknown names or types (17), syntax (3), and timeout (1).
-A parser fault rejected every action in a code block, so its step-by-step pilot made no update.
+A parser fault rejected every action in a code block, so its interactive pilot made no update.
 Experiment~22 prepared PPO, but the GPU run failed before RL started.
 
-\emph{Why it failed} (\emph{candidates}): the low success rate gives few mixed groups; the GRPO model concentrated on \code{simp\_all}, which closes only easy goals.
+\emph{Why it failed} (\emph{candidates}): the low acceptance rate gives few mixed groups; the GRPO model concentrated on \code{simp\_all}, which closes only easy goals.
 The branches also had extra SFT stages and different data, so the comparison does not isolate RL.
 
 %----------------------------------------------------------------------
-\subsection{Step-by-step RL: the clear gain (Experiment 19)}
+\subsection{Interactive RL: the clear gain (Experiment 19)}
 \label{sec:interactive}
 We used Formulation B from common SFT, with REINFORCE, RLOO, $G = 4$, and at most 4 actions.
-We trained only on three practice tasks that the model solved some of the time.
-The success rule, fixed before the run, required more accepted DEV attempts than the parent over two seeds and no lost DEV theorem.
+We trained only on three practice theorems that the model proved some of the time.
+The selection rule, fixed before the run, required more accepted DEV attempts than the parent over two seeds and no lost DEV theorem.
 The rule selected the RL model (Figure~\ref{fig:mixed}).
 It proved 7 of 32 original theorems without help (parent: 4 of 32), and all 7 proofs passed a new Lean check.
 An earlier run of this type lost one DEV theorem, so the rule kept its parent.
@@ -603,7 +603,7 @@ Not every theorem improved: \code{Nat.not\_even\_one} decreased from 4/4 to 2/4.
 \begin{figure}[!htbp]
 \centering
 \includegraphics[width=0.7\textwidth]{mixed_gain}
-\caption{Experiment 19: SFT parent and RL model on the same tasks and seeds. Error bars: 95\% Wilson score intervals, which treat correlated attempts as independent and so understate the uncertainty.}
+\caption{Experiment 19: SFT parent and RL model on the same theorems and seeds. Error bars: 95\% Wilson score intervals, which treat correlated attempts as independent and so understate the uncertainty.}
 \label{fig:mixed}
 \end{figure}
 
@@ -611,10 +611,10 @@ Not every theorem improved: \code{Nat.not\_even\_one} decreased from 4/4 to 2/4.
 RL made the model more reliable on proofs that it could already find; it did not show that RL teaches new proofs.
 
 %----------------------------------------------------------------------
-\subsection{Step-by-step RL with a curriculum (Experiment 23)}
+\subsection{Interactive RL with a curriculum (Experiment 23)}
 \label{sec:curriculum}
-On 22 broader theorems, a short warm-start first increased whole-proof success on 16 training tasks from 0 to 13.
-Then an \emph{ordered} arm (answer given, one lemma, combined steps, whole proof) and a \emph{shuffled} arm trained on the same tasks.
+On 22 broader theorems, a short warm-start first increased accepted whole proofs on 16 training theorems from 0 to 13.
+Then an \emph{ordered} arm (answer given, one lemma, combined steps, whole proof) and a \emph{shuffled} arm trained on the same theorems.
 Neither arm improved on the parent.
 On broader DEV, all three models had 0 of 64.
 On easy retention, the parent had 24/48, ordered 20/48, and shuffled 21/48.
@@ -630,10 +630,10 @@ The ordered model made more valid first moves than the parent (88 against 40), b
 
 \emph{Why it failed} (four \emph{candidates}, not yet tested):
 \begin{enumerate}
-\item A valid step is not progress. The model learned valid steps, not complete proofs.
-\item The curriculum had gaps: the lemma stage covered 9 of 22 theorems, the combined stage 11 of 22, and early tasks contained the answer.
+\item A valid action is not progress. The model learned valid actions, not complete proofs.
+\item The curriculum had gaps: the lemma stage covered 9 of 22 theorems, the combined stage 11 of 22, and the early stages contained the answer.
 \item For one Lean error type, the interface lost the message and gave reward 0, while ordinary errors received a penalty. A failure with a lost message therefore scored better (186 actions).
-\item The environment did not show the theorem or the remaining steps, and one error ended the episode.
+\item The environment did not show the theorem or the remaining actions, and one error ended the attempt.
 \end{enumerate}
 One common explanation is not supported: most repeated-state failures occurred without \code{simp\_all}.
 
@@ -649,7 +649,7 @@ We searched for every way to obtain the Lean reward without real proof skill and
 \node[leaf] (a) at (-5.2, -1.9) {\textbf{1. Deceive the checker.} 27 of 87 attack checks passed before our fix; 0 after. \emph{Fixed}};
 \node[leaf] (b) at (0, -1.9) {\textbf{2. Library search.} \code{exact?} raised a no-model baseline from 9 to 13 of 43. \emph{Prohibited}};
 \node[leaf] (c) at (5.2, -1.9) {\textbf{3. Trivial statements.} One tactic proves 161 of 3,450 training statements; 23 statements across all splits have contradictory assumptions. \emph{Removed from RL}};
-\node[leaf] (d) at (-5.2, -4.0) {\textbf{4. Recall.} 826 of 1,007 early tasks shared files with test theorems; copying the nearest proof solves 22 of 392; some held-out tasks restated training statements. \emph{Filtered; baseline}};
+\node[leaf] (d) at (-5.2, -4.0) {\textbf{4. Recall.} 826 of 1,007 early theorems shared files with test theorems; copying the nearest proof proves 22 of 392; some held-out theorems restated training statements. \emph{Filtered; baseline}};
 \node[leaf] (e) at (0, -4.0) {\textbf{5. Partial checking.} Lean checks one expression, not the explanation (Exp.~11). \emph{Observed}};
 \node[leaf] (f) at (5.2, -4.0) {\textbf{6. Reward noise.} 7 of 1,689 correct proofs exceed the time limit; 253 of 1,600 errors are the length limit. \emph{Partly open}};
 \foreach \n in {a, b, c} \draw[arr] (root.south) -- (\n.north);
@@ -698,7 +698,7 @@ Some failures were engineering faults, not scientific results (Table~\ref{tab:bu
 
 \paragraph{Corrected environment.}
 Version 2.1 of the environment corrects the defects of version 1 (Figure~\ref{fig:v2}).
-The model sees the theorem, the accepted steps, the current goals, the last Lean message, the tactics that already failed, and the remaining steps.
+The model sees the theorem, the accepted actions, the current goals, the last Lean message, the tactics that already failed, and the remaining actions.
 An action contains up to four tactics, and Lean keeps all tactics before the first error, as in DeepSeek-Prover-V1.5~\cite{deepseekprover15}.
 The reward is 1 for a proof and 0 otherwise, with $\gamma = 0.95$, so shorter proofs receive more reward.
 Version 2.2 corrected further faults.
@@ -720,8 +720,8 @@ Integration tests with real Lean passed: 8 of 8 for version 2.1, and 86 of 86 fo
 \node[st] (d) at (4.4, 0) {$s_{t+1}$};
 \draw[arr] (p) -- (c);
 \draw[arr] (c) -- node[above, note] {valid tactics} (d);
-\draw[fail] (c) edge[loop below, looseness=6] node[below, note] {error: stay, show the message,\\use one step} (c);
-\draw[arr, blue!50!black] (c) to[bend right=40] node[above, note] {repeated failures:\\return one step} (p);
+\draw[fail] (c) edge[loop below, looseness=6] node[below, note] {error: stay, show the message,\\use one action} (c);
+\draw[arr, blue!50!black] (c) to[bend right=40] node[above, note] {repeated failures:\\go back one action} (p);
 \end{scope}
 \end{tikzpicture}
 \caption{Treatment of a failed action in version 1 and version 2.1.}
@@ -730,41 +730,41 @@ Integration tests with real Lean passed: 8 of 8 for version 2.1, and 86 of 86 fo
 
 \paragraph{Curriculum ordered by proof structure.}
 The final curriculum has five stages, ordered by the type of reasoning that a proof needs (Figure~\ref{fig:stairs}).
-All tasks come from templates in families of 8, and Lean accepts the reference proof of every task.
-A family that one fixed tactic mostly solves (4 or more of 8) moves to S0.
+All theorems come from templates in families of 8, and Lean accepts the reference proof of every theorem.
+A family that one fixed tactic mostly proves (4 or more of 8) moves to S0.
 We defined this relabel rule after we saw the first probe results, so it was not chosen blind.
-Within the training set, exact duplicates were removed, which leaves 192 training tasks.
+Within the training set, exact duplicates were removed, which leaves 192 training theorems.
 
 \begin{figure}[!htbp]
 \centering
 \begin{tikzpicture}[stp/.style={box, text width=2.35cm, minimum height=1.3cm}]
-\node[stp, fill=blue!4]  (s0) at (0, 0)    {\textbf{S0}\\identity or\\automation\\54 tasks};
-\node[stp, fill=blue!9]  (s1) at (3.05, 0) {\textbf{S1}\\one named\\lemma\\26 tasks};
-\node[stp, fill=blue!14] (s2) at (6.1, 0)  {\textbf{S2}\\two-step\\composition\\32 tasks};
-\node[stp, fill=blue!20] (s3) at (9.15, 0) {\textbf{S3}\\chain of\\subgoals\\40 tasks};
-\node[stp, fill=blue!27] (s4) at (12.2, 0) {\textbf{S4}\\harder proofs\\(3 to 6 steps)\\40 tasks};
+\node[stp, fill=blue!4]  (s0) at (0, 0)    {\textbf{S0}\\identity or\\automation\\54 theorems};
+\node[stp, fill=blue!9]  (s1) at (3.05, 0) {\textbf{S1}\\one named\\lemma\\26 theorems};
+\node[stp, fill=blue!14] (s2) at (6.1, 0)  {\textbf{S2}\\two-step\\composition\\32 theorems};
+\node[stp, fill=blue!20] (s3) at (9.15, 0) {\textbf{S3}\\chain of\\subgoals\\40 theorems};
+\node[stp, fill=blue!27] (s4) at (12.2, 0) {\textbf{S4}\\harder proofs\\(3 to 6 steps)\\40 theorems};
 \foreach \a/\b in {s0/s1, s1/s2, s2/s3, s3/s4} \draw[arr] (\a) -- (\b);
 \node[note] at (6.1, 1.25) {more difficult $\longrightarrow$};
-\node[plain, text width=10cm] (ho) at (6.1, -1.9) {\textbf{Held-out test}: 152 tasks in 20 families (S1 24, S2 48, S3 50, S4 30), never used for training};
+\node[plain, text width=10cm] (ho) at (6.1, -1.9) {\textbf{Held-out test}: 152 theorems in 20 families (S1 24, S2 48, S3 50, S4 30), never used for training};
 \end{tikzpicture}
-\caption{The final structure curriculum: 192 training tasks and 152 held-out tasks. Training excludes 670 names: every held-out, evaluation, reserve, demo, and DEV name.}
+\caption{The final structure curriculum: 192 training theorems and 152 held-out theorems. Training excludes 670 names: every held-out, evaluation, reserve, demo, and DEV name.}
 \label{fig:stairs}
 \end{figure}
 
 \paragraph{Cleaning the held-out set.}
-A semantic check compared held-out tasks with the statements behind the SFT data.
+A semantic check compared held-out theorems with the statements behind the SFT data.
 In the first panel, it found 26 held-out--training pairs with the same content and 3 near-transfers; for example, \code{ho\_coprimechain\_01} restates \code{lean\_workbook\_22701}.
-We removed 35 tasks, which left 61 clean tasks.
+We removed 35 theorems, which left 61 clean theorems.
 A second set of new families went through the same check, which removed 7 contaminated held-out families and 2 training families.
-We then dropped the 5 remaining held-out tasks rated ``related''.
-The final held-out set has 152 tasks: the 61 original clean tasks and 91 new ones.
-On the 61 original clean tasks, the SFT parent (environment version 1) solved 6, with 8 of 488 attempts accepted.
+We then dropped the 5 remaining held-out theorems rated ``related''.
+The final held-out set has 152 theorems: the 61 original clean theorems and 91 new ones.
+On the 61 original clean theorems, the SFT parent (environment version 1) proved 6, with 8 of 488 attempts accepted.
 
 \paragraph{Can RL start on these stages?}
-Before training, we ran the SFT parent 8 times on each S0 to S2 task of the first template set, with the version~1 prompt (Figure~\ref{fig:probe}).
-With the relabelled stages, S0 had 187 of 448 attempts accepted (44 of 56 tasks mixed), S1 26 of 256 (14 of 32 mixed), and S2 10 of 256 (8 of 32 mixed).
+Before training, we ran the SFT parent 8 times on each S0 to S2 theorem of the first template set, with the version~1 prompt (Figure~\ref{fig:probe}).
+With the relabelled stages, S0 had 187 of 448 attempts accepted (44 of 56 theorems mixed), S1 26 of 256 (14 of 32 mixed), and S2 10 of 256 (8 of 32 mixed).
 Every stage has mixed groups, so RL has a signal, but the signal is weak in S2.
-Under the original labels, one family that \code{omega} solves alone gave 32 of the 42 S2 successes, and the two real two-step families gave 8 of 64 and 0 of 64.
+Under the original labels, one family that \code{omega} proves alone gave 32 of the 42 S2 accepted attempts, and the two real two-step families gave 8 of 64 and 0 of 64.
 With the version 2.1 prompt, 186 of 386 first actions of the parent failed on format.
 In 145 of these 186, the code block had a label other than \code{lean}, for example \code{liquorice}; no run has tested whether the label causes the failure.
 Therefore a short warm-start in the new format comes before RL.
@@ -773,40 +773,40 @@ Its data has 1,969 training rows on 468 theorems, each traced again through the 
 \begin{figure}[!htbp]
 \centering
 \includegraphics[width=0.8\textwidth]{stage_probe}
-\caption{Readiness test of the SFT parent on the first template set, version~1 prompt, 8 attempts per task, one seed. (a)~Tasks per relabelled stage by outcome. (b)~Accepted attempts per family of the original S2 stage, $n = 64$; grey: the family that \code{omega} solves alone, later moved to S0.}
+\caption{Readiness test of the SFT parent on the first template set, version~1 prompt, 8 attempts per theorem, one seed. (a)~Theorems per relabelled stage by outcome. (b)~Accepted attempts per family of the original S2 stage, $n = 64$; grey: the family that \code{omega} proves alone, later moved to S0.}
 \label{fig:probe}
 \end{figure}
 
 \paragraph{The frozen plan for the final run.}
 We recorded this protocol before the launch, when no result was available.
 The subsequent outcome belongs to the EXP-023 completion handoff in \pth{docs/EXPERIMENTS.md}; the protocol below remains historical.
-The run tests two claims: RL improves the model over its warm-start W on held-out tasks, and a curriculum makes RL more efficient (Figure~\ref{fig:design}).
+The run tests two claims: RL improves the model over its SFT model W on held-out theorems, and a curriculum makes RL more efficient (Figure~\ref{fig:design}).
 
 \begin{figure}[!htbp]
 \centering
 \begin{tikzpicture}[node distance=0.5cm]
 \node[plain, text width=3.4cm] (w) at (0, 0) {\textbf{W}: SFT parent + warm-start on 1,969 rows in the new format};
 \node[box, text width=3.4cm] (a) at (5.0, 1.5) {\textbf{A}: RL, stages in order S0 $\to$ S4};
-\node[box, text width=3.4cm] (b) at (5.0, 0) {\textbf{B}: RL, the same tasks shuffled};
-\node[box, text width=3.4cm, dashed] (c) at (5.0, -1.5) {\textbf{C}: RL, adaptive task selection (if time permits)};
+\node[box, text width=3.4cm] (b) at (5.0, 0) {\textbf{B}: RL, the same theorems shuffled};
+\node[box, text width=3.4cm, dashed] (c) at (5.0, -1.5) {\textbf{C}: RL, adaptive theorem selection (if time permits)};
 \foreach \n in {a, b, c} \draw[arr] (w.east) -- (\n.west);
-\node[good, text width=4.4cm] (ev) at (10.6, 0) {Held-out test: 152 tasks in 20 families (primary)\\plus in-domain (40), retention (3), external (64), and demo};
+\node[good, text width=4.4cm] (ev) at (10.6, 0) {Held-out test: 152 theorems in 20 families (primary)\\plus in-domain (40), retention (3), external (64), and demo};
 \foreach \n in {a, b, c} \draw[arr] (\n.east) -- (ev.west);
 \draw[arr, gray] (w.south) .. controls (2, -3.0) and (8.5, -3.0) .. node[below, note] {W is also evaluated} (ev.south);
 \end{tikzpicture}
-\caption{The frozen comparison. A and B against W test whether RL helps. A against B tests whether order helps. C tests whether tasks near a 50\% success rate give more mixed groups for the same compute.}
+\caption{The frozen comparison. A and B against W test whether RL helps. A against B tests whether order helps. C tests whether theorems near a 50\% acceptance rate give more mixed groups for the same compute.}
 \label{fig:design}
 \end{figure}
 
 \begin{itemize}
 \item \textbf{Settings.} Environment version 2.2, $\gamma = 0.95$, $G = 8$, at most 6 actions, REINFORCE with the leave-one-out baseline on discounted returns, learning rate $10^{-6}$, seed 20261013 for every arm, at most 150 groups per arm.
-\item \textbf{Admission.} W samples each training task 8 times. A task enters training only if 1 to 6 of the 8 attempts succeed, so every admitted task can give mixed groups. A stage with too few admitted tasks is dropped from both arms.
-\item \textbf{Primary measure.} The mean fraction of the 8 attempts that Lean accepts, per held-out task. The primary test permutes whole families, because tasks in one family are correlated; Holm correction controls the two comparisons of each claim.
-\item \textbf{Efficiency.} For each arm, the gain in solved tasks over W per million generated tokens, together with Lean calls, updates, and the share of mixed groups.
-\item \textbf{Validity gates.} A against B counts as confirmatory only if both arms complete the same number of groups, with updates within 10\% and censored groups within 2. The efficiency claim also needs generated tokens within 10\%. If training success does not increase during RL, a null result is uninformative. No checkpoint, setting, or task is chosen from evaluation results.
-\item \textbf{Sample size.} In simulation, the McNemar test gave a false-positive rate of up to 0.14 against the intended 0.05; the family test stays at 0.05 or less. With the final 152 tasks, the family test detects 8 to 19 percentage points in the fraction of tasks solved, and 11 to 15 points at a baseline like the parent's. These values come from an assumed model, not from data.
+\item \textbf{Admission.} W makes 8 attempts on each training theorem. A theorem enters training only if Lean accepts 1 to 6 of the 8 attempts, so every admitted theorem can give mixed groups. A stage with too few admitted theorems is dropped from both arms.
+\item \textbf{Primary measure.} The mean fraction of the 8 attempts that Lean accepts, per held-out theorem. The primary test permutes whole families, because theorems in one family are correlated; Holm correction controls the two comparisons of each claim.
+\item \textbf{Efficiency.} For each arm, the gain in proved theorems over W per million generated tokens, together with Lean calls, updates, and the share of mixed groups.
+\item \textbf{Validity gates.} A against B counts as confirmatory only if both arms complete the same number of groups, with updates within 10\% and censored groups within 2. The efficiency claim also needs generated tokens within 10\%. If training acceptance does not increase during RL, a null result is uninformative. No checkpoint, setting, or theorem is chosen from evaluation results.
+\item \textbf{Sample size.} In simulation, the McNemar test gave a false-positive rate of up to 0.14 against the intended 0.05; the family test stays at 0.05 or less. With the final 152 theorems, the family test detects 8 to 19 percentage points in the fraction of theorems proved, and 11 to 15 points at a baseline like the parent's. These values come from an assumed model, not from data.
 \item \textbf{Compute.} One L4 GPU for 12 hours, with a reservation of USD 37.01 and one attempt. A CPU fallback runs as a labelled deviation if the attempt fails.
-\item \textbf{Demo.} \code{demo\_coprime} and one held-out task per level (a common divisor divides the gcd; odd $m$ and $n$ give an even $mn + 1$; $ab$ or $a + b$ is even), run on A if A solves at least as many held-out tasks as W, otherwise on W. Six earlier demo problems matched statements in the training or SFT data and were withdrawn.
+\item \textbf{Demo.} \code{demo\_coprime} and one held-out theorem per level (a common divisor divides the gcd; odd $m$ and $n$ give an even $mn + 1$; $ab$ or $a + b$ is even), run on A if A proves at least as many held-out theorems as W, otherwise on W. Six earlier demo theorems matched statements in the training or SFT data and were withdrawn.
 \end{itemize}
 
 \subsection{Familiar-family reliability improves without an established transfer gain}
@@ -815,27 +815,27 @@ The run tests two claims: RL improves the model over its warm-start W on held-ou
 \paragraph{Results recounted on 18 October 2026.}
 The completed EXP-023 final run gives more accepted attempts on familiar number-theory constructions after RL (Table~\ref{tab:final-curriculum-outcome}).
 These evaluations start from whole goals without supplied proof lines.
-They compare fixed final checkpoints with the supervised warm-start W, using the same attempts per statement within each panel.
+They compare fixed final checkpoints with the SFT model W, using the same attempts per statement within each panel.
 Later data amendments leave a smaller held-out panel than the historical plan above.
 
 \begin{table}[!htbp]
 \centering
 \begin{tabularx}{\textwidth}{Yrrrr}
 \toprule
-Model & \shortstack{Familiar\\attempts} & \shortstack{Familiar\\roots} & \shortstack{Held-out\\attempts} & \shortstack{Held-out\\roots} \\
+Model & \shortstack{Familiar\\attempts} & \shortstack{Familiar\\theorems} & \shortstack{Held-out\\attempts} & \shortstack{Held-out\\theorems} \\
 \midrule
-W: supervised parent & 148/320 & 31/40 & 258/1,136 & 59/142 \\
+W: SFT model & 148/320 & 31/40 & 258/1,136 & 59/142 \\
 A: ordered RL & 208/320 & 32/40 & 283/1,136 & 53/142 \\
 B: shuffled RL & 213/320 & 34/40 & 302/1,136 & 54/142 \\
 C: adaptive RL & 242/320 & 35/40 & 249/1,136 & 46/142 \\
 \bottomrule
 \end{tabularx}
-\caption{Recorded Lean-accepted complete proofs in the final curriculum run. Each statement has eight attempts. A root counts as solved when at least one attempt succeeds. Familiar constructions and held-out constructions are separate populations; their denominators must not be pooled.}
+\caption{Recorded Lean-accepted complete proofs in the final curriculum run. Each statement has eight attempts. A theorem counts as proved when Lean accepts at least one attempt. Familiar constructions and held-out constructions are separate populations; their denominators must not be pooled.}
 \label{tab:final-curriculum-outcome}
 \end{table}
 
 More accepted attempts need not mean broader proof coverage.
-Every RL final solves fewer distinct held-out roots than W in these samples.
+Every RL final proves fewer distinct held-out theorems than W in these attempts.
 The family-level tests find no overall held-out benefit after Holm correction; each adjusted $p$-value equals 1.
 The familiar-family tests support higher sampled reliability, but this is a secondary panel from a single training seed.
 It does not establish broad acquisition of number-theory proofs.
@@ -875,7 +875,7 @@ Both experiments remain prospective.
 \toprule
 Experiment & Comparison & Question \\
 \midrule
-Generalization, EXP-026 & Unchanged Qwen; SFT; SFT + RLVR & What does each training stage change on familiar and shifted problems? \\
+Generalization, EXP-026 & Unchanged Qwen; SFT; SFT + RLVR & What does each training stage change on familiar and shifted theorems? \\
 Curriculum, EXP-027 & Shuffled RL; prerequisite-first RL, from the same SFT checkpoint & Does curriculum improve familiar performance, generalization, or both? \\
 \bottomrule
 \end{tabularx}
@@ -907,7 +907,7 @@ Generalization needs a specified change from training to evaluation.
 Lake and Baroni distinguish nearby generalization from systematic composition in SCAN~\cite{lakebaroni2018}.
 This motivates separate panels, without making composition the only research question.
 Table~\ref{tab:generalization-panels} specifies the intended shifts.
-Familiar-family performance uses held-out questions, not training accuracy.
+Familiar-family performance uses held-out theorems, not training accuracy.
 
 \begin{table}[!htbp]
 \centering
@@ -936,12 +936,12 @@ EXP-025 supplies candidate inputs, not a certified structural benchmark.
 Manas reviews intended meaning, semantic families, component skills, reference strategies and known SFT/RL exposure.
 Reference dependency depth and tactic length remain separate from minimum mathematical difficulty.
 Keep current TRAIN, DEV and TEST membership unchanged.
-Any required expansion needs a separately versioned build.
+Any required expansion needs a separately versioned release.
 If a panel cannot be supported, report that limitation and retain an explicitly labelled pilot.
 
 \subsection{Experiment 2: curriculum effects on performance and generalization}
 
-The second experiment holds the SFT parent and RLVR implementation fixed.
+The second experiment holds the SFT checkpoint S and RLVR implementation fixed.
 Its conditions are R, shuffled RL practice, and C, prerequisite-first RL practice.
 Both start from the exact S checkpoint.
 The first intervention changes RL order while keeping SFT unchanged.
@@ -949,18 +949,18 @@ This measures the total effect of the schedule, without assuming a transfer bene
 
 R and C receive permutations of the same TRAIN task-ID multiset, including identical repeat counts.
 Reviewed skill prerequisites determine ordered stages; freeze within-stage tie-breaking and permutation seeds.
-Keep frozen-parent success as a separate empirical difficulty measure.
+Keep frozen-S acceptance as a separate empirical difficulty measure.
 If calibration determines TRAIN admission, apply one common rule to both arms.
-Retain exclusions and never filter TEST by its success rate.
-Use whole-root tasks without supplied proof prefixes.
+Retain exclusions and never filter TEST by its acceptance rate.
+Use whole theorems without supplied proof prefixes.
 
 R can serve both experiments when every resolved setting and seed matches.
 Reusing the run avoids duplicate training, but does not add an independent replication.
-Adaptive sampling, changed task allocation and supplied-prefix assistance remain distinct later curriculum interventions.
+Adaptive sampling, changed theorem allocation and supplied-prefix assistance remain distinct later curriculum interventions.
 DeepSeek-Prover-V2 incorporates subgoal-derived problems into a curriculum~\cite{deepseekprover2}.
-Our first comparison fixes the task multiset and tests order.
+Our first comparison fixes the theorem multiset and tests order.
 
-Measure C minus R on familiar benchmark problems and separately on each generalization panel.
+Measure C minus R on familiar benchmark theorems and separately on each generalization panel.
 Table~\ref{tab:curriculum-interpretation} gives the possible interpretations.
 A familiar-panel gain does not establish transfer.
 No detected gain does not establish absence of an effect.
@@ -995,14 +995,14 @@ At evaluation, all conditions receive the same interface, statements, library ac
 An interface warm-up that updates B's weights is additional training and must not be hidden.
 Keep evaluation proofs outside SFT, RL, demonstrations and retrieval.
 Choose checkpoints and settings on DEV; evaluate TEST after those choices freeze.
-SFT loss-validation remains a TRAIN-only monitor.
+SFT validation remains a TRAIN-only monitor.
 
-Report complete-proof accepted-attempt fraction and questions solved within the same fixed attempt budget.
+Report complete-proof accepted-attempt fraction and proved theorems within the same fixed attempt budget.
 Acceptance requires an unchanged statement and complete replay under the pinned verifier.
 Every planned theorem--attempt pair stays in the operational denominator.
 Retain rejection, timeout, infrastructure failure, truncation and missing output as separate categories.
 Material infrastructure failures make the scientific comparison inconclusive.
-Report completion coverage and resources for failed attempts as well as successes.
+Report completion coverage and resources for failed attempts as well as accepted attempts.
 
 Use paired RL seeds for R against C and retain semantic-family dependence in uncertainty calculations.
 Freeze primary contrasts and any multiplicity correction before evaluation.
@@ -1011,7 +1011,7 @@ Few seed pairs or families support descriptive conclusions.
 
 For the curriculum contrast, freeze the optimizer, reward, discount, interaction protocol and hard resource caps.
 Use no extra shaping or exploration bonus.
-Compare planned, consumed and uncensored task multisets; a cap stop can prevent equal realized exposure.
+Compare planned, consumed and uncensored theorem multisets; a cap stop can prevent equal realized exposure.
 Preserve incomplete runs without raising caps or adding selected retries.
 Topic clustering and recency remain alternatives to a prerequisite-learning mechanism.
 Mixed-reward groups do not by themselves explain generalization.
@@ -1033,14 +1033,14 @@ He delivers a B/S/R table for generalization, with separate benchmark-panel colu
 
 For curriculum, Manas derives C from the same S and compares it with R.
 Abhinav supplies the immutable S checkpoint, R schedule, resolved settings and R outcomes.
-The existing \code{TaskSchedule.frozen} and trainer \pth{--task-order} accept explicit task repetitions.
-The study manifest must check whole-root membership and equal task multiplicities across schedules.
+The existing \code{TaskSchedule.frozen} and trainer \pth{--task-order} accept explicit theorem repetitions.
+The study manifest must check whole-theorem membership and equal theorem multiplicities across schedules.
 The scheduler does not enforce those cross-arm conditions.
 Manas delivers the R/C table with familiar performance, generalization and measured cost.
 
 Use optimizer-disabled TRAIN/DEV calibration before fixing training settings.
 The existing \pth{--assessment-only} interface uses \pth{--assessment-split} \code{validation} for DEV and \code{test} for TEST.
-Preserve configs, source identities, raw trajectories, consumed schedules, failures and checkpoint provenance.
+Preserve configs, source identities, raw attempts, consumed schedules, failures and checkpoint provenance.
 Resolve panel counts, model revisions, learning settings, seeds, resource caps and launch costs before execution.
 The guides are in EXP-026 and EXP-027 of \pth{docs/EXPERIMENTS.md}.
 These arm definitions do not themselves authorize training or new source admission.
@@ -1049,30 +1049,30 @@ These arm definitions do not themselves authorize training or new source admissi
 \label{sec:nt-curriculum-execution}
 
 The immediate study asks whether RL improves independent number theory proofs and whether prerequisite order changes that improvement.
-The primary sequence is B, one fixed SFT parent S, then matched shuffled R and curriculum C branches.
-Use the interactive REINFORCE implementation for both branches, with whole-root starts and the same task repetitions.
+The primary sequence is B, one fixed SFT checkpoint S, then matched shuffled R and curriculum C branches.
+Use the interactive REINFORCE implementation for both branches, with whole-theorem starts and the same theorem repetitions.
 The separate small PPO comparison tests optimizer feasibility under its own interface.
 It cannot supply R for this curriculum study.
 
-\paragraph{Data before task difficulty.}
-Broad prerequisite coverage takes priority over selecting questions the model already solves.
+\paragraph{Data before theorem difficulty.}
+Broad prerequisite coverage takes priority over selecting theorems the model already proves.
 Keep the checked interactive action corpus separate from the checked complete-proof corpus.
 Action SFT targets responses to live states, including format and Lean-error recovery.
 Complete-proof SFT targets complete reference constructions under a different prompt contract.
 Do not concatenate these formats or change their mixture without registering the training recipe.
-Repeated action rows do not count as additional mathematical statements.
-Keep one canonical whole-root RL task per admitted statement, with an alias ledger that preserves its source proofs.
+Repeated SFT examples do not count as additional mathematical statements.
+Keep one RL theorem per admitted statement, started from the whole theorem, with an alias ledger that preserves its source proofs.
 
 The current consumer release is \pth{nt_curriculum_data_20261018_v1/validated_v2/}.
-It supersedes the initial common projection for new training.
+It supersedes the initial common release for new training.
 Fresh strict replay accepts all 580 source proofs under the pinned Lean and mathlib pair.
-All 536 canonical source roots reconstruct through the selected interaction environment.
-Full-proof acceptance does not certify the extracted action examples.
+All 536 source theorems reconstruct through the selected interaction environment.
+Full-proof acceptance does not certify the extracted SFT examples.
 Their separate live checks reject examples that start after closure, continue after closure, or fail the required transition checks.
 
-The filtered release retains 1,880 TRAIN action examples.
-The separate loss monitor retains 125 action examples from 32 TRAIN-only theorem names.
-The primary RL bank contains 506 canonical whole-root tasks.
+This release retains 1,880 TRAIN SFT examples.
+The separate SFT validation retains 125 SFT examples from 32 TRAIN-only theorem names.
+The primary RL bank contains 506 theorems with whole-theorem starts.
 Its alias ledger preserves 516 source proof variants.
 Every source record has a retained or quarantine disposition; no record remains pending.
 All retained action messages pass exact v2 rendering, parsing and tokenizer checks without truncation.
@@ -1081,11 +1081,11 @@ The evidence is in \pth{validated_v2/data_consumer_receipt.json} and \pth{model_
 
 \begin{table}[ht]
 \centering
-\caption{Source topic labels in the filtered TRAIN bank. The denominator is 506 canonical roots. These lexical labels do not certify mathematical skill coverage.}
+\caption{Source topic labels in the filtered TRAIN bank. The denominator is 506 theorems. These lexical labels do not certify mathematical skill coverage.}
 \label{tab:nt-common-source-coverage}
 \begin{tabular}{lr}
 \toprule
-Source label & Canonical roots \\
+Source label & Theorems \\
 \midrule
 Divisibility & 217 \\
 Primes and factorization & 180 \\
@@ -1098,12 +1098,12 @@ B\'ezout and coprimality & 32 \\
 The semantic review reads all 536 canonical TRAIN statements and all 548 TRAIN proof variants.
 The primary policy excludes 19 valid foundational controls into a separate source pack.
 It excludes ten AI-reviewed redundancy cases without claiming certified equivalence.
-It excludes one task whose reference invokes a reserved DEV target lemma.
+It excludes one theorem whose reference invokes a reserved DEV target lemma.
 These policy exclusions are distinct from rejected action transitions and contradictory assumptions.
-The source admission certificates remain bound to the actual proof identities and headers.
+The source admission certificates remain bound to the actual proof identities and statements.
 Their scope is formal premise satisfiability, not informal source alignment or unknown pretraining exposure.
 
-Both runtime schedules contain 1,012 groups with identical task multiplicities.
+Both runtime schedules contain 1,012 groups with identical theorem multiplicities.
 The reviewed candidate order retains all 54 proposed pedagogical edges and their providers.
 No annotation has human confirmation.
 These assignments describe source operations and a proposed teaching order; they do not measure model mastery or establish prerequisite necessity.
@@ -1119,36 +1119,36 @@ The review therefore distinguishes observed source coverage, missing annotations
 The fixed order comparison does not consume a curriculum-validation set or use adaptive stage promotion.
 A distinct curriculum-validation reservation remains required before an adaptive extension.
 
-\paragraph{Bind the parent and the comparison.}
+\paragraph{Bind S and the comparison.}
 The historical SFT checkpoint is ineligible for the clean primary comparison.
 Its recorded training examples explicitly invoke \pth{Nat.factorial_mul_factorial_dvd_factorial}, which proves a reserved DEV target up to product order.
 Removing the source examples cannot remove their prior effect on those weights.
-Train a fresh S from the pinned upstream B using the filtered action release, then derive both RL branches from that exact final checkpoint.
+Train a fresh S from the pinned upstream B using the SFT examples of the \code{validated\_v2} release, then derive both RL branches from that exact final checkpoint.
 The historical checkpoint remains available for a labelled familiar diagnostic.
-Direct-name and exact-header scans do not establish complete semantic alias independence.
+Direct-name and exact-statement scans do not establish complete semantic alias independence.
 Upstream pretraining exposure remains unknown.
 
-The base and historical tokenizers produce identical token IDs for every retained message and root prompt.
+The base and historical tokenizers produce identical token IDs for every retained message and theorem prompt.
 Both model files pass a bounded finite-forward check without generation or updates.
 These checks establish file and input compatibility; they do not establish proof capability or validate a future GPU training run.
 Future SFT workers record exact consumed source bytes, selected rows, configuration and tokenizer metadata before loading weights.
 The fresh S checkpoint does not yet exist.
 
 Before training, use a bounded optimizer-disabled TRAIN/DEV calibration to inspect reward variation and failures.
-Do not select tasks from TEST or treat loss, valid local tactics or supplied-prefix success as complete-proof capability.
+Do not select theorems from TEST or treat loss, valid local tactics or supplied-prefix acceptance as complete-proof capability.
 In the selected environment version, intermediate goal changes and Lean diagnostics receive zero reward.
 Terminal reward requires accepted complete replay; the legacy \code{goal\_change\_v1} setting does not add shaping in this version.
 Freeze prompts, action and context limits, discount, optimizer, schedule repetitions, evaluation attempts and hard resource caps together.
-Bind the completed TRAIN root replay and reconstruct the fixed DEV roots in the actual consumer environment before loading the training model.
+Bind the completed TRAIN theorem replay and reconstruct the fixed DEV theorems in the actual consumer environment before loading the training model.
 
 \paragraph{Delivery and failure interpretation.}
 Complete semantic annotation, input binding and the costed execution package first.
-After exact-cost approval, run the parent checks and matched RL branches early enough to finish evaluation before Tuesday close.
+After exact-cost approval, run the S checks and matched RL branches early enough to finish evaluation before Tuesday close.
 Reserve Wednesday, 21 October 2026, for the counted comparison and its limitations.
 Use the fixed final checkpoints and preserve every planned theorem--attempt pair, failure and cap stop.
 Report familiar performance, reviewed transfer panels, completion coverage and physical resource use separately.
 If semantic review remains incomplete, report exploratory order results without a prerequisite mechanism claim.
-If rewards remain constant or an arm stops before matched exposure, report that limit without extending caps or selecting replacement tasks.
+If rewards remain constant or an arm stops before matched exposure, report that limit without extending caps or selecting replacement theorems.
 The historical help, null and retention results remain available even if the new comparison is incomplete.
 The prepared optimizer pilot and this broader program each require their own concrete launch approval.
 The staged broad-bank package has a quoted reservation of USD 102.31.
@@ -1162,20 +1162,20 @@ These planning envelopes do not authorize spend or guarantee completion.
 \section{Results of 18 and 19 October 2026}
 \label{sec:oct19-results}
 
-This section reports EXP-028 and the R and C branches of the main study.
+This section reports EXP-028 and the R and C branches of the main run.
 EXP-028 measures S, arms derived from S, and two SFT runs from B on a new held-out selection set, with S (E0) as the baseline.
 Table~\ref{tab:oct19-runs} lists the runs.
-Here B, S, R and C name the models of the main study (Section~\ref{sec:nt-curriculum-execution}), not the EXP-023 arms of Table~\ref{tab:final-curriculum-outcome}.
+Here B, S, R and C name the models of the main run (Section~\ref{sec:nt-curriculum-execution}), not the EXP-023 arms of Table~\ref{tab:final-curriculum-outcome}.
 The run outcome counts below were recounted from the saved run records, without new Lean or model runs.
-Costs and the selection-set build counts come from the dated record.
+Costs and the selection-set construction counts come from the dated record.
 Sign-flip $p$-values below are exact.
 The original dated entries give Monte Carlo values, and the recount entry of 19 October gives the exact values.
 The dated records are in EXP-028 of \pth{docs/EXPERIMENTS.md}.
 
 \paragraph{Selection set and decision rule.}
 The EXP-028 selection set comes from the existing corpus.
-Its build excludes the TRAIN roots and their aliases, every SFT source, and the DEV and TEST sets.
-Of 216 candidates, admission removes 14 that a single fixed tactic solves and 1 with known exposure of the parent.
+Its construction excludes the TRAIN theorems and their aliases, every SFT source, and the DEV and TEST sets.
+Of 216 candidates, admission removes 14 that a single fixed tactic proves and 1 with known exposure of the parent.
 The selection set holds 164 of the 201 admitted theorems.
 Of the 164 theorems, 79 fall in the four TRAIN topics and 85 in other topics.
 The median reference proof has 29 lines.
@@ -1187,7 +1187,7 @@ The bootstrap resamples theorems with 10,000 replicates.
 TEST remains unused.
 
 \paragraph{What did not run.}
-E4 was to test SFT from B on the 1,880 base action rows plus 64 rows mined from step search on TRAIN.
+E4 was to test SFT from B on the 1,880 base SFT examples plus 64 SFT examples mined from step search on TRAIN.
 Its SFT stage failed after 4\,s, because the mining script wrote rows without the \code{format} field that the trainer requires.
 The frozen lease program could not rerun the stage, so E4 needs a later approved lease.
 E1, step search without the automation fallback, was dropped before any paid run.
@@ -1195,7 +1195,7 @@ Automation runs only after a failed policy attempt, so E1's model-only outcome e
 
 \paragraph{Cost.}
 EXP-028 used an estimated USD 52.28 of instance compute against USD 165.32 reserved.
-The main lease, which trained S, R and C, used an estimated USD 33.77 against USD 102.31 reserved.
+The main run, which trained S, R and C, used an estimated USD 33.77 against USD 102.31 reserved.
 Both figures use the quoted on-demand rate and exclude storage and transfer.
 They are estimates, not invoices.
 The EXP-028 total uses USD 6.23 for Lease 3; another dated entry gives USD 6.59 for the same lease.
@@ -1203,23 +1203,23 @@ The EXP-028 total uses USD 6.23 for Lease 3; another dated entry gives USD 6.59 
 \begin{table}[!htbp]
 \centering
 \small
-\caption{Runs reported in this section. S is the SFT parent of the main study. B is its pinned upstream model. The selection set has 164 theorems. E0 and E2 assess 163, because one group is censored.}
+\caption{Runs reported in this section. S is the SFT checkpoint of the main run. B is its pinned upstream model. The selection set has 164 theorems. E0 and E2 assess 163, because one group is censored.}
 \label{tab:oct19-runs}
 \smallskip
 \begin{tabularx}{\textwidth}{@{}P{2.6cm}P{1.4cm}YP{2.6cm}P{2.1cm}@{}}
 \toprule
 Run & Start & What changed & Population & Attempts \\
 \midrule
-S (E0) & S & Nothing: one sample per step, model-only; the baseline & Selection set (163 assessed) & 2 per theorem \\
-E2, step search & S & 4 candidate actions per step, with an automation fallback & Selection set (163 assessed) & 2 per theorem \\
-E3, lemma-section SFT & B & SFT on the action rows with a lemma section; evaluated with retrieval & Selection set & 2 per theorem \\
-E5, SFT seed 2 & B & SFT on the action rows without the lemma section, with a second seed & Selection set & 2 per theorem \\
-R (E7) & S & REINFORCE on all 506 TRAIN tasks in shuffled order & Selection set & 2 per theorem \\
-\code{RL\_filtered} (E6) & S & REINFORCE on the 62 TRAIN tasks with S pass rate in $(0, 0.75]$; 1,012 groups of 4 & Selection set & 2 per theorem \\
-Kimina-Prover-Distill-0.6B, two draws & Released model & A different model; whole proofs with long reasoning; 8,096-token limit per sample & Selection set & 8 per theorem per draw \\
-\code{pass\_rates} & S & Nothing; measures S on TRAIN & 506 TRAIN tasks & 4 per task \\
-R and C training & S & Same task multiset; R in shuffled order, C in prerequisite-first order run twice & 506 TRAIN tasks & 1,012 groups of 4 \\
-\code{dev\_R}, \code{dev\_C} & R, C & Nothing; final weights & 8 DEV roots & 32 per model \\
+S (E0) & S & Nothing: one candidate action per state, model-only; the baseline & Selection set (163 assessed) & 2 per theorem \\
+E2, step search & S & 4 candidate actions per state, with an automation fallback & Selection set (163 assessed) & 2 per theorem \\
+E3, lemma-section SFT & B & SFT on the SFT examples with a lemma section; evaluated with retrieval & Selection set & 2 per theorem \\
+E5, SFT seed 2 & B & SFT on the SFT examples without the lemma section, with a second seed & Selection set & 2 per theorem \\
+R (E7) & S & REINFORCE on all 506 TRAIN theorems in shuffled order & Selection set & 2 per theorem \\
+\code{RL\_filtered} (E6) & S & REINFORCE on 62 TRAIN theorems with S acceptance in $(0, 0.75]$; 1,012 groups of 4 & Selection set & 2 per theorem \\
+Kimina-Prover-Distill-0.6B, two draws & Released model & A different model; whole proofs with long reasoning; 8,096-token limit per attempt & Selection set & 8 per theorem per draw \\
+\code{pass\_rates} & S & Nothing; measures S on TRAIN & 506 TRAIN theorems & 4 per theorem \\
+R and C training & S & Same theorem multiset; R in shuffled order, C in prerequisite-first order run twice & 506 TRAIN theorems & 1,012 groups of 4 \\
+\code{dev\_R}, \code{dev\_C} & R, C & Nothing; final weights & 8 DEV theorems & 32 per model \\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -1244,7 +1244,7 @@ A_{i,t} = \sum_{k \ge t} \gamma^{k} r_{i,k} - \frac{1}{G-1}\sum_{j \ne i}\,\sum_
 where $r_{i,k}$ is the reward after action $k$ of attempt $i$.
 The reward comes only at the end, so every action of an attempt gets the same advantage.
 If all $G$ returns of a group are equal, every advantage is 0, and the group gives no update (Section~\ref{sec:zero}).
-With $\gamma < 1$, a group in which every attempt succeeds can still update, because proofs that close at different actions have different returns.
+With $\gamma < 1$, a group in which Lean accepts every attempt can still update, because proofs that close at different actions have different returns.
 
 \begin{table}[!htbp]
 \centering
@@ -1255,17 +1255,17 @@ With $\gamma < 1$, a group in which every attempt succeeds can still update, bec
 \toprule
 Part & Definition \\
 \midrule
-Task & One theorem statement, from TRAIN or a held-out set. No proof lines are supplied \\
-State $s_t$ & The theorem, the policy steps that Lean accepted, the current goals, the result of the last action, the tactics that already failed at the current goals, and the number of actions left \\
-Observation & The state written as a Lean file, with the goals in a \code{/- tactic state -/} comment. The prompt holds at most 2,048 tokens. If the prompt is longer, the oldest policy steps are hidden. If it is still longer after an action, the episode ends \\
+Theorem & One statement, from TRAIN or a held-out set. No proof lines are supplied \\
+State $s_t$ & The theorem, the policy actions that Lean accepted, the current goals, the result of the last action, the tactics that already failed at the current goals, and the number of actions left \\
+Observation & The state written as a Lean file, with the goals in a \code{/- tactic state -/} comment. The prompt holds at most 2,048 tokens. If the prompt is longer, the oldest policy actions are hidden. If it is still longer after an action, the episode ends \\
 Action $a_t$ & Lean tactic text of at most 192 generated tokens, bare or in one code fence labelled \code{lean} or \code{lean4}, with at most 4 top-level tactics and optional \code{--} comment lines. Text around a fence, or a second fence, is a format error \\
 Transition & Lean runs the tactics in order and keeps the valid tactics before the first failure (Figure~\ref{fig:v22-action}). A failure is a Lean error, unchanged goals, or a repeat of an earlier state on the current proof path \\
-Harness revert & After 2 distinct tactics fail at one state, the harness removes the last accepted step and records it as failed at the earlier state. It reverts at most once per action \\
-End of episode & Lean replays a closed proof; 6 actions are used; a Lean call exceeds the 20\,s timeout; or the next prompt exceeds 2,048 tokens with every policy step hidden. A REPL crash, or a first prompt over the limit, censors the whole group \\
+Harness revert & After 2 distinct tactics fail at one state, the harness removes the last accepted action and records it as failed at the earlier state. It reverts at most once per action \\
+End of episode & Lean replays a closed proof; 6 actions are used; a Lean call exceeds the 20\,s timeout; or the next prompt exceeds 2,048 tokens with every policy action hidden. A REPL crash, or a first prompt over the limit, censors the whole group \\
 Reward & $r_t = 1$ if Lean accepts the replayed full proof after action $a_t$, otherwise 0. The reward is Lean-verified and has no heuristic term \\
 Discount & $\gamma = 0.95$. A proof closed by $a_t$, with $t = 0, \dots, 5$, has return $\gamma^t$: 1 for the first action and 0.774 for the sixth \\
 Learner & Equation~\eqref{eq:v22-adv} with $G = 4$ attempts per group. AdamW with learning rate $10^{-6}$ and no weight decay; gradient norm clipped at 1.0. No KL, entropy or reference-model term \\
-Evaluation & The same environment with no update, 2 attempts per selection theorem. A theorem counts as solved if Lean accepts any attempt \\
+Evaluation & The same environment with no update, 2 attempts per selection theorem. A theorem counts as proved if Lean accepts any attempt \\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -1298,7 +1298,7 @@ Evaluation & The same environment with no update, 2 attempts per selection theor
 \draw[thick] (cls) -- (fan2);
 \draw[arr] (fan2) -| node[pos=0.75, right, note] {Lean\\accepts} (acc);
 \draw[fail] (fan2) -| node[pos=0.75, right, note] {Lean\\rejects} (rr);
-\node[note, text width=14.6cm, align=left] at (6.0, -9.9) {Each action uses one of the 6 actions of an episode. Outcomes other than a closed proof give the next state $s_{t+1}$; after a self-loop, $s_{t+1}$ has the same goals and a new failure message. After 2 distinct tactics fail at one state, the harness removes the last accepted step, at most once per action. After 6 actions without a proof, a Lean timeout of 20\,s, or a next prompt over 2,048 tokens with every policy step hidden, the episode ends with reward 0. A REPL crash censors the group.};
+\node[note, text width=14.6cm, align=left] at (6.0, -9.9) {Each action uses one of the 6 actions of an episode. Outcomes other than a closed proof give the next state $s_{t+1}$; after a self-loop, $s_{t+1}$ has the same goals and a new failure message. After 2 distinct tactics fail at one state, the harness removes the last accepted action, at most once per action. After 6 actions without a proof, a Lean timeout of 20\,s, or a next prompt over 2,048 tokens with every policy action hidden, the episode ends with reward 0. A REPL crash censors the group.};
 \end{tikzpicture}
 \caption{How environment version 2.2 processes one action $a_t$. Solid arrows lead to progress or a proof; dashed arrows lead to a self-loop or a failed replay. The status names are the action categories of Figures~\ref{fig:oct19-actions} and~\ref{fig:oct20-why}.}
 \label{fig:v22-action}
@@ -1308,100 +1308,100 @@ Evaluation & The same environment with no update, 2 attempts per selection theor
 \subsection{No arm shows a detected held-out gain over S}
 \label{sec:oct19-heldout}
 
-In E0, S solves 1 of 163 selection theorems and accepts 1 of 326 attempts (Figure~\ref{fig:oct19-heldout}a).
+In E0, S proves 1 of 163 selection theorems and accepts 1 of 326 attempts (Figure~\ref{fig:oct19-heldout}a).
 E0 assesses 163 of the 164 theorems.
 On group 143, a root automation probe hit the 20\,s Lean timeout, and the running code censored the whole group.
 A timeout is a failed automation outcome, not an infrastructure fault; later runs record it and continue.
 Comparisons with E0 therefore pair 163 theorems.
 E2 loses the same group to the same defect.
 
-E2 solves 1 of 163 theorems, E3 1 of 164, E5 0 of 164, R (E7) 1 of 164 and \code{RL\_filtered} (E6) 2 of 164.
+E2 proves 1 of 163 theorems, E3 1 of 164, E5 0 of 164, R (E7) 1 of 164 and \code{RL\_filtered} (E6) 2 of 164.
 No arm meets the promotion rule, and no paired interval excludes 0.
 The largest gain is E6 against E0: $+0.92$ points, with a bootstrap 95\% interval of $[-0.61, +3.07]$.
 E3 against its control E5 gains $+0.30$ points, with an interval of $[0.00, +0.91]$.
-E0, E2, E3 and E7 each solve 1 theorem.
-E2 and E3 solve the same theorem, and E0 and E7 each solve a different one.
+E0, E2, E3 and E7 each prove 1 theorem.
+E2 and E3 prove the same theorem, and E0 and E7 each prove a different one.
 This pattern fits sampling noise at the floor.
 
 \paragraph{Capability probe.}
 The probe asks whether S's near-zero acceptance comes from S or from the difficulty of the selection set.
 It uses Kimina-Prover-Distill-0.6B, which its model card describes as a distillation of Kimina-Prover-72B~\cite{kimina}.
 The probe uses the model card's sampling settings and checks each proof through the same verifier path as S.
-In draw~1, Kimina solves 47 of 164 theorems within 8 samples.
-In draw~2, which changes only the batching, it solves 40 of 164.
-An exact McNemar test on the 25 theorems solved in only one draw gives $p = 0.23$.
+In draw~1, Kimina proves 47 of 164 theorems within 8 attempts.
+In draw~2, which changes only the batching, it proves 40 of 164.
+An exact McNemar test on the 25 theorems proved in only one draw gives $p = 0.23$.
 
 \emph{Limits}: the probe is not an arm matched to S.
 Kimina generates whole proofs with long reasoning, not S's action format.
-In draw~1, Kimina generates 6,444 tokens per sample on average, with a limit of 8,096.
+In draw~1, Kimina generates 6,444 tokens per attempt on average, with a limit of 8,096.
 In E0, S generates about 574 tokens per attempt.
-Kimina's 8 samples therefore use far more generated tokens than S's 2 attempts.
-In draw~1, 853 of 1,312 samples reach the token limit without a closed proof and count as failures.
+Kimina's 8 attempts therefore use far more generated tokens than S's 2 attempts.
+In draw~1, 853 of 1,312 attempts reach the token limit without a closed proof and count as failures.
 The pinned Lean and mathlib are probably older than Kimina's training environment, so some lemma names may not exist.
 The selection theorems have no informal problem text, so the problem field of Kimina's prompt is empty.
 These three effects bias Kimina's score down.
 A public prover may have trained on these statements, and this unknown exposure could bias the score up.
 
-Figure~\ref{fig:oct19-heldout}a shows Kimina's unbiased pass@2 estimates from 8 samples per theorem.
+Figure~\ref{fig:oct19-heldout}a shows Kimina's unbiased pass@2 estimates from 8 attempts per theorem.
 The estimate is 11.35\% in draw~1 and 11.67\% in draw~2.
-S solves 0.61\% of its 163 theorems within 2 attempts.
+S proves 0.61\% of its 163 theorems within 2 attempts.
 The panel compares models at an equal number of attempts, not at equal generated tokens.
-A 0.6B prover with whole-proof generation and a larger generation budget therefore solves many of these theorems.
+A 0.6B prover with whole-proof generation and a larger generation budget therefore proves many of these theorems.
 The probe does not separate S's model and training data from its action format and generation budget.
 
-Kimina's solved fraction falls with reference-proof length in both draws (Figure~\ref{fig:oct19-heldout}b).
-For references of at most 20 lines, it solves 28 of 62 theorems in draw~1 and 20 of 62 in draw~2.
-For 21 to 40 lines, it solves 13 of 42 and 12 of 42.
-For more than 40 lines, it solves 6 of 60 and 8 of 60.
+Kimina's proved fraction falls with reference-proof length in both draws (Figure~\ref{fig:oct19-heldout}b).
+For references of at most 20 lines, it proves 28 of 62 theorems in draw~1 and 20 of 62 in draw~2.
+For 21 to 40 lines, it proves 13 of 42 and 12 of 42.
+For more than 40 lines, it proves 6 of 60 and 8 of 60.
 Reference length describes one recorded proof; it is not a measured minimum difficulty.
 
 \begin{figure}[!htbp]
 \centering
 \includegraphics[width=\textwidth]{oct19_heldout}
-\caption{Held-out results on the EXP-028 selection set of 164 theorems. (a)~Theorems solved within 2 attempts per theorem: E0 1/163, E2 1/163, E3 1/164, E5 0/164, E7 1/164 and E6 2/164. Kimina draws 1 and 2 appear as unbiased pass@2 estimates from 8 samples per theorem, 11.35\% and 11.67\%, with no interval. Blue-grey bars are SFT models, dark blue bars are RL from S, and grey bars are Kimina. The panel holds attempts equal, not generated tokens. (b)~Kimina theorems solved within 8 samples, by reference-proof length, for draws 1 and 2: at most 20 lines, 28/62 and 20/62; 21 to 40 lines, 13/42 and 12/42; over 40 lines, 6/60 and 8/60. Error bars in both panels: 95\% Wilson score intervals over theorems, which treat theorems as independent.}
+\caption{Held-out results on the EXP-028 selection set of 164 theorems. (a)~Theorems proved within 2 attempts per theorem: E0 1/163, E2 1/163, E3 1/164, E5 0/164, E7 1/164 and E6 2/164. Kimina draws 1 and 2 appear as unbiased pass@2 estimates from 8 attempts per theorem, 11.35\% and 11.67\%, with no interval. Blue-grey bars are SFT models, dark blue bars are RL from S, and grey bars are Kimina. The panel holds attempts equal, not generated tokens. (b)~Kimina theorems proved within 8 attempts, by reference-proof length, for draws 1 and 2: at most 20 lines, 28/62 and 20/62; 21 to 40 lines, 13/42 and 12/42; over 40 lines, 6/60 and 8/60. Error bars in both panels: 95\% Wilson score intervals over theorems, which treat theorems as independent.}
 \label{fig:oct19-heldout}
 \end{figure}
 
 %----------------------------------------------------------------------
-\subsection{RL raises acceptance on its training tasks without measured transfer}
+\subsection{RL raises acceptance on its training theorems without measured transfer}
 \label{sec:oct19-rl-filtered}
 
-\code{pass\_rates} measures S with 4 attempts on each of the 506 TRAIN tasks.
-S accepts 84 of 2,024 attempts and solves 63 of 506 tasks.
-Of the 506 tasks, 443 have no accepted attempt.
-The registered filter keeps the 62 tasks with an S pass rate in $(0, 0.75]$.
-\code{RL\_filtered} runs REINFORCE from S on these 62 tasks, with the resource caps of R.
+\code{pass\_rates} measures S with 4 attempts on each of the 506 TRAIN theorems.
+S accepts 84 of 2,024 attempts and proves 63 of 506 theorems.
+Of the 506 theorems, 443 have no accepted attempt.
+The registered filter keeps the 62 theorems with an S acceptance rate in $(0, 0.75]$.
+\code{RL\_filtered} runs REINFORCE from S on these 62 theorems, with the resource caps of R.
 It completes all 1,012 groups of 4 attempts, with 337 optimizer updates and no censored group.
 
 Acceptance rises by training quarter: 404, 500, 576 and 602 of 1,012 attempts (Figure~\ref{fig:oct19-rl-filtered}a).
-Each task is visited 16 or 17 times.
-The mean first-visit acceptance per task is 0.306.
+Each theorem is visited 16 or 17 times.
+The mean first-visit acceptance per theorem is 0.306.
 The mean last-visit acceptance is 0.597.
-Of the 62 tasks, 33 are higher at the last visit, 7 are lower and 22 are equal (Figure~\ref{fig:oct19-rl-filtered}b).
+Of the 62 theorems, 33 are higher at the last visit, 7 are lower and 22 are equal (Figure~\ref{fig:oct19-rl-filtered}b).
 An exact paired sign-flip test gives $p < 0.001$ ($p = 2.4 \times 10^{-6}$).
-On the same 62 tasks, S's \code{pass\_rates} acceptance is 0.323.
+On the same 62 theorems, S's \code{pass\_rates} acceptance is 0.323.
 The first visit is close to this value, so regression to the mean after selection does not explain the rise.
-R, trained on all 506 tasks, shows no detected rise.
+R, trained on all 506 theorems, shows no detected rise.
 Its first visits accept 81 of 2,024 attempts and its second visits 83 of 2,024 ($p = 0.93$).
 
 E6 evaluates the final \code{RL\_filtered} weights on the selection set.
-It solves 2 of 164 theorems, each in both attempts; E0 solves 1 of 163.
-One of its theorems is the one that E2 and E3 solve, and the other is the one that E7 solves.
+It proves 2 of 164 theorems, each in both attempts; E0 proves 1 of 163.
+One of its theorems is the one that E2 and E3 prove, and the other is the one that E7 proves.
 Against R (E7), E6 gains $+0.91$ points, with an interval of $[0.00, +2.44]$.
-The training gain on 62 tasks therefore does not transfer measurably to the selection set at this set size.
+The training gain on 62 theorems therefore does not transfer measurably to the selection set at this set size.
 
-\emph{Limits}: the rise measures fit to the 62 trained tasks, and it may be memorization.
-S's action SFT examples are extracted from reference proofs of TRAIN statements.
-The task exclusions that define the RL bank also apply to these SFT examples.
-S may therefore have seen actions from reference proofs of the trained tasks.
+\emph{Limits}: the rise measures fit to the 62 trained theorems, and it may be memorization.
+S's SFT examples are extracted from reference proofs of TRAIN statements.
+The theorem exclusions that define the RL bank also apply to these SFT examples.
+S may therefore have seen actions from reference proofs of the trained theorems.
 Recall of SFT-seen proofs is a candidate explanation of the rise; no run here tests it.
-The data audit of 19 October counts them: 59 of the 62 trained tasks have at least one SFT example from their own reference proof.
-R and \code{RL\_filtered} also differ in task set (506 against 62 tasks), visits per task (2 against 16 or 17) and order. No run separates these differences.
+The data audit of 19 October counts them: 59 of the 62 trained theorems have at least one SFT example from their own reference proof.
+R and \code{RL\_filtered} also differ in theorem set (506 against 62 theorems), visits per theorem (2 against 16 or 17) and order. No run separates these differences.
 
 \begin{figure}[!htbp]
 \centering
 \includegraphics[width=\textwidth]{oct19_rl_filtered}
-\caption{\code{RL\_filtered} on its 62 TRAIN tasks. (a)~Accepted attempts by training quarter: 404, 500, 576 and 602 of 1,012 attempts. The dashed line marks S before RL on the same 62 tasks: 80/248 attempts in \code{pass\_rates}, with 4 attempts per task. Error bars: 95\% Wilson score intervals, which treat correlated attempts as independent and so understate the uncertainty. (b)~Accepted attempts of 4 per task at the first visit against the last visit, for 62 tasks. Bubble area shows the number of tasks, and the dashed line is $y = x$. Of the 62 tasks, 33 are higher at the last visit, 7 lower and 22 equal. Panel (b) has no error bars.}
+\caption{\code{RL\_filtered} on its 62 TRAIN theorems. (a)~Accepted attempts by training quarter: 404, 500, 576 and 602 of 1,012 attempts. The dashed line marks S before RL on the same 62 theorems: 80/248 attempts in \code{pass\_rates}, with 4 attempts per theorem. Error bars: 95\% Wilson score intervals, which treat correlated attempts as independent and so understate the uncertainty. (b)~Accepted attempts of 4 per theorem at the first visit against the last visit, for 62 theorems. Bubble area shows the number of theorems, and the dashed line is $y = x$. Of the 62 theorems, 33 are higher at the last visit, 7 lower and 22 equal. Panel (b) has no error bars.}
 \label{fig:oct19-rl-filtered}
 \end{figure}
 
@@ -1409,32 +1409,32 @@ R and \code{RL\_filtered} also differ in task set (506 against 62 tasks), visits
 \subsection{In one run per arm, curriculum order raises TRAIN acceptance and narrows the actions}
 \label{sec:oct19-curriculum}
 
-R and C start from the same S and run 1,012 groups of 4 attempts on the same 506 TRAIN tasks.
+R and C start from the same S and run 1,012 groups of 4 attempts on the same 506 TRAIN theorems.
 Their configurations differ only in identifiers, and their commands differ only in the task order.
 R uses a shuffled order, and C runs its prerequisite-first order twice.
 Both complete all groups with no censored group.
 C accepts 255 of 4,048 attempts, and R accepts 164 of 4,048.
-C solves 93 of the 506 tasks, and R solves 63.
-Per task, C minus R is positive for 73 tasks and negative for 32 (paired sign-flip $p = 0.0002$).
+C proves 93 of the 506 theorems, and R proves 63.
+Per theorem, C minus R is positive for 73 theorems and negative for 32 (paired sign-flip $p = 0.0002$).
 Each arm is one training run.
-The sign-flip test treats tasks as independent, so it does not include run-to-run variation or dependence between task families.
+The sign-flip test treats theorems as independent, so it does not include run-to-run variation or dependence between theorem families.
 
 \paragraph{When the gain appears.}
-S's \code{pass\_rates} run gives a measurement before RL on the same tasks.
+S's \code{pass\_rates} run gives a measurement before RL on the same theorems.
 C's first visits accept 130 of 2,024 attempts, against 84 for S ($p = 0.0019$).
 R's first visits accept 81 of 2,024 ($p = 0.87$ against S).
-C's second pass accepts 125 of 2,024 attempts ($p = 0.79$ against its first pass).
-C's gain therefore appears within its first pass and does not grow in the second.
-By quarter of C's first-pass order, C's first visits accept 56, 35, 33 and 6 attempts (Figure~\ref{fig:oct19-curriculum}a).
+C's second epoch accepts 125 of 2,024 attempts ($p = 0.79$ against its first epoch).
+C's gain therefore appears within its first epoch and does not grow in the second.
+By quarter of C's first-epoch order, C's first visits accept 56, 35, 33 and 6 attempts (Figure~\ref{fig:oct19-curriculum}a).
 On the same quarters, S accepts 42, 27, 12 and 3 attempts.
 The quarters hold 504, 504, 504 and 512 attempts.
 
 \paragraph{Exploratory automation check.}
 This check is exploratory, and its rule was not registered.
 It asks how much of the late-quarter gain consists of proofs that use only automation tactics.
-Under the strict rule, an accepted episode is \emph{automation-only} if every action is exactly one automation tactic name with no arguments.
+Under the strict rule, an accepted attempt is \emph{automation-only} if every action is exactly one automation tactic name with no arguments.
 Under the argument rule, a tactic with arguments, for example \code{simp [h]}, also counts.
-In quarter~3, 3 of C's 33 accepted first-visit episodes are automation-only under the strict rule.
+In quarter~3, 3 of C's 33 accepted first-visit attempts are automation-only under the strict rule.
 Under the argument rule, 15 of the 33 are automation-only.
 S has 0 of 12 under both rules.
 In quarter~4, C has 0 of 6 under the strict rule and 4 of 6 under the argument rule.
@@ -1449,26 +1449,26 @@ R's format-error rate is 18.1\%, 6.7\%, 18.6\% and 47.9\% by quarter.
 It therefore rises to 47.9\% in the last quarter, after a dip in the second.
 C's mean action length falls from 56.3 tokens in the first quarter to 10.4 in the last.
 In C's last quarter, actions that are exactly \code{omega}, \code{simp} or \code{simp\_all} make 4,597 of 5,845 actions.
-Under the strict rule, 50 of C's 255 accepted episodes are automation-only, against 1 of R's 164.
+Under the strict rule, 50 of C's 255 accepted attempts are automation-only, against 1 of R's 164.
 Under the argument rule, the counts are 105 for C and 2 for R.
-Outside automation-only episodes, C accepts 205 against R's 163 under the strict rule.
+Outside automation-only attempts, C accepts 205 against R's 163 under the strict rule.
 Under the argument rule, the remainders are 150 for C and 162 for R.
-So under the argument rule, C's TRAIN advantage over R does not remain outside automation-only episodes.
+So under the argument rule, C's TRAIN advantage over R does not remain outside automation-only attempts.
 These action analyses are exploratory, not registered metrics.
 
 \paragraph{No held-out contrast yet.}
-B, S, R and C each solve 0 of 8 DEV roots.
+B, S, R and C each prove 0 of 8 DEV theorems.
 \code{dev\_R} and \code{dev\_C} each accept 0 of 32 attempts.
 C has no selection-set evaluation in these records.
 Both arms are at 0 on DEV, so the R/C contrast has no held-out difference to measure, and the TRAIN gains do not show transfer.
 Table~\ref{tab:curriculum-interpretation} needs a familiar-panel result and a generalization-panel result.
-TRAIN acceptance is training accuracy, and the familiar-family panel uses held-out questions instead.
+TRAIN acceptance is training accuracy, and the familiar-family panel uses held-out theorems instead.
 No row of that table applies yet.
 
 \begin{figure}[!htbp]
 \centering
 \includegraphics[width=\textwidth]{oct19_curriculum}
-\caption{Curriculum order on the 506 TRAIN tasks, with R and C from the same S. (a)~First-visit accepted attempts by quarter of C's first-pass order, with 4 attempts per task. S (\code{pass\_rates}): 42/504, 27/504, 12/504 and 3/512. C: 56/504, 35/504, 33/504 and 6/512. Error bars: 95\% Wilson score intervals, which treat correlated attempts as independent and so understate the uncertainty. (b)~Format errors as a percentage of actions, by quarter of training actions, for C and R. (c)~Mean generated tokens per action, by the same quarters. Each quarter holds 5,845 C actions or 5,935 R actions; the last of C's 23,381 actions falls outside the four quarters. Panels (b) and (c) have no error bars.}
+\caption{Curriculum order on the 506 TRAIN theorems, with R and C from the same S. (a)~First-visit accepted attempts of 4 per theorem, by quarter of C's first-epoch order. S (\code{pass\_rates}): 42/504, 27/504, 12/504 and 3/512. C: 56/504, 35/504, 33/504 and 6/512. Error bars: 95\% Wilson score intervals, which treat correlated attempts as independent and so understate the uncertainty. (b)~Format errors as a percentage of actions, by quarter of training actions, for C and R. (c)~Mean generated tokens per action, by the same quarters. Each quarter holds 5,845 C actions or 5,935 R actions; the last of C's 23,381 actions falls outside the four quarters. Panels (b) and (c) have no error bars.}
 \label{fig:oct19-curriculum}
 \end{figure}
 
@@ -1493,7 +1493,7 @@ The dated record names REINFORCE without a KL or entropy term as a likely contri
 \begin{figure}[!htbp]
 \centering
 \includegraphics[width=\textwidth]{oct19_actions}
-\caption{Status of every model action on the 164-theorem selection set, with 2 attempts per theorem: S (E0, 1,953 actions, 163 theorems assessed), R (E7, 1,963) and \code{RL\_filtered} (E6, 1,948). Categories: format error; Lean error with no tactic applied (status \code{rejected}); some tactics applied, then a Lean error, unchanged goals or a repeated state (\code{partial}); a valid step with goals remaining (\code{changed}); no progress or a forbidden construct; proof closed. The right column gives mean generated tokens per action. Bars are 100\% stacked shares, with no error bars. This analysis is exploratory, not a registered metric.}
+\caption{Status of every model action on the 164-theorem selection set, with 2 attempts per theorem: S (E0, 1,953 actions, 163 theorems assessed), R (E7, 1,963) and \code{RL\_filtered} (E6, 1,948). Categories: format error; Lean error with no tactic applied (status \code{rejected}); some tactics applied, then a Lean error, unchanged goals or a repeated state (\code{partial}); a valid action with goals remaining (\code{changed}); no progress or a forbidden construct; proof closed. The right column gives mean generated tokens per action. Bars are 100\% stacked shares, with no error bars. This analysis is exploratory, not a registered metric.}
 \label{fig:oct19-actions}
 \end{figure}
 
@@ -1501,7 +1501,7 @@ The dated record names REINFORCE without a KL or entropy term as a likely contri
 \subsection{Why the TRAIN gain does not reach held-out theorems}
 \label{sec:oct20-why}
 
-RL raises acceptance on the tasks that it trains on (Sections~\ref{sec:oct19-rl-filtered} and~\ref{sec:oct19-curriculum}).
+RL raises acceptance on the theorems that it trains on (Sections~\ref{sec:oct19-rl-filtered} and~\ref{sec:oct19-curriculum}).
 No arm shows a detected held-out gain (Section~\ref{sec:oct19-heldout}).
 On 20 October, Manas asked whether this comes from the RL update or from the reward.
 This subsection answers from the saved records of the runs above, with no new Lean or model run.
@@ -1510,38 +1510,38 @@ Every result here is exploratory and a postdiction, and none is a registered met
 The EXP-028 entry of 20 October in \pth{docs/EXPERIMENTS.md} lists the scripts and their outputs.
 
 \paragraph{Design.}
-A \emph{visit} is one group of 4 attempts on one TRAIN task.
-R and C visit each of the 506 TRAIN tasks twice, and \code{RL\_filtered} visits each of its 62 tasks 16 or 17 times.
-The \emph{S reference} of a task is the number of S's 4 attempts in \code{pass\_rates} that Lean accepts.
-For task $\tau$ and visit $v$, let $a^{(v)}_\tau$ be the arm's accepted attempts, $s_\tau$ the S reference, and $d_\tau = a^{(v)}_\tau - s_\tau$.
+A \emph{visit} is one group of 4 attempts on one TRAIN theorem.
+R and C visit each of the 506 TRAIN theorems twice, and \code{RL\_filtered} visits each of its 62 theorems 16 or 17 times.
+The \emph{S reference} of a theorem is the number of S's 4 attempts in \code{pass\_rates} that Lean accepts.
+For theorem $\tau$ and visit $v$, let $a^{(v)}_\tau$ be the arm's accepted attempts, $s_\tau$ the S reference, and $d_\tau = a^{(v)}_\tau - s_\tau$.
 The test is an exact two-sided paired sign-flip test on $\sum_\tau d_\tau$.
-We split the tasks by whether the arm's first visit has at least one accepted attempt.
-If the policy equalled S, the second visit and the S reference would be exchangeable given the task, so selecting on the first visit would not bias their difference.
-The split does not isolate the update from each task's own first visit, because the policy also changes through training on other tasks.
+We split the theorems by whether the arm's first visit has at least one accepted attempt.
+If the policy equalled S, the second visit and the S reference would be exchangeable given the theorem, so selecting on the first visit would not bias their difference.
+The split does not isolate the update from each theorem's own first visit, because the policy also changes through training on other theorems.
 
 \paragraph{Acceptance rises where the reward is nonzero.}
 Figure~\ref{fig:oct20-signal} shows the split.
-On the 72 tasks where C's first visit has a proof, C's second visit accepts 95 of 288 attempts, against 54 for S ($p = 0.011$; 0.087 after a Bonferroni factor of 8).
-On the 46 such tasks for R, R's second visit accepts 55 of 184 attempts, against 42 for S ($p = 0.199$).
-\code{RL\_filtered} trains only on tasks that S solves in 1 to 3 of 4 attempts.
-Its mean acceptance per task rises from 0.306 at the first visit to 0.597 at the last (Section~\ref{sec:oct19-rl-filtered}).
-At the last visit, 31 of its 62 tasks have 4 of 4 accepted attempts, and 23 still have 0.
-C's first visits already beat S over all 506 tasks (130 against 84 accepted attempts), so part of C's second-visit excess can come from training on earlier tasks.
-The rise of \code{RL\_filtered} within its 62 tasks is the cleaner evidence.
+On the 72 theorems where C's first visit has a proof, C's second visit accepts 95 of 288 attempts, against 54 for S ($p = 0.011$; 0.087 after a Bonferroni factor of 8).
+On the 46 such theorems for R, R's second visit accepts 55 of 184 attempts, against 42 for S ($p = 0.199$).
+\code{RL\_filtered} trains only on theorems that S proves in 1 to 3 of 4 attempts.
+Its mean acceptance per theorem rises from 0.306 at the first visit to 0.597 at the last (Section~\ref{sec:oct19-rl-filtered}).
+At the last visit, 31 of its 62 theorems have 4 of 4 accepted attempts, and 23 still have 0.
+C's first visits already beat S over all 506 theorems (130 against 84 accepted attempts), so part of C's second-visit excess can come from training on earlier theorems.
+The rise of \code{RL\_filtered} within its 62 theorems is the cleaner evidence.
 
 \paragraph{The reward is rarely nonzero.}
-S has no accepted attempt on 443 of the 506 TRAIN tasks.
-R's first visit has a proof on 46 of the 506 tasks, and C's first visit has one on 72.
-On the other 460 tasks, R's second visit accepts 28 of 1,840 attempts, against 42 for S ($p = 0.136$).
-On the other 434 tasks, C's second visit accepts 30 of 1,736 attempts, the same count as S ($p = 1.0$).
-A group with no proof gives every attempt an advantage of 0 (Section~\ref{sec:zero}), so the first visit to these tasks gives no update.
+S has no accepted attempt on 443 of the 506 TRAIN theorems.
+R's first visit has a proof on 46 of the 506 theorems, and C's has one on 72.
+On the other 460 theorems, R's second visit accepts 28 of 1,840 attempts, against 42 for S ($p = 0.136$).
+On the other 434 theorems, C's second visit accepts 30 of 1,736 attempts, the same count as S ($p = 1.0$).
+A group with no proof gives every attempt an advantage of 0 (Section~\ref{sec:zero}), so the first visit to these theorems gives no update.
 
 \begin{figure}[!htbp]
 \centering
 \begin{tikzpicture}[font=\small]
-\node[plain, text width=5.2cm] (root) at (0, 0) {First visit to a TRAIN task: 4 attempts by the arm};
-\node[good, text width=6.4cm] (yes) at (-3.9, -1.9) {At least one accepted attempt: a mixed or all-success group\\R: 46 tasks \quad C: 72 tasks};
-\node[bad, text width=6.4cm] (no) at (3.9, -1.9) {No accepted attempt: every advantage is 0, so no update\\R: 460 tasks \quad C: 434 tasks};
+\node[plain, text width=5.2cm] (root) at (0, 0) {First visit to a TRAIN theorem:\\4 attempts by the arm};
+\node[good, text width=6.4cm] (yes) at (-3.9, -1.9) {At least one accepted attempt: a mixed or all-accepted group\\R: 46 theorems \quad C: 72 theorems};
+\node[bad, text width=6.4cm] (no) at (3.9, -1.9) {No accepted attempt: every advantage is 0, so no update\\R: 460 theorems \quad C: 434 theorems};
 \node[box, text width=6.4cm] (yes2) at (-3.9, -4.1) {Second visit against the S reference,\\accepted attempts\\R: 55 against 42 of 184, $p = 0.199$\\C: 95 against 54 of 288, $p = 0.011$};
 \node[box, text width=6.4cm] (no2) at (3.9, -4.1) {Second visit against the S reference,\\accepted attempts\\R: 28 against 42 of 1,840, $p = 0.136$\\C: 30 against 30 of 1,736, $p = 1.0$};
 \draw[arr] (root) -| (yes);
@@ -1549,27 +1549,27 @@ A group with no proof gives every attempt an advantage of 0 (Section~\ref{sec:ze
 \draw[arr] (yes) -- (yes2);
 \draw[arr] (no) -- (no2);
 \end{tikzpicture}
-\caption{TRAIN tasks of R and C split by the outcome of the arm's first visit. The S reference is S's accepted attempts of 4 per task in \code{pass\_rates}, a separate run on the same tasks. The $p$-values come from exact two-sided paired sign-flip tests on the per-task difference, with no correction for the 8 tests. The split puts all-success first visits with the mixed groups. This analysis is exploratory.}
+\caption{TRAIN theorems of R and C split by the outcome of the arm's first visit. The S reference is S's accepted attempts of 4 per theorem in \code{pass\_rates}, a separate run on the same theorems. The $p$-values come from exact two-sided paired sign-flip tests on the per-theorem difference, with no correction for the 8 tests. The split puts all-accepted first visits with the mixed groups. This analysis is exploratory.}
 \label{fig:oct20-signal}
 \end{figure}
 
 \paragraph{S applies fewer tactics on held-out theorems.}
-S applies at least one tactic in 105 of 326 held-out episodes (E0).
-On TRAIN, it applies one in 1,199 of 2,024 episodes (Figure~\ref{fig:oct20-why}a).
+S applies at least one tactic in 105 of 326 held-out attempts (E0).
+On TRAIN, it applies one in 1,199 of 2,024 attempts (Figure~\ref{fig:oct20-why}a).
 By action, the counts are 156 of 1,953 held-out actions and 2,106 of 11,890 TRAIN actions.
-The TRAIN tasks also carry SFT exposure.
-Of the 506 TRAIN roots, 486 have at least one SFT example from their own reference proof, and so do 59 of the 62 \code{RL\_filtered} tasks.
+The TRAIN theorems also carry SFT exposure.
+Of the 506 TRAIN theorems, 486 have at least one SFT example from their own reference proof, and so do 59 of the 62 \code{RL\_filtered} theorems.
 No SFT example comes from a selection-set statement.
 On the selection set, 161 of S's 326 first actions start with \code{have} and have more than one line.
 Lean rejects 147 of them at the first tactic.
 
 \paragraph{RL concentrates on one action template.}
-Of \code{RL\_filtered}'s 2,082 accepted training episodes, 1,627 close the proof with the first action (Figure~\ref{fig:oct20-why}c).
-S's 84 accepted TRAIN episodes close at every action from 1 to 6.
+Of \code{RL\_filtered}'s 2,082 accepted training attempts, 1,627 close the proof with the first action (Figure~\ref{fig:oct20-why}c).
+S's 84 accepted TRAIN attempts close at every action from 1 to 6.
 Of the 1,627 closing first actions, 2 are a single fixed tactic without arguments.
 The 12 most frequent closing texts all start with \code{simp\_all} and a lemma list, and they cover 1,076 of the 1,627.
-The most frequent text, \code{simp\_all [Int.ModEq, Int.emod\_eq\_emod\_iff\_emod\_sub\_eq\_zero]}, closes 451 episodes.
-In the last quarter of training, 40 tasks have a proof; 14 of them have one distinct proof text, and 10 have two.
+The most frequent text, \code{simp\_all [Int.ModEq, Int.emod\_eq\_emod\_iff\_emod\_sub\_eq\_zero]}, closes 451 attempts.
+In the last quarter of training, 40 theorems have a proof; 14 of them have one distinct proof text, and 10 have two.
 On the selection set, 326 of \code{RL\_filtered}'s 328 first actions start with \code{simp\_all} and a lemma list.
 Of these 326, Lean rejects 224 at the first tactic, 94 apply some tactics and then fail, 4 close the proof, and 4 are format errors.
 The learner has no KL, entropy or reference-model term that would keep the policy near S or keep its actions varied.
@@ -1582,35 +1582,35 @@ Of S's 373 format errors, 320 reach the 192-token limit.
 On TRAIN, 893 of S's 1,416 format errors reach the token limit, and 465 more have more than 4 tactics.
 
 \paragraph{The held-out test cannot detect the measured gain.}
-We compute the power of the exact two-sided sign test at $\alpha = 0.05$ on theorems that one arm solves and the other does not.
-The computation uses two dependence assumptions: in the nested case, the arm solves every theorem that S solves; in the independent case, the two outcomes are independent.
-Negative dependence, where the arms solve disjoint theorems, is not computed, and it can give a lower power.
+We compute the power of the exact two-sided sign test at $\alpha = 0.05$ on theorems that one arm proves and the other does not.
+The computation uses two dependence assumptions: in the nested case, the arm proves every theorem that S proves; in the independent case, the two outcomes are independent.
+Negative dependence, where the arms prove disjoint theorems, is not computed, and it can give a lower power.
 At the observed rates (S 1 of 163, \code{RL\_filtered} 2 of 164) and 164 theorems, the power is 0.001 (nested) to 0.006 (independent).
-A grid search (steps of 10 theorems below 2,000 and 250 above) finds that the same gain needs 1,310 (nested) to 4,250 (independent) theorems for a power of 0.8.
+A grid search (every 10 theorems below 2,000, every 250 above) finds that the same gain needs 1,310 (nested) to 4,250 (independent) theorems for a power of 0.8.
 At the registered 5-point bar, 164 theorems give a power of 0.693 to 0.833.
 These values are for the sign test, not for the registered bootstrap rule.
 
 \begin{figure}[!htbp]
 \centering
 \includegraphics[width=\textwidth]{oct20_why}
-\caption{Three measurements behind Section~\ref{sec:oct20-why}. (a)~Episodes in which at least one tactic applies: S on TRAIN (\code{pass\_rates}) 1,199/2,024, S on the selection set (E0) 105/326, and \code{RL\_filtered} on the selection set (E6) 183/328. Error bars: 95\% Wilson score intervals, which treat correlated episodes as independent and so understate the uncertainty. (b)~Selection-set format errors as a share of all model actions, split by cause in this order of checks: the 192-token limit, more than 4 tactics, and other malformed actions. S: 320, 44 and 9 of 1,953 actions. R: 20, 1,257 and 11 of 1,963. \code{RL\_filtered}: 1, 10 and 7 of 1,948. (c)~Accepted episodes by the action that closes the proof, as a share of each run's accepted episodes. S on TRAIN: 19, 18, 10, 14, 11 and 12 of 84. \code{RL\_filtered} training: 1,627, 258, 90, 50, 34 and 23 of 2,082. Panels (b) and (c) have no error bars. This analysis is exploratory.}
+\caption{Three measurements behind Section~\ref{sec:oct20-why}. (a)~Attempts in which at least one tactic applies: S on TRAIN (\code{pass\_rates}) 1,199/2,024, S on the selection set (E0) 105/326, and \code{RL\_filtered} on the selection set (E6) 183/328. Error bars: 95\% Wilson score intervals, which treat correlated attempts as independent and so understate the uncertainty. (b)~Selection-set format errors as a share of all model actions, split by cause in this order of checks: the 192-token limit, more than 4 tactics, and other malformed actions. S: 320, 44 and 9 of 1,953 actions. R: 20, 1,257 and 11 of 1,963. \code{RL\_filtered}: 1, 10 and 7 of 1,948. (c)~Accepted attempts by the action that closes the proof, as a share of each run's accepted attempts. S on TRAIN: 19, 18, 10, 14, 11 and 12 of 84. \code{RL\_filtered} training: 1,627, 258, 90, 50, 34 and 23 of 2,082. Panels (b) and (c) have no error bars. This analysis is exploratory.}
 \label{fig:oct20-why}
 \end{figure}
 
 \paragraph{Interpretation.}
 The records show no sign of a fault in the update.
-On the 62 \code{RL\_filtered} tasks, which all have a nonzero S pass rate, acceptance rises, and the rise is not regression to the mean.
-The reward is Lean-verified, and it is rarely nonzero: S solves 63 of the 506 TRAIN tasks in 4 attempts.
-On held-out theorems, S applies a tactic in fewer episodes than on TRAIN.
+On the 62 \code{RL\_filtered} theorems, which all have a nonzero S acceptance rate, acceptance rises, and the rise is not regression to the mean.
+The reward is Lean-verified, and it is rarely nonzero: S proves 63 of the 506 TRAIN theorems in 4 attempts.
+On held-out theorems, S applies a tactic in fewer attempts than on TRAIN.
 RL reinforces \code{simp\_all} actions with a lemma list. On the selection set, 326 of \code{RL\_filtered}'s 328 first actions start this way, and Lean rejects 224 of them at the first tactic.
 The missing held-out gain is therefore consistent with a rare reward under a weak starting policy and with narrow reinforcement, more than with a fault of the update.
 No run varies the reward, the starting policy, a KL or entropy term, or the action limits, so this attribution is not tested.
 
 \emph{Alternative explanations}, not controlled:
 \begin{itemize}
-\item Tasks with a first-visit proof are easier. On R's split, S accepts 42 of 184 attempts on them and 42 of 1,840 on the others. A general drift toward short actions could help easy tasks without a task-specific update.
-\item S's TRAIN advantage can come from SFT exposure, from the exclusion of theorems that one fixed tactic solves from the selection set, or from difficulty. No count separates them.
-\item The \code{simp\_all} concentration changes how \code{RL\_filtered} fails. S does not show it and also solves 1 of 163 held-out theorems, so it is not the only cause.
+\item Theorems with a first-visit proof are easier. On R's split, S accepts 42 of 184 attempts on them and 42 of 1,840 on the others. A general drift toward short actions could help easy theorems without a theorem-specific update.
+\item S's TRAIN advantage can come from SFT exposure, from the exclusion of theorems that one fixed tactic proves from the selection set, or from difficulty. No count separates them.
+\item The \code{simp\_all} concentration changes how \code{RL\_filtered} fails. S does not show it and also proves 1 of 163 held-out theorems, so it is not the only cause.
 \end{itemize}
 
 \emph{Limits}: each arm is one training run.
@@ -1623,25 +1623,25 @@ Under a Bonferroni factor of 8, C's first-visit gain over S stays below 0.05 (0.
 
 Measured contrasts:
 \begin{itemize}
-\item \code{RL\_filtered} raises acceptance on its 62 trained tasks, from a mean of 0.306 at the first visit to 0.597 at the last ($p < 0.001$).
+\item \code{RL\_filtered} raises acceptance on its 62 trained theorems, from a mean of 0.306 at the first visit to 0.597 at the last ($p < 0.001$).
 \item C accepts more TRAIN attempts than R, 255 against 164 of 4,048 ($p = 0.0002$), in one training run per arm.
-\item C's first pass accepts more attempts than S on the same tasks ($p = 0.0019$).
+\item C's first epoch accepts more attempts than S on the same theorems ($p = 0.0019$).
 \item R shows no detected rise on TRAIN.
 \item No arm shows a detected held-out gain: no paired interval on the selection set excludes 0.
-\item B, S, R and C each solve 0 of 8 DEV roots.
+\item B, S, R and C each prove 0 of 8 DEV theorems.
 \item RL shortens the actions. R also makes more format errors, and C concentrates on three automation tactics. These action results are exploratory.
-\item Where an arm's first visit to a TRAIN task has no proof, the second visit shows no detected gain over S on that task, for R or for C. Where it has one, C's second visit gains over S ($p = 0.011$; 0.087 after a Bonferroni factor of 8). This split is exploratory (Section~\ref{sec:oct20-why}).
+\item Where an arm's first visit to a TRAIN theorem has no proof, the second visit shows no detected gain over S on that theorem, for R or for C. Where it has one, C's second visit gains over S ($p = 0.011$; 0.087 after a Bonferroni factor of 8). This split is exploratory (Section~\ref{sec:oct20-why}).
 \item \code{RL\_filtered} starts 326 of its 328 held-out attempts with \code{simp\_all} and a lemma list. This count is exploratory.
 \end{itemize}
 
 Hypotheses, not tested:
 \begin{itemize}
-\item RL sharpens behaviour that S already has, rather than adding new proofs. \code{RL\_filtered} trains only on tasks that S solves at least once in 4 attempts, so its training gain cannot show new proofs. Yue et al.\ report that RL with verifiable rewards raises pass@$k$ at small $k$ but lowers it at large $k$, relative to the base model~\cite{yue2025}. This study does not measure pass@$k$ at large $k$.
-\item The training rise reflects recall of proofs seen in SFT. S's SFT examples come from reference proofs of TRAIN statements, including 59 of the 62 \code{RL\_filtered} tasks, and no run separates recall from new skill.
+\item RL sharpens behaviour that S already has, rather than adding new proofs. \code{RL\_filtered} trains only on theorems that S proves at least once in 4 attempts, so its training gain cannot show new proofs. Yue et al.\ report that RL with verifiable rewards raises pass@$k$ at small $k$ but lowers it at large $k$, relative to the base model~\cite{yue2025}. This study does not measure pass@$k$ at large $k$.
+\item The training rise reflects recall of proofs seen in SFT. S's SFT examples come from reference proofs of TRAIN statements, including 59 of the 62 \code{RL\_filtered} theorems, and no run separates recall from new skill.
 \end{itemize}
 
 \paragraph{Measurement floor.}
-S solves 1 of 163 selection theorems and 0 of 8 DEV roots.
+S proves 1 of 163 selection theorems and 0 of 8 DEV theorems.
 The promotion rule needs a paired gain of at least 5 points, so a smaller held-out gain cannot pass it.
 At the observed rates and 164 theorems, an exact sign test has a power of 0.001 to 0.006 (Section~\ref{sec:oct20-why}).
 No detected gain does not show that RL gives no transfer.
@@ -1666,15 +1666,15 @@ Three observations motivate EXP-029:
 EXP-029 evaluates S, C, R and \code{RL\_filtered} with 8 attempts per theorem on the 164 selection theorems.
 Three screens split the theorems into four strata: vacuous hypotheses, automation chains, near TRAIN, and ``other''.
 The ``other'' stratum is the headline.
-EXP-029 also evaluates S and \code{RL\_filtered} with 8 attempts on the 62 \code{RL\_filtered} tasks.
+EXP-029 also evaluates S and \code{RL\_filtered} with 8 attempts on the 62 \code{RL\_filtered} theorems.
 The paired comparisons, the bootstrap and the 5-point promotion rule are those of EXP-028.
 
 The amendment of 20 October fits the program on one L4 GPU within about USD 50.
 Its dry-run quote is USD 49.51 for 28 hours, against USD 118.75 for the first program on one L40S.
-It adds an exploratory comparison on the 62 tasks: S with 12 actions, 384 action tokens and 8 tactics per action, against S at the registered limits.
+It adds an exploratory comparison on the 62 theorems: S with 12 actions, 384 action tokens and 8 tactics per action, against S at the registered limits.
 The limits recount of 20 October on TRAIN (\code{pass\_rates}) motivates it:
 \begin{itemize}
-\item 1,935 of S's 2,024 episodes use all 6 actions without a proof.
+\item 1,935 of S's 2,024 attempts use all 6 actions without a proof.
 \item S's 84 proofs close at every action from 1 to 6 (Figure~\ref{fig:oct20-why}c).
 \item The token and tactic limits cause 1,358 of S's 1,416 format errors.
 \item At $\gamma = 0.95$, a proof closed by the last action earns 0.774 with 6 actions and 0.569 with 12.
@@ -1686,20 +1686,20 @@ The comparison therefore measures the new limits and the new wording together.
 Most first visits in R have no proof, and a group with no proof gives no update (Section~\ref{sec:oct20-why}).
 Manas proposed a dense reward.
 EXP-030 asks whether per-action penalties for Lean errors make REINFORCE close more TRAIN proofs than the terminal proof reward alone.
-R\_dense starts from the same S and uses R's seed and the first 506 groups of R's frozen task order, which cover 377 distinct TRAIN tasks.
+R\_dense starts from the same S and uses R's seed and the first 506 groups of R's frozen task order, which cover 377 distinct TRAIN theorems.
 Its configuration differs from R's only in the reward mode, the run budgets and the run identifiers.
 Table~\ref{tab:dense-reward} gives the reward.
-The control is R's existing record of the same 506 groups, in which R closes 87 of 2,024 episodes.
-The test is an exact two-sided sign-flip test on the per-group difference in accepted episodes, with groups paired by position.
+The control is R's existing record of the same 506 groups, in which R closes 87 of 2,024 attempts.
+The test is an exact two-sided sign-flip test on the per-group difference in accepted attempts, with groups paired by position.
 R\_dense passes only if it closes more proofs than R with $p < 0.05$.
 A higher return or fewer errors without more proofs does not pass.
-A gaming audit compares the shares of valid steps and of no-progress actions between the arms.
-R trained on an L40S, and R\_dense would train on an L4, so their sampled episodes would differ even with the same seed.
+A gaming audit compares the shares of valid actions and of no-progress actions between the arms.
+R trained on an L40S, and R\_dense would train on an L4, so their sampled attempts would differ even with the same seed.
 
 \begin{table}[!htbp]
 \centering
 \small
-\caption{The per-action reward of EXP-030 (\code{error\_feedback\_v1} in environment version 2). A partial action is scored by the failure that stopped it. An action whose next prompt exceeds the limit ends the episode and keeps the reward of its outcome. The discount stays $\gamma = 0.95$.}
+\caption{The per-action reward of EXP-030 (\code{error\_feedback\_v1} in environment version 2). A partial action is scored by the failure that stopped it. An action whose next prompt exceeds the limit ends the attempt and keeps the reward of its outcome. The discount stays $\gamma = 0.95$.}
 \label{tab:dense-reward}
 \begin{tabularx}{\textwidth}{@{}YP{1.6cm}P{2.4cm}@{}}
 \toprule
@@ -1708,16 +1708,16 @@ Event after an action & Reward & Label \\
 Lean accepts the complete proof & $+1$ & Lean-verified \\
 Format error, syntax error, forbidden code, unresolved name, or invalid backtrack & $-0.2$ & Heuristic \\
 Type or tactic error, unchanged goals, repeated state, unclassified Lean rejection, or rejected replay & $-0.1$ & Heuristic \\
-Valid step, timeout, or crash & $0$ & None \\
+Valid action, timeout, or crash & $0$ & None \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
 The registration of \code{error\_feedback\_v1} on 11 October gave 0 to unchanged goals, repeated states and unclassified rejections.
 EXP-030 gives them $-0.1$.
-Errors do not end a version~2 episode, so a reward of 0 would let a policy avoid every penalty by repeating an action that changes nothing.
+Errors do not end a version~2 attempt, so a reward of 0 would let a policy avoid every penalty by repeating an action that changes nothing.
 The penalties are heuristic: they score Lean errors, not proofs, so a lower error rate does not show more proof skill.
-\code{RL\_filtered} makes 18 format errors in 1,948 held-out actions and solves 2 of 164 theorems (Section~\ref{sec:oct20-why}), so fewer format errors alone did not give held-out proofs.
+\code{RL\_filtered} makes 18 format errors in 1,948 held-out actions and proves 2 of 164 theorems (Section~\ref{sec:oct20-why}), so fewer format errors alone did not give held-out proofs.
 The dense reward also penalizes Lean rejections, which are 1,636 of \code{RL\_filtered}'s 1,948 held-out actions.
 No record shows what that penalty would change; this is an inference, not a result of EXP-030.
 
@@ -1730,7 +1730,7 @@ No record shows what that penalty would change; this is an inference, not a resu
 \item AI reviewers graded the natural-language answers in Experiments 9, 10, 11, and 13.
 \item The sample-size values come from simulations with assumed parameters.
 \item The numbers come from recorded run outputs; we did not repeat experiments for this report.
-\item The EXP-028 selection set and the 8 DEV roots sit near the measurement floor: S solves 1 of 163 selection theorems and 0 of 8 DEV roots. The promotion rule needs a paired gain of at least 5 points, so a smaller held-out gain cannot pass it.
+\item The EXP-028 selection set and the 8 DEV theorems sit near the measurement floor: S proves 1 of 163 selection theorems and 0 of 8 DEV theorems. The promotion rule needs a paired gain of at least 5 points, so a smaller held-out gain cannot pass it.
 \item Section~\ref{sec:oct20-why} is a postdiction from one training run per arm. No run tests its account of the missing held-out gain.
 \end{itemize}
 
@@ -1762,18 +1762,18 @@ The script \pth{scripts/report/make_report_figures.py} draws the data figures an
 % BEGIN EVALUATION QUESTION CATALOGUE
 \clearpage
 \appendix
-\section{Every evaluation question and its expected answer}
+\section{Every evaluation theorem and its expected answer}
 \label{app:evaluation-questions}
 
-This catalogue describes the encoded questions from the evaluation review pack prepared on 17 October 2026.
-It preserves their source order, mathematical domains and task identities.
-The source contains 34 DEV questions and 82 TEST questions.
-A description explains the formal statement; it does not repair or certify its intended mathematical meaning.
-Existing semantic concerns remain next to the affected question.
-Questions without a warning still need the source-intent and exposure reviews recorded in \pth{docs/EXPERIMENTS.md}.
+This catalogue describes the encoded theorems from the evaluation review pack prepared on 17 October 2026.
+It preserves their source order, mathematical domains and task IDs.
+The source contains 34 DEV theorems and 82 TEST theorems.
+A description explains the statement; it does not repair or certify its intended mathematical meaning.
+Existing semantic concerns remain next to the affected theorem.
+Theorems without a warning still need the source-intent and exposure reviews recorded in \pth{docs/EXPERIMENTS.md}.
 
 Every expected answer is a complete Lean proof of the unchanged statement under the pinned verifier.
-Existence questions require witnesses with proofs of their conditions.
+Existence theorems require witnesses with proofs of their conditions.
 Equivalences require both directions; conjunctions require every conjunct.
 A negated universal claim requires its negation, rather than a proof of the positive claim.
 The proof need not match the private reference.
@@ -1785,8 +1785,8 @@ $\varphi$ denotes Euler's totient function; $J$ and the parenthesized symbol $\l
 $\operatorname{ord}$ denotes Lean's multiplicative order, and $\mathbb Z/m\mathbb Z$ denotes the residue ring used by \code{ZMod m}.
 Divisor sums range over the finite natural divisor sets in the source.
 Natural subtraction truncates at zero; division domains are specified where they affect interpretation.
-The original formal header and initial state remain in the remote review pack.
-\subsection{DEV questions}
+The original statement and initial state remain in the remote review pack.
+\subsection{DEV theorems}
 \begin{enumerate}[label={DEV \arabic*.},leftmargin=4.5em,itemsep=1em]
 \item \textbf{Odd powers and factorials modulo 16}\label{qn:dev:1}
 
@@ -1794,7 +1794,7 @@ Prove all three claims: every odd integer $y$ satisfies $y^8\equiv1\pmod{16}$; e
 
 \emph{Expected answer.} A complete proof of all three universally quantified claims, including the parity conclusion from $x!+1=y^8$.
 
-\emph{Source task.} \pth{ntb_0849ff82c82325aedf67ae3d:whole:0}
+\emph{Task ID.} \pth{ntb_0849ff82c82325aedf67ae3d:whole:0}
 
 \item \textbf{Decimal length after appending zeros}\label{qn:dev:2}
 
@@ -1802,7 +1802,7 @@ For natural numbers $a,n$ with $1\le a<10$ and $0<n$, prove that the decimal dig
 
 \emph{Expected answer.} A proof that $\operatorname{length}(\operatorname{digits}_{10}(a10^n))=n+1$ under both bounds on $a$ and positivity of $n$.
 
-\emph{Source task.} \pth{ntb_0b44211e960985affabb0e96:whole:0}
+\emph{Task ID.} \pth{ntb_0b44211e960985affabb0e96:whole:0}
 
 \item \textbf{Prime divisor and final nine digits}\label{qn:dev:3}
 
@@ -1812,7 +1812,7 @@ Let $p$ be a natural prime with $10^{50}<p$. Assume $(10^{294}-1)\bmod p=0$, and
 
 \emph{Review note.} Existing review flags contradictory assumptions: the universal nonzero-remainder hypothesis includes exponent zero. Semantic clearance remains withheld; this description does not certify the other assumptions.
 
-\emph{Source task.} \pth{ntb_0c317e1120b03cf847d9597c:whole:0}
+\emph{Task ID.} \pth{ntb_0c317e1120b03cf847d9597c:whole:0}
 
 \item \textbf{Negation of a multiplicative-order conjunction}\label{qn:dev:4}
 
@@ -1820,7 +1820,7 @@ Prove that the following conjunction is false. Its first part says that every na
 
 \emph{Expected answer.} A proof of the negation of the entire conjunction, not a proof that $7$ is a least qualifying prime.
 
-\emph{Source task.} \pth{ntb_12c42551bcbe67163eb49a45:whole:0}
+\emph{Task ID.} \pth{ntb_12c42551bcbe67163eb49a45:whole:0}
 
 \item \textbf{Divisibility equivalence under square-sum premises}\label{qn:dev:5}
 
@@ -1830,7 +1830,7 @@ Let $n\in\mathbb N$ satisfy $n\ge4$. Assume $i^2>0$ for every natural $i\le n$, 
 
 \emph{Review note.} Existing review flags a contradictory premise: positive squares are required even at zero. A saved Lean check confirms that premise contradiction; this description does not provide semantic clearance.
 
-\emph{Source task.} \pth{ntb_24495954b801bd41cc09d7a9:whole:0}
+\emph{Task ID.} \pth{ntb_24495954b801bd41cc09d7a9:whole:0}
 
 \item \textbf{Factorial product divisibility}\label{qn:dev:6}
 
@@ -1838,7 +1838,7 @@ For all natural numbers $n,k$ with $k\le n$, prove that $(n-k)!\,k!$ divides $n!
 
 \emph{Expected answer.} A universally quantified proof of $(n-k)!\,k!\mid n!$ whenever $k\le n$.
 
-\emph{Source task.} \pth{ntb_26c13028f7860afcbd1b1330:whole:0}
+\emph{Task ID.} \pth{ntb_26c13028f7860afcbd1b1330:whole:0}
 
 \item \textbf{A rational sum is not one}\label{qn:dev:7}
 
@@ -1846,7 +1846,7 @@ For a natural prime $p$, prove that $\sum_{k=0}^{p-1}pk\ne1$, where each summand
 
 \emph{Expected answer.} A proof that the indicated rational sum differs from $1$ for every natural prime $p$.
 
-\emph{Source task.} \pth{ntb_28ce24a682cba3a80079ac05:whole:0}
+\emph{Task ID.} \pth{ntb_28ce24a682cba3a80079ac05:whole:0}
 
 \item \textbf{No square completion for odd inputs}\label{qn:dev:8}
 
@@ -1854,7 +1854,7 @@ For every pair of odd integers $x,y$, prove that no integer $z$ satisfies $x^2+y
 
 \emph{Expected answer.} A universally quantified nonexistence proof for integer $z$ under both oddness assumptions.
 
-\emph{Source task.} \pth{ntb_2ac8f84bb1611299a7fdbc33:whole:0}
+\emph{Task ID.} \pth{ntb_2ac8f84bb1611299a7fdbc33:whole:0}
 
 \item \textbf{Order characterizes powers equal to one}\label{qn:dev:9}
 
@@ -1862,7 +1862,7 @@ Let $a\in\mathbb Z$ and $n\in\mathbb N$ satisfy $\gcd(a,n)=1$ and $n>0$. Let $d\
 
 \emph{Expected answer.} A proof of both implications between the residue equation $a^k=1$ and natural divisibility $d\mid k$.
 
-\emph{Source task.} \pth{ntb_2f522c6a2246200d9d42f7d4:whole:0}
+\emph{Task ID.} \pth{ntb_2f522c6a2246200d9d42f7d4:whole:0}
 
 \item \textbf{Integer divisibility implication}\label{qn:dev:10}
 
@@ -1870,7 +1870,7 @@ For an integer $x$, assume $x\mid39x-24$ and $328x-4\mid x^3-4x^2+4x$. Prove $x\
 
 \emph{Expected answer.} A proof of the final divisibility statement under the two encoded divisibility premises.
 
-\emph{Source task.} \pth{ntb_34759c85c220863a9b934698:whole:0}
+\emph{Task ID.} \pth{ntb_34759c85c220863a9b934698:whole:0}
 
 \item \textbf{No mutually adjacent prime divisors}\label{qn:dev:11}
 
@@ -1878,7 +1878,7 @@ Prove that there are no natural primes $p,q$ with $p>2$, $q>2$, $p\mid q+1$, and
 
 \emph{Expected answer.} A proof excluding every natural pair satisfying all six conditions.
 
-\emph{Source task.} \pth{ntb_42221e0e76e026e91ccae67b:whole:0}
+\emph{Task ID.} \pth{ntb_42221e0e76e026e91ccae67b:whole:0}
 
 \item \textbf{Prime powers modulo the predecessor}\label{qn:dev:12}
 
@@ -1886,7 +1886,7 @@ Let $p,n\in\mathbb N$, with $p$ prime and $n>1$. Assume there exist natural $a,b
 
 \emph{Expected answer.} A proof of the integer congruence $p^n\equiv1\pmod{p-1}$ under the prime, exponent, and existential assumptions.
 
-\emph{Source task.} \pth{ntb_4678ae628e2cd00da60bb8e9:whole:0}
+\emph{Task ID.} \pth{ntb_4678ae628e2cd00da60bb8e9:whole:0}
 
 \item \textbf{Digit-sum congruence and a missing digit}\label{qn:dev:13}
 
@@ -1896,7 +1896,7 @@ Prove both claims. For every positive natural $N$, its decimal digit sum is cong
 
 \emph{Review note.} Existing review records cross-split semantic overlap: the first conjunct overlaps the TEST decimal digit-sum congruence. This is not evidence of independent generalization.
 
-\emph{Source task.} \pth{ntb_540f08afe6aea5bca8e7f52f:whole:0}
+\emph{Task ID.} \pth{ntb_540f08afe6aea5bca8e7f52f:whole:0}
 
 \item \textbf{Integer-division sum bound}\label{qn:dev:14}
 
@@ -1906,15 +1906,15 @@ Let $p\in\mathbb N$ be prime, and assume $p\equiv1\pmod4$ or $p\equiv3\pmod4$ in
 
 \emph{Review note.} Existing review flags an intent mismatch: the summand uses integer division, not rational division. Semantic clearance remains withheld.
 
-\emph{Source task.} \pth{ntb_5623ea7db1926fecb82805a4:whole:0}
+\emph{Task ID.} \pth{ntb_5623ea7db1926fecb82805a4:whole:0}
 
 \item \textbf{An implicitly quantified exponent}\label{qn:dev:15}
 
 Let $m,p\in\mathbb N$, with $p$ prime. Assume there exists a nonzero natural $a$ such that $2a=p-1$, where that subtraction is natural subtraction. Prove $p^m\equiv1\pmod{p-1}$ after casting $p$ to the integers in the congruence and its modulus.
 
-\emph{Expected answer.} A proof of the congruence for arbitrary natural exponent $m$, which is an implicit parameter in the formal header.
+\emph{Expected answer.} A proof of the congruence for arbitrary natural exponent $m$, which is an implicit parameter in the statement.
 
-\emph{Source task.} \pth{ntb_57b89c0669597337e6ce5691:whole:0}
+\emph{Task ID.} \pth{ntb_57b89c0669597337e6ce5691:whole:0}
 
 \item \textbf{Negation of a factorial-divisibility count}\label{qn:dev:16}
 
@@ -1922,7 +1922,7 @@ Prove that the following universal counting assertion is false: for every $n,m\i
 
 \emph{Expected answer.} A proof of the negation of the universal cardinality formula; a counterexample with a checked failure of the formula is acceptable.
 
-\emph{Source task.} \pth{ntb_5ce565368939b4275182fc8c:whole:0}
+\emph{Task ID.} \pth{ntb_5ce565368939b4275182fc8c:whole:0}
 
 \item \textbf{Prime-exponent premise and a nested power}\label{qn:dev:17}
 
@@ -1932,7 +1932,7 @@ Let $p\in\mathbb N$ be prime with $p\ne2$, and let $a\in\mathbb N$ satisfy $a^p=
 
 \emph{Review note.} Existing review flags contradictory assumptions: no natural base has a natural prime exponent different from two and power equal to two. This is a review finding, not fresh Lean verification.
 
-\emph{Source task.} \pth{ntb_60328a061f4b90dcae8c1b6b:whole:0}
+\emph{Task ID.} \pth{ntb_60328a061f4b90dcae8c1b6b:whole:0}
 
 \item \textbf{Absolute value of a square minus one}\label{qn:dev:18}
 
@@ -1940,7 +1940,7 @@ Let $n\in\mathbb N$ satisfy $2\le n$ and $3<n$. Prove that if the integer cast o
 
 \emph{Expected answer.} A proof of the conditional inequality $\operatorname{natAbs}((n:\mathbb Z)^2-1)\ne1$ under all the encoded bounds and the nonprimality premise.
 
-\emph{Source task.} \pth{ntb_66128a7673636dccc946e79c:whole:0}
+\emph{Task ID.} \pth{ntb_66128a7673636dccc946e79c:whole:0}
 
 \item \textbf{No odd multiple as a fourth-power difference}\label{qn:dev:19}
 
@@ -1948,7 +1948,7 @@ For every odd integer $k$, prove that there are no integers $x,y$ with $x^4-y^4=
 
 \emph{Expected answer.} A universally quantified nonexistence proof for integer solutions $x,y$ whenever $k$ is odd.
 
-\emph{Source task.} \pth{ntb_6795aa26f8089aa7c1f49e08:whole:0}
+\emph{Task ID.} \pth{ntb_6795aa26f8089aa7c1f49e08:whole:0}
 
 \item \textbf{Power of an element with known order}\label{qn:dev:20}
 
@@ -1956,7 +1956,7 @@ Let $p\in\mathbb N$ be prime, let $a,b\in\mathbb Z/p\mathbb Z$, and let $m,k\in\
 
 \emph{Expected answer.} A proof of $b^m=1$ under the stated order and power relation, without adding a nonzero assumption on $a$.
 
-\emph{Source task.} \pth{ntb_6bf87afbdba942d3d665e9d7:whole:0}
+\emph{Task ID.} \pth{ntb_6bf87afbdba942d3d665e9d7:whole:0}
 
 \item \textbf{Digit-sum exclusion on an interval}\label{qn:dev:21}
 
@@ -1964,7 +1964,7 @@ Prove that no natural number $x$ in the inclusive interval $200\le x\le288$ has 
 
 \emph{Expected answer.} A proof of nonexistence of such an $x$, including both interval bounds and the digit-sum divisibility condition.
 
-\emph{Source task.} \pth{ntb_8cadc503b92a3294a3770016:whole:0}
+\emph{Task ID.} \pth{ntb_8cadc503b92a3294a3770016:whole:0}
 
 \item \textbf{Negation of a decimal-remainder set equality}\label{qn:dev:22}
 
@@ -1972,7 +1972,7 @@ Let $S$ be the set of natural remainders $(100000A+10000B+1000C+100D+48)\bmod72$
 
 \emph{Expected answer.} A proof that the two sets differ, not a proof that the displayed set lists all possible remainders.
 
-\emph{Source task.} \pth{ntb_8fb14729a7d6626bd3782104:whole:0}
+\emph{Task ID.} \pth{ntb_8fb14729a7d6626bd3782104:whole:0}
 
 \item \textbf{Remainder after division by multiplicative order}\label{qn:dev:23}
 
@@ -1980,7 +1980,7 @@ Let $a,m,n,k,q,r\in\mathbb N$ satisfy $m>1$, $\gcd(a,m)=1$, and $k=\operatorname
 
 \emph{Expected answer.} A proof that the specified remainder $r$ is zero under the order, residue-power, decomposition, and bound assumptions.
 
-\emph{Source task.} \pth{ntb_92a8e6497c8f664aa1696ccf:whole:0}
+\emph{Task ID.} \pth{ntb_92a8e6497c8f664aa1696ccf:whole:0}
 
 \item \textbf{Zero residue and zero remainder}\label{qn:dev:24}
 
@@ -1988,7 +1988,7 @@ Let $n\in\mathbb N$ satisfy $6<n$, $10<n$, and $\gcd(n,3)=1$. Prove that its res
 
 \emph{Expected answer.} A proof of both directions of $(n:\mathbb Z/3\mathbb Z)=0\Longleftrightarrow n\bmod3=0$ under every given assumption.
 
-\emph{Source task.} \pth{ntb_9c107931350d9e67fa24c1f8:whole:0}
+\emph{Task ID.} \pth{ntb_9c107931350d9e67fa24c1f8:whole:0}
 
 \item \textbf{Decimal digit sum modulo nine}\label{qn:dev:25}
 
@@ -1998,7 +1998,7 @@ For every natural $n$, including zero, prove that $n$ is congruent modulo $9$ to
 
 \emph{Review note.} Existing review records cross-split semantic overlap with the TEST decimal digit-sum congruence, despite different positivity assumptions and notation.
 
-\emph{Source task.} \pth{ntb_9f2790ee0b18fb114caa8b87:whole:0}
+\emph{Task ID.} \pth{ntb_9f2790ee0b18fb114caa8b87:whole:0}
 
 \item \textbf{Order divides a positive exponent}\label{qn:dev:26}
 
@@ -2006,7 +2006,7 @@ Let $q\in\mathbb N$ be prime and $a\in\mathbb Z$ with $q\nmid a$ in the integers
 
 \emph{Expected answer.} A proof that the natural order $k$ divides the positive natural exponent $m$ under the nondivisibility and residue-power assumptions.
 
-\emph{Source task.} \pth{ntb_be9c16ca3754ba8a9ab01583:whole:0}
+\emph{Task ID.} \pth{ntb_be9c16ca3754ba8a9ab01583:whole:0}
 
 \item \textbf{A decimal quotient with an implicit parameter}\label{qn:dev:27}
 
@@ -2016,7 +2016,7 @@ For an arbitrary fixed natural parameter $N$, prove that no natural $n$ satisfie
 
 \emph{Review note.} New possible intent issue: the initial state declares a natural parameter whose identifier is n!, so the repeated n! tokens denote that parameter rather than a factorial of the bound n. The description renames this parameter N and preserves the unused existential variable; no fresh Lean check or source repair is claimed.
 
-\emph{Source task.} \pth{ntb_bea1d7078c9528575e9bf318:whole:0}
+\emph{Task ID.} \pth{ntb_bea1d7078c9528575e9bf318:whole:0}
 
 \item \textbf{A larger prime does not divide a factorial}\label{qn:dev:28}
 
@@ -2024,7 +2024,7 @@ Let $m,p\in\mathbb N$ satisfy $m>0$, $p$ prime, and $p>m$. Prove $p\nmid m!$.
 
 \emph{Expected answer.} A proof that the prime $p$ does not divide the factorial of $m$ under both positivity and size assumptions.
 
-\emph{Source task.} \pth{ntb_cb242a8876b8745c69ac06ff:whole:0}
+\emph{Task ID.} \pth{ntb_cb242a8876b8745c69ac06ff:whole:0}
 
 \item \textbf{A greatest-common-divisor bound attained}\label{qn:dev:29}
 
@@ -2032,7 +2032,7 @@ Prove that every positive natural $n$ satisfies $\gcd(9n+4,5n+2)\le2$. Also prov
 
 \emph{Expected answer.} A proof of the universal upper bound and a positive natural witness attaining the bound, with its equality proof.
 
-\emph{Source task.} \pth{ntb_d62af373edae6d51dcf617f2:whole:0}
+\emph{Task ID.} \pth{ntb_d62af373edae6d51dcf617f2:whole:0}
 
 \item \textbf{Nonempty decimal digits and reconstruction bound}\label{qn:dev:30}
 
@@ -2040,7 +2040,7 @@ Let $b,n\in\mathbb N$ satisfy $1<b$ and $0<n$. Prove that the decimal digit list
 
 \emph{Expected answer.} A proof of both nonemptiness and $\operatorname{ofDigits}_{10}(\operatorname{digits}_{10}(nb))\le2nb^2$.
 
-\emph{Source task.} \pth{ntb_d6d6dd394cac5461186aa8d4:whole:0}
+\emph{Task ID.} \pth{ntb_d6d6dd394cac5461186aa8d4:whole:0}
 
 \item \textbf{A factorial plus a residue is not a square}\label{qn:dev:31}
 
@@ -2048,7 +2048,7 @@ Let $c\in\mathbb Z$ satisfy $c\equiv3\pmod4$. Prove that for every natural $m\ge
 
 \emph{Expected answer.} A proof excluding all integer square roots of $m!+c$ for every natural $m\ge4$ under the congruence assumption on $c$.
 
-\emph{Source task.} \pth{ntb_e244bf908dd21056c803610d:whole:0}
+\emph{Task ID.} \pth{ntb_e244bf908dd21056c803610d:whole:0}
 
 \item \textbf{No solution with an even integer input}\label{qn:dev:32}
 
@@ -2056,7 +2056,7 @@ For every even integer $x$, prove that there is no integer $y$ satisfying $14x^2
 
 \emph{Expected answer.} A universally quantified nonexistence proof for integer $y$ whenever integer $x$ is even.
 
-\emph{Source task.} \pth{ntb_ed3f3886e6597e95184acb2d:whole:0}
+\emph{Task ID.} \pth{ntb_ed3f3886e6597e95184acb2d:whole:0}
 
 \item \textbf{Contradiction below multiplicative order}\label{qn:dev:33}
 
@@ -2064,7 +2064,7 @@ Let $p\in\mathbb N$ be prime, and let $b\ne0$ in $\mathbb Z/p\mathbb Z$. Let nat
 
 \emph{Expected answer.} A proof of False from the encoded assumptions about $p,b,d,r$, rather than an independently chosen numerical answer.
 
-\emph{Source task.} \pth{ntb_ee0e013b74d5f43c8a8e241a:whole:0}
+\emph{Task ID.} \pth{ntb_ee0e013b74d5f43c8a8e241a:whole:0}
 
 \item \textbf{Four cubes realize every residue modulo nine}\label{qn:dev:34}
 
@@ -2072,10 +2072,10 @@ For every natural $r<9$, prove that there exist natural $a,b,c,d$ such that $(a^
 
 \emph{Expected answer.} For each permitted residue $r$, provide four natural witnesses and prove that their cube sum has remainder $r$ modulo $9$.
 
-\emph{Source task.} \pth{ntb_f995e1335705564e3d7db684:whole:0}
+\emph{Task ID.} \pth{ntb_f995e1335705564e3d7db684:whole:0}
 
 \end{enumerate}
-\subsection{TEST questions}
+\subsection{TEST theorems}
 \begin{enumerate}[label={TEST \arabic*.},leftmargin=4.5em,itemsep=1em]
 \item \textbf{Negated least-prime Jacobi claim}\label{qn:test:1}
 
@@ -2085,7 +2085,7 @@ Prove that the following combined claim is false: $43$ is prime; the Jacobi symb
 
 \emph{Review note.} The target negates the combined claim; it does not separately negate each conjunct.
 
-\emph{Source task.} \pth{ntb_05fad5360cfbe30eebe17b91:whole:0}
+\emph{Task ID.} \pth{ntb_05fad5360cfbe30eebe17b91:whole:0}
 
 \item \textbf{Natural-power inequality}\label{qn:test:2}
 
@@ -2095,7 +2095,7 @@ Let $n\in\mathbb{N}$ satisfy $1<n$ and suppose $n$ is not prime. Prove $n^n\ne n
 
 \emph{Review note.} Recorded intent warning: natural division makes 1/2 zero. Preserve the formal target; do not replace it with a rational half.
 
-\emph{Source task.} \pth{ntb_07b7569a02e930619d9f4d6b:whole:0}
+\emph{Task ID.} \pth{ntb_07b7569a02e930619d9f4d6b:whole:0}
 
 \item \textbf{Parity of two variables}\label{qn:test:3}
 
@@ -2103,7 +2103,7 @@ Let $x,y,n\in\mathbb{N}$ with $x>0$, $y>0$, $n$ odd and $n\ge1$. If $3x^2+5y^2=2
 
 \emph{Expected answer.} A complete Lean proof of $(\operatorname{Even}(x)\land\operatorname{Even}(y))\lor(\operatorname{Odd}(x)\land\operatorname{Odd}(y))$.
 
-\emph{Source task.} \pth{ntb_08d43e44ee8db479c3f3713e:whole:0}
+\emph{Task ID.} \pth{ntb_08d43e44ee8db479c3f3713e:whole:0}
 
 \item \textbf{Factors of a prime power}\label{qn:test:4}
 
@@ -2111,7 +2111,7 @@ Let $p,a,b,k\in\mathbb{N}$. Assume $p$ is prime, $a>0$, $b>0$, $ab=p^k$ and $\gc
 
 \emph{Expected answer.} A complete Lean proof supplying $i,j\in\mathbb{N}$ with $a=p^i$ and $b=p^j$. No relation between $i,j$ beyond these equalities is requested.
 
-\emph{Source task.} \pth{ntb_1413c3ebe87c42aaf582105d:whole:0}
+\emph{Task ID.} \pth{ntb_1413c3ebe87c42aaf582105d:whole:0}
 
 \item \textbf{Order modulo three}\label{qn:test:5}
 
@@ -2121,7 +2121,7 @@ In $\mathbb{Z}/3\mathbb{Z}$, prove that $10$ has multiplicative order $1$. Also 
 
 \emph{Review note.} All powers and equalities involving 10 occur in ZMod 3.
 
-\emph{Source task.} \pth{ntb_16aa8a2ecd721698a83e6389:whole:0}
+\emph{Task ID.} \pth{ntb_16aa8a2ecd721698a83e6389:whole:0}
 
 \item \textbf{Divisor totient sum bound}\label{qn:test:6}
 
@@ -2129,7 +2129,7 @@ Let $n\in\mathbb{N}$ with $1<n$. Prove $\sum_{d\mid n}\varphi(d)\le n^2-1$, summ
 
 \emph{Expected answer.} A complete Lean proof of the divisor-sum inequality under $1<n$.
 
-\emph{Source task.} \pth{ntb_16d0b14eb4f46af62451c672:whole:0}
+\emph{Task ID.} \pth{ntb_16d0b14eb4f46af62451c672:whole:0}
 
 \item \textbf{Prime divisibility and a square}\label{qn:test:7}
 
@@ -2139,7 +2139,7 @@ Let $n\in\mathbb{Z}$ and let $p\in\mathbb{N}$ be prime. Prove both $p\mid n\ \Lo
 
 \emph{Review note.} The remainder and subtraction occur in the integers.
 
-\emph{Source task.} \pth{ntb_17574657fab0aeeab228be04:whole:0}
+\emph{Task ID.} \pth{ntb_17574657fab0aeeab228be04:whole:0}
 
 \item \textbf{Negated Fibonacci congruence}\label{qn:test:8}
 
@@ -2147,7 +2147,7 @@ Prove that it is false that every natural prime $p$ satisfies $\sum_{i=1}^{p}F_i
 
 \emph{Expected answer.} A complete Lean proof negating the universal prime congruence, rather than proving that congruence for all primes.
 
-\emph{Source task.} \pth{ntb_1a7891d49276f2fdb7643bdf:whole:0}
+\emph{Task ID.} \pth{ntb_1a7891d49276f2fdb7643bdf:whole:0}
 
 \item \textbf{Decimal digit-sum remainder}\label{qn:test:9}
 
@@ -2155,9 +2155,9 @@ For every positive $n\in\mathbb{N}$, prove that the sum of its base-ten digits h
 
 \emph{Expected answer.} A complete Lean proof of $\bigl(\sum\operatorname{digits}_{10}(n)\bigr)\bmod9=n\bmod9$ for every $n>0$.
 
-\emph{Review note.} Recorded semantic overlap: DEV question 25 states the digit-sum congruence, and the first conjunct of DEV question 13 includes it. This is not a certified independent family.
+\emph{Review note.} Recorded semantic overlap: DEV theorem 25 states the digit-sum congruence, and the first conjunct of DEV theorem 13 includes it. This is not a certified independent family.
 
-\emph{Source task.} \pth{ntb_1aa39c678607b996200182fc:whole:0}
+\emph{Task ID.} \pth{ntb_1aa39c678607b996200182fc:whole:0}
 
 \item \textbf{Order and prime exponent equivalence}\label{qn:test:10}
 
@@ -2165,7 +2165,7 @@ Let $n\in\mathbb{N}$ be prime and let $a\in\mathbb{Z}/n\mathbb{Z}$ be nonzero. P
 
 \emph{Expected answer.} A complete Lean proof of the equivalence, preserving the conjunction on its left and the disjunction on its right.
 
-\emph{Source task.} \pth{ntb_1af4833b840d0b0fbec15e8c:whole:0}
+\emph{Task ID.} \pth{ntb_1af4833b840d0b0fbec15e8c:whole:0}
 
 \item \textbf{Cancel a coprime congruence factor}\label{qn:test:11}
 
@@ -2175,7 +2175,7 @@ Let $a,b,m,x,y\in\mathbb{Z}$ satisfy $ax\equiv b\pmod m$, $ay\equiv b\pmod m$ an
 
 \emph{Review note.} No positivity or nonzero assumption on the integer modulus is stated.
 
-\emph{Source task.} \pth{ntb_1d4a55a1396005c641f975de:whole:0}
+\emph{Task ID.} \pth{ntb_1d4a55a1396005c641f975de:whole:0}
 
 \item \textbf{Odd square divisibility}\label{qn:test:12}
 
@@ -2185,7 +2185,7 @@ Let $n\in\mathbb{N}$ be odd. Assuming $3\ne0$ in $\mathbb{N}$ and $2<n$, prove b
 
 \emph{Review note.} The second target is the stated remainder bound; do not replace it with a sharper congruence.
 
-\emph{Source task.} \pth{ntb_20e25d7da730561b7776bb3e:whole:0}
+\emph{Task ID.} \pth{ntb_20e25d7da730561b7776bb3e:whole:0}
 
 \item \textbf{Divisibility equivalence from a product}\label{qn:test:13}
 
@@ -2193,7 +2193,7 @@ Let $a,b,c\in\mathbb{Z}$ and assume $ab\mid c$. Prove $a\mid c\Longleftrightarro
 
 \emph{Expected answer.} A complete Lean proof of both directions of the divisibility equivalence under the product-divisibility assumption.
 
-\emph{Source task.} \pth{ntb_21c9319bec71cef5f8c5a55d:whole:0}
+\emph{Task ID.} \pth{ntb_21c9319bec71cef5f8c5a55d:whole:0}
 
 \item \textbf{Square root of a field quotient}\label{qn:test:14}
 
@@ -2203,7 +2203,7 @@ Let $p\in\mathbb{N}$ be an odd prime and let $a,b,k,l\in\mathbb{Z}/p\mathbb{Z}$.
 
 \emph{Review note.} Division is field division in ZMod p, not integer or natural division.
 
-\emph{Source task.} \pth{ntb_2b2b05cfd427f7eccfae7a28:whole:0}
+\emph{Task ID.} \pth{ntb_2b2b05cfd427f7eccfae7a28:whole:0}
 
 \item \textbf{Odd integer positive powers}\label{qn:test:15}
 
@@ -2211,7 +2211,7 @@ Let $a\in\mathbb{Z}$ satisfy $a\equiv1\pmod2$. For every positive natural expone
 
 \emph{Expected answer.} A complete Lean proof of the congruence for every exponent in the positive naturals.
 
-\emph{Source task.} \pth{ntb_2c9caaaff14dc84be05601b1:whole:0}
+\emph{Task ID.} \pth{ntb_2c9caaaff14dc84be05601b1:whole:0}
 
 \item \textbf{Natural quotient lower bound}\label{qn:test:16}
 
@@ -2221,7 +2221,7 @@ Let $a,b,k\in\mathbb{N}$ satisfy $b\ge3$, $b$ odd, $a>0$, $k>0$ and $2kb(b-1)\ge
 
 \emph{Review note.} Recorded intent warning: for natural b at least three, the right quotient is zero, so the ratio bound degenerates. This is not a rational-ratio statement.
 
-\emph{Source task.} \pth{ntb_317a357e031c74d97e1ba8f4:whole:0}
+\emph{Task ID.} \pth{ntb_317a357e031c74d97e1ba8f4:whole:0}
 
 \item \textbf{Negated Jacobi residue formula}\label{qn:test:17}
 
@@ -2231,7 +2231,7 @@ Prove that it is false that every odd natural prime $p$ satisfies $J(-3,p)=1$ wh
 
 \emph{Review note.} The outer negation covers the whole universal statement; the otherwise branch includes every residue other than one.
 
-\emph{Source task.} \pth{ntb_3260c7ed4ee56866de06e982:whole:0}
+\emph{Task ID.} \pth{ntb_3260c7ed4ee56866de06e982:whole:0}
 
 \item \textbf{No coprime square representation}\label{qn:test:18}
 
@@ -2239,7 +2239,7 @@ Prove that there are no positive natural numbers $a,b$ satisfying $\gcd(a,b)=1$ 
 
 \emph{Expected answer.} A complete Lean proof of the nonexistence of $a,b$ satisfying all four conditions.
 
-\emph{Source task.} \pth{ntb_36c456b2166347d83b0ed3f3:whole:0}
+\emph{Task ID.} \pth{ntb_36c456b2166347d83b0ed3f3:whole:0}
 
 \item \textbf{Prime divisors and nonsquare two}\label{qn:test:19}
 
@@ -2247,7 +2247,7 @@ Prove three claims: every natural prime $p$ has exactly two natural divisors; $2
 
 \emph{Expected answer.} A complete Lean proof of the full conjunction, including the universal prime claim, the concrete divisor count and the nonexistence claim.
 
-\emph{Source task.} \pth{ntb_38d4e0e8d6c4a9e630133c64:whole:0}
+\emph{Task ID.} \pth{ntb_38d4e0e8d6c4a9e630133c64:whole:0}
 
 \item \textbf{Existence of prime product witnesses}\label{qn:test:20}
 
@@ -2257,7 +2257,7 @@ Prove that natural numbers $p,q,r,n$ exist such that $p,q,r$ are prime, $pqr=n$ 
 
 \emph{Review note.} The primes are not required to be distinct.
 
-\emph{Source task.} \pth{ntb_398249d36acc8ef9a5e1ca40:whole:0}
+\emph{Task ID.} \pth{ntb_398249d36acc8ef9a5e1ca40:whole:0}
 
 \item \textbf{Empty set of nonsquare conditions}\label{qn:test:21}
 
@@ -2267,7 +2267,7 @@ Prove that no $n\in\mathbb{N}$ has this property: for every natural prime $p$, b
 
 \emph{Review note.} Natural truncated subtraction is part of the statement; do not read these as integer polynomial differences.
 
-\emph{Source task.} \pth{ntb_3ca1d1b12b5dfddc44f1290e:whole:0}
+\emph{Task ID.} \pth{ntb_3ca1d1b12b5dfddc44f1290e:whole:0}
 
 \item \textbf{Remainder of prime-square minus one}\label{qn:test:22}
 
@@ -2275,9 +2275,9 @@ Let $p\in\mathbb{N}$ be prime, and let $a\in\mathbb{N}$ be arbitrary. Prove $(p^
 
 \emph{Expected answer.} A complete Lean proof of the remainder identity in the stated context.
 
-\emph{Review note.} The arbitrary parameter a appears in the formal header but not in the assumptions or target.
+\emph{Review note.} The arbitrary parameter a appears in the statement but not in the assumptions or target.
 
-\emph{Source task.} \pth{ntb_3fd7520aa33f27729d8a7a07:whole:0}
+\emph{Task ID.} \pth{ntb_3fd7520aa33f27729d8a7a07:whole:0}
 
 \item \textbf{Negated quadratic representation theorem}\label{qn:test:23}
 
@@ -2287,7 +2287,7 @@ Prove that the following universal claim is false. Every natural prime $p>5$ for
 
 \emph{Review note.} The target is the negation of the entire universal claim, not a request to construct those representations for every qualifying prime.
 
-\emph{Source task.} \pth{ntb_43bce97fd20bfa368ddf2b30:whole:0}
+\emph{Task ID.} \pth{ntb_43bce97fd20bfa368ddf2b30:whole:0}
 
 \item \textbf{Nonprime exponential with an odd factor}\label{qn:test:24}
 
@@ -2295,7 +2295,7 @@ Let $N\in\mathbb{N}$ be positive. Suppose some odd natural prime divides $N$. Pr
 
 \emph{Expected answer.} A complete Lean proof of nonprimality under the positivity and odd-prime-divisor assumptions.
 
-\emph{Source task.} \pth{ntb_44ecc8d8d9a04797f8633215:whole:0}
+\emph{Task ID.} \pth{ntb_44ecc8d8d9a04797f8633215:whole:0}
 
 \item \textbf{Totient of a prime power}\label{qn:test:25}
 
@@ -2303,9 +2303,9 @@ Let $p\in\mathbb{N}$ be prime and let $k\in\mathbb{N}$ be positive. Prove $\varp
 
 \emph{Expected answer.} A complete Lean proof of the totient identity under primality and positive exponent assumptions.
 
-\emph{Review note.} Recorded semantic overlap: TEST question 40 states the same prime-power totient identity.
+\emph{Review note.} Recorded semantic overlap: TEST theorem 40 states the same prime-power totient identity.
 
-\emph{Source task.} \pth{ntb_45847c8fcf7e4ce252bf9497:whole:0}
+\emph{Task ID.} \pth{ntb_45847c8fcf7e4ce252bf9497:whole:0}
 
 \item \textbf{Least prime square residue modulo seven}\label{qn:test:26}
 
@@ -2313,7 +2313,7 @@ Prove that $11$ is prime, $11>7$ and its residue in $\mathbb{Z}/7\mathbb{Z}$ is 
 
 \emph{Expected answer.} A complete Lean proof of all three properties of $11$ and the universal minimality statement.
 
-\emph{Source task.} \pth{ntb_4613017e2c6d8b3546380196:whole:0}
+\emph{Task ID.} \pth{ntb_4613017e2c6d8b3546380196:whole:0}
 
 \item \textbf{Reciprocal-sum disjunction}\label{qn:test:27}
 
@@ -2323,7 +2323,7 @@ Prove that positive natural numbers $a,b,c$ exist for which at least one branch 
 
 \emph{Review note.} Recorded intent warning: pairwise coprimality constrains only the first branch, not the branches with numerators 10 or 11.
 
-\emph{Source task.} \pth{ntb_49e6cc8d82bba05f96425e21:whole:0}
+\emph{Task ID.} \pth{ntb_49e6cc8d82bba05f96425e21:whole:0}
 
 \item \textbf{Sum of prime proper divisors}\label{qn:test:28}
 
@@ -2331,7 +2331,7 @@ Let $p\in\mathbb{N}$ be prime. Prove that the sum of its natural divisors strict
 
 \emph{Expected answer.} A complete Lean proof of $\sum_{d\mid p,\ d<p}d=1$.
 
-\emph{Source task.} \pth{ntb_4b422de08469fc142a8bd3f2:whole:0}
+\emph{Task ID.} \pth{ntb_4b422de08469fc142a8bd3f2:whole:0}
 
 \item \textbf{Even-term sum bound by a prime power}\label{qn:test:29}
 
@@ -2339,7 +2339,7 @@ Let $p\in\mathbb{N}$ be prime with $p\ne2$ and assume $p^p\ge p+1$. Prove $\sum_
 
 \emph{Expected answer.} A complete Lean proof of the finite-sum bound under primality, exclusion of two and the stated power bound.
 
-\emph{Source task.} \pth{ntb_4c9e096311c691a10fc18f4c:whole:0}
+\emph{Task ID.} \pth{ntb_4c9e096311c691a10fc18f4c:whole:0}
 
 \item \textbf{Prime exceeding a square-root threshold}\label{qn:test:30}
 
@@ -2349,7 +2349,7 @@ Let $n\in\mathbb{N}$ satisfy $1<n$. Prove that some natural prime $p\ne n$ satis
 
 \emph{Review note.} The conclusion does not require p to divide n or to be less than n.
 
-\emph{Source task.} \pth{ntb_507de6b94de228dd2f022572:whole:0}
+\emph{Task ID.} \pth{ntb_507de6b94de228dd2f022572:whole:0}
 
 \item \textbf{Divisor sum of a prime square}\label{qn:test:31}
 
@@ -2359,7 +2359,7 @@ Let $p\in\mathbb{N}$ be prime, and let $S$ be the natural sum of the divisors of
 
 \emph{Review note.} The second equality uses rational division after casts; it is not a natural quotient.
 
-\emph{Source task.} \pth{ntb_549962e77307dd430ec3b45c:whole:0}
+\emph{Task ID.} \pth{ntb_549962e77307dd430ec3b45c:whole:0}
 
 \item \textbf{Negated weighted Jacobi-sum identity}\label{qn:test:32}
 
@@ -2367,7 +2367,7 @@ Prove that it is false that every natural prime $p$ with $p\bmod4=3$ satisfies $
 
 \emph{Expected answer.} A complete Lean proof negating the universal weighted-sum identity under the stated prime and residue conditions.
 
-\emph{Source task.} \pth{ntb_554b2dc790fab84a168853ef:whole:0}
+\emph{Task ID.} \pth{ntb_554b2dc790fab84a168853ef:whole:0}
 
 \item \textbf{Integer function determined at primes}\label{qn:test:33}
 
@@ -2375,7 +2375,7 @@ Let $x:\mathbb{N}\to\mathbb{Z}$ satisfy $n=\prod_{d\mid n}x(d)$ for every natura
 
 \emph{Expected answer.} A complete Lean proof of the value at one and the universal prime-value claim under the divisor-product hypothesis.
 
-\emph{Source task.} \pth{ntb_58cf341d56782a157b4f37da:whole:0}
+\emph{Task ID.} \pth{ntb_58cf341d56782a157b4f37da:whole:0}
 
 \item \textbf{Totient ratio at a prime}\label{qn:test:34}
 
@@ -2383,7 +2383,7 @@ Let $p\in\mathbb{N}$ be prime. After casting $p$ and $\varphi(p)$ to $\mathbb{Q}
 
 \emph{Expected answer.} A complete Lean proof of the rational identity under the prime assumption.
 
-\emph{Source task.} \pth{ntb_5a32ab19491895603fc1af22:whole:0}
+\emph{Task ID.} \pth{ntb_5a32ab19491895603fc1af22:whole:0}
 
 \item \textbf{Even modulus fails a totient divisibility}\label{qn:test:35}
 
@@ -2391,7 +2391,7 @@ Let $n\in\mathbb{N}$ be even with $n>2$. Prove $n\nmid(2^{\varphi(n)}-1)$, where
 
 \emph{Expected answer.} A complete Lean proof that the stated natural divisibility does not hold.
 
-\emph{Source task.} \pth{ntb_6be76276083ed05501bfa715:whole:0}
+\emph{Task ID.} \pth{ntb_6be76276083ed05501bfa715:whole:0}
 
 \item \textbf{Prime powers differ from a truncated difference}\label{qn:test:36}
 
@@ -2401,7 +2401,7 @@ Let $p,m,n\in\mathbb{N}$ with $p$ prime and assume $m\ge0\land n\ge0$. Prove $p^
 
 \emph{Review note.} The nonnegativity assumptions are explicit but already follow from the natural-number domains.
 
-\emph{Source task.} \pth{ntb_73b60c27b218a377c1d1c37e:whole:0}
+\emph{Task ID.} \pth{ntb_73b60c27b218a377c1d1c37e:whole:0}
 
 \item \textbf{Congruent exponents modulo a totient}\label{qn:test:37}
 
@@ -2409,7 +2409,7 @@ Let $a,b\in\mathbb{N}$ satisfy $a\equiv b\pmod{\varphi(125)}$. Prove $2^a\equiv2
 
 \emph{Expected answer.} A complete Lean proof of the power congruence under the exponent congruence assumption.
 
-\emph{Source task.} \pth{ntb_767e128f330effc40b628557:whole:0}
+\emph{Task ID.} \pth{ntb_767e128f330effc40b628557:whole:0}
 
 \item \textbf{Nondivisibility of a sum of squares}\label{qn:test:38}
 
@@ -2417,7 +2417,7 @@ Let $p\in\mathbb{N}$ be prime with $p\bmod4=3$, and let $a,b\in\mathbb{Z}$. Assu
 
 \emph{Expected answer.} A complete Lean proof of nondivisibility under all four assumptions.
 
-\emph{Source task.} \pth{ntb_771a85cbc730dded6e9f1fe8:whole:0}
+\emph{Task ID.} \pth{ntb_771a85cbc730dded6e9f1fe8:whole:0}
 
 \item \textbf{Residue class with two nonsquares}\label{qn:test:39}
 
@@ -2427,7 +2427,7 @@ For arbitrary $a,b\in\mathbb{Z}$, prove that $m\in\mathbb{N}$ and $c\in\mathbb{Z
 
 \emph{Review note.} Recorded intent warning: the residue class need not contain a prime, so the universal claim can be vacuous. No coprimality of c and m or prime existence is required.
 
-\emph{Source task.} \pth{ntb_78234cf56468fef0944a0a2a:whole:0}
+\emph{Task ID.} \pth{ntb_78234cf56468fef0944a0a2a:whole:0}
 
 \item \textbf{Repeated prime-power totient identity}\label{qn:test:40}
 
@@ -2435,9 +2435,9 @@ Let $p,k\in\mathbb{N}$ with $p$ prime and $k>0$. Prove $\varphi(p^k)=p^k-p^{k-1}
 
 \emph{Expected answer.} A complete Lean proof of the totient identity under both assumptions.
 
-\emph{Review note.} Recorded semantic overlap: TEST question 25 states the same prime-power totient identity.
+\emph{Review note.} Recorded semantic overlap: TEST theorem 25 states the same prime-power totient identity.
 
-\emph{Source task.} \pth{ntb_797a92fae369277d867f92aa:whole:0}
+\emph{Task ID.} \pth{ntb_797a92fae369277d867f92aa:whole:0}
 
 \item \textbf{Rational inequality for an even sequence sum}\label{qn:test:41}
 
@@ -2447,7 +2447,7 @@ Let $p\in\mathbb{N}$ be prime with $p\ne2$. Let $a:\mathbb{N}\to\mathbb{N}$ sati
 
 \emph{Review note.} The division and comparison are rational after casts; the sum has natural terms.
 
-\emph{Source task.} \pth{ntb_79908f21d3a04c4fdaa934ac:whole:0}
+\emph{Task ID.} \pth{ntb_79908f21d3a04c4fdaa934ac:whole:0}
 
 \item \textbf{Prime divisor of adjacent factorial sum}\label{qn:test:42}
 
@@ -2455,7 +2455,7 @@ Prove two claims about natural numbers. First, there exist $n>0$ and a prime $p$
 
 \emph{Expected answer.} Supply witnesses for the existence claim and prove the universal remainder bound. Both conjuncts require complete Lean proofs.
 
-\emph{Source task.} \pth{ntb_7a12343ef5f6b7715d2b8dd7:whole:0}
+\emph{Task ID.} \pth{ntb_7a12343ef5f6b7715d2b8dd7:whole:0}
 
 \item \textbf{Unequal powers for a nonprime exponent}\label{qn:test:43}
 
@@ -2463,7 +2463,7 @@ Let $n\in\mathbb N$ satisfy $1<n$ and assume $n$ is not prime. Prove $2^{n^2-n}\
 
 \emph{Expected answer.} Prove the stated inequality under both hypotheses.
 
-\emph{Source task.} \pth{ntb_7a8b6877ed0dbbf567a789ba:whole:0}
+\emph{Task ID.} \pth{ntb_7a8b6877ed0dbbf567a789ba:whole:0}
 
 \item \textbf{Maximum digit product under divisibility constraints}\label{qn:test:44}
 
@@ -2471,7 +2471,7 @@ For natural-number digits $A,B<10$ with $A\ge1$, impose divisibility of $100000A
 
 \emph{Expected answer.} Provide admissible digit witnesses attaining $42$ and prove the upper bound for every pair satisfying all digit and remainder conditions.
 
-\emph{Source task.} \pth{ntb_7b9304b912534907d37cabf6:whole:0}
+\emph{Task ID.} \pth{ntb_7b9304b912534907d37cabf6:whole:0}
 
 \item \textbf{Number of divisors of a prime}\label{qn:test:45}
 
@@ -2479,7 +2479,7 @@ Let $n\in\mathbb N$ be prime. Prove that its finite set of positive divisors has
 
 \emph{Expected answer.} Prove $\lvert\operatorname{divisors}(n)\rvert=2$.
 
-\emph{Source task.} \pth{ntb_7ed9af586fa024354709e2f9:whole:0}
+\emph{Task ID.} \pth{ntb_7ed9af586fa024354709e2f9:whole:0}
 
 \item \textbf{A power differs from its natural quotient}\label{qn:test:46}
 
@@ -2489,7 +2489,7 @@ Let $n\in\mathbb N$ satisfy $1<n$ and assume $n$ is even. Prove $2^n\ne\lfloor2^
 
 \emph{Review note.} The division is natural-number division, not rational division.
 
-\emph{Source task.} \pth{ntb_819c891a3cb42e3ed8f8c31c:whole:0}
+\emph{Task ID.} \pth{ntb_819c891a3cb42e3ed8f8c31c:whole:0}
 
 \item \textbf{Different prime-base powers after subtraction}\label{qn:test:47}
 
@@ -2497,7 +2497,7 @@ Let $p,n\in\mathbb N$. Assume $p$ is prime, $4<p$, $1<n$, and $n$ is not prime. 
 
 \emph{Expected answer.} Prove the inequality while retaining all four assumptions.
 
-\emph{Source task.} \pth{ntb_81a6446c304a5842e1b56484:whole:0}
+\emph{Task ID.} \pth{ntb_81a6446c304a5842e1b56484:whole:0}
 
 \item \textbf{Inverse of an assumed quadratic equivalence}\label{qn:test:48}
 
@@ -2507,7 +2507,7 @@ Let $n\in\mathbb N$ be positive and not prime. Assume $\sigma:\mathbb N\to\mathb
 
 \emph{Review note.} Existing review flags contradictory assumptions: a bijection must attain zero, whereas $x^2+2$ cannot. This is a source warning from manual review, not fresh Lean verification.
 
-\emph{Source task.} \pth{ntb_8a04bce03beb48fdc3862d35:whole:0}
+\emph{Task ID.} \pth{ntb_8a04bce03beb48fdc3862d35:whole:0}
 
 \item \textbf{Negation of a Jacobi sum identity}\label{qn:test:49}
 
@@ -2517,7 +2517,7 @@ Prove that the following identity does not hold for every natural prime $p$ with
 
 \emph{Review note.} Preserve the outer negation and the scope of the universal quantifier.
 
-\emph{Source task.} \pth{ntb_8da859b76deb65034cb08063:whole:0}
+\emph{Task ID.} \pth{ntb_8da859b76deb65034cb08063:whole:0}
 
 \item \textbf{A prime divisor-square sum is not fourteen}\label{qn:test:50}
 
@@ -2525,7 +2525,7 @@ Let $n\in\mathbb N$ be prime and assume $n\ne2$. Prove $\sum_{k\mid n,\ k>0}k^2\
 
 \emph{Expected answer.} Prove the inequality for the natural-number divisor sum.
 
-\emph{Source task.} \pth{ntb_8fa705e94721f2d74586f12b:whole:0}
+\emph{Task ID.} \pth{ntb_8fa705e94721f2d74586f12b:whole:0}
 
 \item \textbf{Bound on a sum of squared natural quotients}\label{qn:test:51}
 
@@ -2535,7 +2535,7 @@ Let $n\in\mathbb N$ satisfy $1<n\le100$ and $3\mid n$. Prove $\sum_{k=1}^{n}(2\l
 
 \emph{Review note.} The summands contain natural-number division, not rational fractions.
 
-\emph{Source task.} \pth{ntb_947d302024239a0c66ed6c03:whole:0}
+\emph{Task ID.} \pth{ntb_947d302024239a0c66ed6c03:whole:0}
 
 \item \textbf{Equivalence of a remainder and divisibility claim}\label{qn:test:52}
 
@@ -2545,7 +2545,7 @@ Let $a\in\mathbb N$ be prime with $2<a$. Prove $a^{a-1}\bmod a\ne0\ \Longleftrig
 
 \emph{Review note.} An equivalence does not assert that either side is true.
 
-\emph{Source task.} \pth{ntb_966e922f641f91f7ef67f209:whole:0}
+\emph{Task ID.} \pth{ntb_966e922f641f91f7ef67f209:whole:0}
 
 \item \textbf{Prime square divisibility equivalence}\label{qn:test:53}
 
@@ -2555,7 +2555,7 @@ Let $a\in\mathbb N$ be prime with $2<a$. Prove $a\mid a^2+1\ \Longleftrightarrow
 
 \emph{Review note.} An equivalence does not assert that either side is true.
 
-\emph{Source task.} \pth{ntb_a0396886f1b22e0a21fd7e72:whole:0}
+\emph{Task ID.} \pth{ntb_a0396886f1b22e0a21fd7e72:whole:0}
 
 \item \textbf{Least totient witness with two prime factors}\label{qn:test:54}
 
@@ -2565,7 +2565,7 @@ Prove that there exists a positive $n\in\mathbb N$ of the form $n=2^x3^y$ for po
 
 \emph{Review note.} The factor list is converted to a finite set before summation, so multiplicities are removed. Division is natural-number division.
 
-\emph{Source task.} \pth{ntb_a53c82259ef05c3220f305af:whole:0}
+\emph{Task ID.} \pth{ntb_a53c82259ef05c3220f305af:whole:0}
 
 \item \textbf{One is a least positive totient divisibility exponent}\label{qn:test:55}
 
@@ -2573,7 +2573,7 @@ Prove $1>0$ and $2\cdot1\mid\varphi(2^1+3^1)$. Also prove that every positive na
 
 \emph{Expected answer.} Prove the two concrete claims and the universally quantified lower bound.
 
-\emph{Source task.} \pth{ntb_a77aff91cab6f59d7fe10c04:whole:0}
+\emph{Task ID.} \pth{ntb_a77aff91cab6f59d7fe10c04:whole:0}
 
 \item \textbf{Nonzero residue power equivalence}\label{qn:test:56}
 
@@ -2581,7 +2581,7 @@ Let $n,a\in\mathbb N$. Assume $1<n$, $2<n$, and $a\ne0$. Prove $(a\bmod n)^{n-1}
 
 \emph{Expected answer.} Prove both directions while retaining both stated bounds on $n$ and the assumption on $a$.
 
-\emph{Source task.} \pth{ntb_a8321a47269f6f807338a3be:whole:0}
+\emph{Task ID.} \pth{ntb_a8321a47269f6f807338a3be:whole:0}
 
 \item \textbf{Zero solutions for a nonsquare coefficient}\label{qn:test:57}
 
@@ -2589,7 +2589,7 @@ Let $p\in\mathbb N$ be prime and $a\in\mathbb Z$. Assume the integer $p$ does no
 
 \emph{Expected answer.} Prove the universal implication and both zero conclusions in $\mathbb Z/p\mathbb Z$.
 
-\emph{Source task.} \pth{ntb_a980417194ef95918cb0bf7d:whole:0}
+\emph{Task ID.} \pth{ntb_a980417194ef95918cb0bf7d:whole:0}
 
 \item \textbf{Identify a multiple from its divisor sum}\label{qn:test:58}
 
@@ -2597,7 +2597,7 @@ Let $x\in\mathbb N$. Assume the sum of its positive divisors is $24$ and $15\mid
 
 \emph{Expected answer.} Prove the exact value of $x$ from both hypotheses.
 
-\emph{Source task.} \pth{ntb_add27f3592c556b6b88b8c09:whole:0}
+\emph{Task ID.} \pth{ntb_add27f3592c556b6b88b8c09:whole:0}
 
 \item \textbf{Congruence equivalence under a negative-square premise}\label{qn:test:59}
 
@@ -2607,7 +2607,7 @@ Let $a,b,p\in\mathbb N$, with $p$ prime. Assume there exists an integer $x$ with
 
 \emph{Review note.} Existing review flags contradictory assumptions: an integer square cannot equal the negative of a natural prime. The initial state reveals that implicit $a,b$ are natural numbers. The contradiction warning is manual, not fresh Lean verification.
 
-\emph{Source task.} \pth{ntb_b23977f4ad063101726eb32a:whole:0}
+\emph{Task ID.} \pth{ntb_b23977f4ad063101726eb32a:whole:0}
 
 \item \textbf{Square-sum inequality for a constrained integer sequence}\label{qn:test:60}
 
@@ -2617,7 +2617,7 @@ Let $n\in\mathbb N$ satisfy $1<n$ and $1<n$, and assume $n$ is not prime. Let $a
 
 \emph{Review note.} Existing intent review notes that the sequence constraint forces every $a(k)$ to zero when $1<n$. Division is integer division. The source warning is manual, not fresh Lean verification.
 
-\emph{Source task.} \pth{ntb_b6e5df954bbe811b2595e721:whole:0}
+\emph{Task ID.} \pth{ntb_b6e5df954bbe811b2595e721:whole:0}
 
 \item \textbf{Negation of a Jacobi residue characterization}\label{qn:test:61}
 
@@ -2627,7 +2627,7 @@ Prove it is not true for every natural prime $p$ that $\left(\frac{-75}{p}\right
 
 \emph{Review note.} Preserve the outer negation and its scope over all primes.
 
-\emph{Source task.} \pth{ntb_b967b0cf42b2c29b96f24210:whole:0}
+\emph{Task ID.} \pth{ntb_b967b0cf42b2c29b96f24210:whole:0}
 
 \item \textbf{Sum bound from least common multiple and gcd}\label{qn:test:62}
 
@@ -2635,7 +2635,7 @@ Let $a,b\in\mathbb N$ be positive. Assume $\operatorname{lcm}(a,b)=140$ and $\gc
 
 \emph{Expected answer.} Prove the upper bound using the positivity, least-common-multiple, and greatest-common-divisor hypotheses.
 
-\emph{Source task.} \pth{ntb_ba0da67564e4aee3b28f8bc4:whole:0}
+\emph{Task ID.} \pth{ntb_ba0da67564e4aee3b28f8bc4:whole:0}
 
 \item \textbf{A nonsquare product has a nonsquare factor}\label{qn:test:63}
 
@@ -2643,7 +2643,7 @@ Let $p\in\mathbb N$ be prime and odd. Assume $39$ is not a square in $\mathbb Z/
 
 \emph{Expected answer.} Prove the disjunction of the two nonsquare claims in the same residue ring.
 
-\emph{Source task.} \pth{ntb_bb24d44ab7f1b559a280beda:whole:0}
+\emph{Task ID.} \pth{ntb_bb24d44ab7f1b559a280beda:whole:0}
 
 \item \textbf{Finite-set sum under an interval equivalence}\label{qn:test:64}
 
@@ -2653,7 +2653,7 @@ Let $S$ be a finite set of natural numbers. Assume that for every natural $p$, t
 
 \emph{Review note.} Existing review flags contradictory assumptions: substituting $p=4$ forces $4$ to be prime. This does not encode the usual set of primes at most $10$. The warning is manual, not fresh Lean verification.
 
-\emph{Source task.} \pth{ntb_bb8109462d7df8e0ab8a17eb:whole:0}
+\emph{Task ID.} \pth{ntb_bb8109462d7df8e0ab8a17eb:whole:0}
 
 \item \textbf{Least square satisfying an iterated divisor sum}\label{qn:test:65}
 
@@ -2663,7 +2663,7 @@ For positive natural $u$, write $\sigma(u)$ for the sum of its positive divisors
 
 \emph{Review note.} No positivity condition is imposed on $k$ or $k'$. The oddness condition is the natural remainder equation $m\bmod2=1$.
 
-\emph{Source task.} \pth{ntb_beedbd080221783debb0b0ff:whole:0}
+\emph{Task ID.} \pth{ntb_beedbd080221783debb0b0ff:whole:0}
 
 \item \textbf{Totient congruence and positivity for a coprime base}\label{qn:test:66}
 
@@ -2671,7 +2671,7 @@ Let $p,a\in\mathbb N$, with $p$ prime and $\gcd(a,p)=1$. Prove $a^{\varphi(p)}\e
 
 \emph{Expected answer.} Prove all three conjuncts, including nonvanishing and positivity.
 
-\emph{Source task.} \pth{ntb_bf724e76836b4276f40bbe4d:whole:0}
+\emph{Task ID.} \pth{ntb_bf724e76836b4276f40bbe4d:whole:0}
 
 \item \textbf{Divisor sum bound for a perfect nonprime}\label{qn:test:67}
 
@@ -2681,7 +2681,7 @@ Let $n\in\mathbb N$ satisfy $1<n$ and assume $n$ is not prime. Assume its positi
 
 \emph{Review note.} The quotient on the right is natural-number division.
 
-\emph{Source task.} \pth{ntb_c0570ab949614d32f731fda0:whole:0}
+\emph{Task ID.} \pth{ntb_c0570ab949614d32f731fda0:whole:0}
 
 \item \textbf{Power-product congruence modulo four}\label{qn:test:68}
 
@@ -2689,7 +2689,7 @@ Let $a,b,k\in\mathbb N$. Assume $a\bmod2=1$ or $a\bmod2=0$, assume the correspon
 
 \emph{Expected answer.} Prove the congruence while preserving all three disjunctive hypotheses.
 
-\emph{Source task.} \pth{ntb_c150b80beff0c40596c26203:whole:0}
+\emph{Task ID.} \pth{ntb_c150b80beff0c40596c26203:whole:0}
 
 \item \textbf{Base-seven digit length of a power minus one}\label{qn:test:69}
 
@@ -2697,7 +2697,7 @@ Let $k\in\mathbb N$ satisfy $k\ge1$. Prove that the base-$7$ digit list of $7^k-
 
 \emph{Expected answer.} Prove the exact digit-list length equality.
 
-\emph{Source task.} \pth{ntb_c40ed915e8bcab761ac71f09:whole:0}
+\emph{Task ID.} \pth{ntb_c40ed915e8bcab761ac71f09:whole:0}
 
 \item \textbf{Negation of a squarefree counting identity}\label{qn:test:70}
 
@@ -2707,7 +2707,7 @@ Prove that the following equality does not hold for every positive natural $n$. 
 
 \emph{Review note.} The left-hand filter does not require $k\mid n$. Its quotient is natural-number division, whereas the right-hand quotient is integer division. Preserve the outer negation.
 
-\emph{Source task.} \pth{ntb_c881044f36da98a364d84d31:whole:0}
+\emph{Task ID.} \pth{ntb_c881044f36da98a364d84d31:whole:0}
 
 \item \textbf{Bound for a totient sum over divisors of a prime minus one}\label{qn:test:71}
 
@@ -2717,7 +2717,7 @@ Let $p\in\mathbb N$ be prime, and let $n\in\mathbb N$ satisfy $n\ne0$. Prove $\s
 
 \emph{Review note.} The parameter $n$ and its hypothesis do not occur in the target expression.
 
-\emph{Source task.} \pth{ntb_cb9923d415db6eaf0b10d6bd:whole:0}
+\emph{Task ID.} \pth{ntb_cb9923d415db6eaf0b10d6bd:whole:0}
 
 \item \textbf{Odd totient of a power of two}\label{qn:test:72}
 
@@ -2725,7 +2725,7 @@ For every $k\in\mathbb N$, prove that $\varphi(2^k)$ is odd if and only if $k\le
 
 \emph{Expected answer.} Prove both directions, including the case $k=0$.
 
-\emph{Source task.} \pth{ntb_d703b92567dd399885123b13:whole:0}
+\emph{Task ID.} \pth{ntb_d703b92567dd399885123b13:whole:0}
 
 \item \textbf{Prime conclusion under a universal quadratic bound}\label{qn:test:73}
 
@@ -2735,7 +2735,7 @@ Let $p\in\mathbb N$ be prime with $p\equiv1\pmod2$ and $4<p$. Assume $2x^2\le p^
 
 \emph{Review note.} Existing review flags contradictory assumptions: the universal bound at $x=p$ conflicts with $4<p$. The warning is manual, not fresh Lean verification.
 
-\emph{Source task.} \pth{ntb_e17448422e4f2cbf449a13be:whole:0}
+\emph{Task ID.} \pth{ntb_e17448422e4f2cbf449a13be:whole:0}
 
 \item \textbf{Bound for a square with a square decimal prefix}\label{qn:test:74}
 
@@ -2745,7 +2745,7 @@ For every $N\in\mathbb N$, assume $N$ is a square, $N\bmod10\ne0$, and $\lfloor 
 
 \emph{Review note.} The quotient $N/100$ is natural-number division, so it removes the final two decimal digits.
 
-\emph{Source task.} \pth{ntb_e5cc8ba57ce19eaf086ba3dd:whole:0}
+\emph{Task ID.} \pth{ntb_e5cc8ba57ce19eaf086ba3dd:whole:0}
 
 \item \textbf{Divisor counts for a prime and its square}\label{qn:test:75}
 
@@ -2753,7 +2753,7 @@ For every natural prime $p$, prove that $p$ has exactly two positive divisors an
 
 \emph{Expected answer.} Prove both cardinality equalities for the corresponding finite divisor sets.
 
-\emph{Source task.} \pth{ntb_e5f06a50a73ffcbedc223452:whole:0}
+\emph{Task ID.} \pth{ntb_e5f06a50a73ffcbedc223452:whole:0}
 
 \item \textbf{Integer witnesses for reduced rational fractions}\label{qn:test:76}
 
@@ -2763,7 +2763,7 @@ Find integers $a,b,c,d$ such that $a,b,c\ge0$, $\gcd(a,b)=1$, $\gcd(c,d)=1$, $b\
 
 \emph{Review note.} The source does not require $d\ge0$. Division is rational after casting the integer numerators and denominators.
 
-\emph{Source task.} \pth{ntb_f098a3f400e5643c0856230f:whole:0}
+\emph{Task ID.} \pth{ntb_f098a3f400e5643c0856230f:whole:0}
 
 \item \textbf{Transfer of nonsquare residues through two congruences}\label{qn:test:77}
 
@@ -2771,9 +2771,9 @@ Let $p,q\in\mathbb N$ be distinct odd primes, and let $a,b,c\in\mathbb Z$. Assum
 
 \emph{Expected answer.} Prove the two nonsquare conclusions, one modulo $p$ and one modulo $q$.
 
-\emph{Review note.} The displayed initial state suppresses the two residue moduli; the header distinguishes them.
+\emph{Review note.} The displayed initial state suppresses the two residue moduli; the statement distinguishes them.
 
-\emph{Source task.} \pth{ntb_f0ed5c021d48de136cceb5c7:whole:0}
+\emph{Task ID.} \pth{ntb_f0ed5c021d48de136cceb5c7:whole:0}
 
 \item \textbf{Power inequality from square divisibility}\label{qn:test:78}
 
@@ -2781,7 +2781,7 @@ Let $a,b\in\mathbb Z$ satisfy $1<a$ and $1<b$, and let $n\in\mathbb N$. Assume $
 
 \emph{Expected answer.} Prove the integer inequality for every natural exponent $n$, including zero.
 
-\emph{Source task.} \pth{ntb_f4cbc48f0a66be7e4c5910e7:whole:0}
+\emph{Task ID.} \pth{ntb_f4cbc48f0a66be7e4c5910e7:whole:0}
 
 \item \textbf{Least positive multiple with digit sum twelve}\label{qn:test:79}
 
@@ -2789,7 +2789,7 @@ Prove that there exists $s\in\mathbb N$ with $s=48$, $s>0$, decimal digit sum $1
 
 \emph{Expected answer.} Supply $s$ and prove its fixed value, positivity, digit sum, divisibility, and universal minimality.
 
-\emph{Source task.} \pth{ntb_f571b2ea2148e532749d00e3:whole:0}
+\emph{Task ID.} \pth{ntb_f571b2ea2148e532749d00e3:whole:0}
 
 \item \textbf{Prime divisors and Jacobi symbol at one hundred sixty-three}\label{qn:test:80}
 
@@ -2799,7 +2799,7 @@ Prove two claims. For every natural $p$, if $p$ is prime, $p\mid163$, and $163$ 
 
 \emph{Review note.} Primality of $163$ is an antecedent in the first conjunct; the statement does not separately request its proof.
 
-\emph{Source task.} \pth{ntb_f61adf6ee5fe0552363aedb5:whole:0}
+\emph{Task ID.} \pth{ntb_f61adf6ee5fe0552363aedb5:whole:0}
 
 \item \textbf{Integer gcd with a prime}\label{qn:test:81}
 
@@ -2807,7 +2807,7 @@ Let $p\in\mathbb N$ be prime and $k\in\mathbb Z$. Let $g$ be the nonnegative nat
 
 \emph{Expected answer.} Prove one of the two stated gcd equalities with the source casts respected.
 
-\emph{Source task.} \pth{ntb_fc84491591d39fa8112b24ae:whole:0}
+\emph{Task ID.} \pth{ntb_fc84491591d39fa8112b24ae:whole:0}
 
 \item \textbf{Fixed square-divisor biconditional}\label{qn:test:82}
 
@@ -2817,7 +2817,7 @@ Prove that there exists a natural $k$ with $2024=k^2$ if and only if every natur
 
 \emph{Review note.} The goal does not assert either side separately and is not a universally quantified characterization for arbitrary base numbers.
 
-\emph{Source task.} \pth{ntb_fdb9aa58f002498f2660c655:whole:0}
+\emph{Task ID.} \pth{ntb_fdb9aa58f002498f2660c655:whole:0}
 
 \end{enumerate}
 

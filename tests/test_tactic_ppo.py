@@ -73,6 +73,16 @@ class TacticPPO(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'unknown'):
             driver.ordered_prompt_rows(tasks, rows, 4, ['a', 'b', 'x', 'a'])
 
+    def test_censored_episode_keeps_its_status_for_the_ppo_reward_boundary(self):
+        driver = self.driver()
+        result = dict(status='replay_crash', accepted=False, censored=True, done=True, reward=0.0)
+        env = SimpleNamespace(reset=lambda: 'goal', step=lambda *_: result, close=lambda: None)
+        with patch.object(driver, 'LeanEpisode', return_value=env):
+            verdict = driver.one_action_score(SimpleNamespace(output=Path('/unused')),
+                {'a': dict(state='goal')}, ['a'], ['trivial'], None)[2][0]
+        self.assertTrue(verdict.get('censored'))
+        self.assertEqual(verdict['status'], 'replay_crash')
+
     def test_main_preparation_failure_closes_context(self):
         driver = self.driver()
         with TemporaryDirectory() as directory:

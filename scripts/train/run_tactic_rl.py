@@ -12,6 +12,10 @@ The opt-in error_feedback_v1 mode replaces that bonus with diagnostic penalties:
 -0.2 for format, syntax, forbidden code or unresolved names; -0.1 for type or
 tactic failures; zero for valid unfinished steps and unclassified/infra errors.
 These weights and diagnostic classes are heuristic, not proof-progress scores.
+In environment v2 the same mode charges one penalty per action, because errors do
+not end a v2 episode: unchanged goals, repeated states and unclassified Lean
+rejections also cost -0.1, so repeating an action that changes nothing cannot
+avoid the penalties. Only an accepted complete proof earns positive reward.
 Repeated displayed states stop an episode. An optional single error repair uses
 the last verified state and a bounded Lean diagnostic, within the same caps.
 An action is one bounded tactic block, possibly containing nested tactics.
@@ -33,8 +37,9 @@ actions and invalid backtracks. Each action uses one step. In the default
 harness-backtrack arm, once harness_backtrack_after distinct tactics fail at a
 state, the harness reverts the last step and records it as failed at the parent.
 Closed goals end the episode with the full-proof replay; a Lean timeout ends it
-with reward 0; a REPL crash censors the group. Reward is terminal and
-Lean-verified only. Returns use the configured discount; supplied lines earn
+with reward 0; a REPL crash censors the group. The default reward is terminal
+and Lean-verified only; error_feedback_v1 adds the heuristic per-action penalties
+above. Returns use the configured discount; supplied lines earn
 full reward but stay visible and labelled, and every record keeps the task kind.
 
 Peak: P x 16 bytes for FP32 weights, gradients and Adam moments (<8 GiB for
@@ -45,23 +50,25 @@ No dataset/proof/model artifacts belong on the Mac. Managed runner must upload
 incremental JSONL records and checkpoints and enforce the resource/wall cap.
 """
 import argparse
+from collections import Counter
 from contextlib import nullcontext
+import copy
 import hashlib
 import importlib.metadata
 import json
 from pathlib import Path
-import random
 import re
 import shutil
 import signal
 import subprocess
 import sys
 import textwrap
+import threading
 import time
 import zipfile
 
 sys.path[:0] = [str(Path(__file__).resolve().parents[1] / d) for d in ('train', 'data', 'eval', 'audit')]
-from bench_lean_verifier import Repl, first_error, repl_context, repl_output, split_prefix, verify_group  # noqa: E402
+from bench_lean_verifier import Repl, VerifierSetupError, first_error, repl_context, repl_output, split_prefix, verify_group  # noqa: E402
 from classify_proof_failures import classify as classify_failure  # noqa: E402
 from prepare_grpo_pilot import load_checker  # noqa: E402
 from probe_nt_pool import header, lean_unit  # noqa: E402
@@ -70,15 +77,95 @@ from replay_training_proofs import load, proof_body, question  # noqa: E402
 from run_lean_grpo import task_units  # noqa: E402
 from search_tactics import STEP  # noqa: E402
 from verify_external_proofs import HEADER  # noqa: E402
+from rl_components import LeaveOneOutObjective, PolicyGradientUpdater, TaskCurriculum, TaskSchedule, component_fingerprints  # noqa: E402
+from rl_components.proofs import tactic_block  # noqa: E402
+
+
+def generation_record(ids, eos_token_id, pad_token_id):
+    """Keep EOS in the action likelihood; distinguish retained tokens from decode work."""
+    stops = eos_token_id if isinstance(eos_token_id, list) else [eos_token_id]
+    end = next((i + 1 for i, token in enumerate(ids) if token in stops), len(ids))
+    action = ids[:end]
+    return dict(raw_response_ids=ids, action_ids=action, generated_tokens=len(ids),
+                retained_tokens=len(action), pad_before_eos=any(
+                    token == pad_token_id and token not in stops for token in action))
+
+
+def stop_trimmed(ids, stops):
+    """Cut batch padding after the first stop token; one unpadded sample is unchanged."""
+    end = next((i + 1 for i, token in enumerate(ids) if token in stops), len(ids))
+    return ids[:end]
+
+
+def pad_left(prompts, pad_id):
+    """Left-pad token lists for one batched generate call; the attention mask hides every pad."""
+    width = max(len(p) for p in prompts)
+    return ([[pad_id] * (width - len(p)) + list(p) for p in prompts],
+            [[0] * (width - len(p)) + [1] * len(p) for p in prompts], width)
+
+
+def vllm_action_ids(completion, stops):
+    """Token ids of one vLLM completion with its terminating stop token kept, as the HF path keeps it."""
+    ids = list(completion.token_ids)
+    if completion.finish_reason == 'stop' and (not ids or ids[-1] not in stops):
+        reason = completion.stop_reason
+        ids.append(reason if isinstance(reason, int) and reason in stops else stops[0])
+    return ids
+
+
+def step_seed(seed, task_id, visit, sample, step):
+    """Reproducible sampling stream per (task visit, sample, step) for lockstep rollouts."""
+    return int(hashlib.sha256(f'{seed}|{task_id}|{visit}|{sample}|{step}'.encode()).hexdigest()[:8], 16)
+
+
+class HFGenerator:
+    """Batched sampling from the live training model: several prompts, n samples each, one generate call.
+
+    Uses the trainer's untruncated temperature-1 policy. Rows share one random stream seeded from the
+    batch's per-sample seeds, so a sample is reproducible for the same active set, not for any batch."""
+
+    def __init__(self, model, tokenizer, torch, autocast, device, stops, max_new_tokens, set_seed):
+        self.model, self.tokenizer, self.torch, self.autocast, self.device = model, tokenizer, torch, autocast, device
+        self.stops, self.max_new_tokens, self.set_seed = stops, max_new_tokens, set_seed
+
+    def __call__(self, prompts, n, seeds):
+        torch = self.torch
+        self.set_seed(int(hashlib.sha256(repr(list(seeds)).encode()).hexdigest()[:8], 16))
+        ids, mask, width = pad_left(prompts, self.tokenizer.pad_token_id)
+        with torch.no_grad(), self.autocast():
+            rows = self.model.generate(
+                input_ids=torch.tensor(ids, device=self.device), attention_mask=torch.tensor(mask, device=self.device),
+                do_sample=True, temperature=1.0, top_p=1.0, top_k=0, repetition_penalty=1.0,
+                max_new_tokens=self.max_new_tokens, pad_token_id=self.tokenizer.eos_token_id,
+                num_return_sequences=n)[:, width:].tolist()
+        return [[generation_record(stop_trimmed(rows[i * n + j], self.stops), self.stops, self.tokenizer.pad_token_id)
+                 for j in range(n)] for i in range(len(prompts))]
+
+
+class VLLMGenerator:
+    """Evaluation-only sampling through vLLM with the same untruncated temperature-1 policy.
+
+    Each prompt carries its own request seed, so a sample does not depend on the rest of the batch.
+    vLLM samples in bfloat16; check_rollout_backends.py must pass before its results count."""
+
+    def __init__(self, model_path, stops, pad_id, max_new_tokens, memory_fraction, seed):
+        from vllm import LLM
+        self.llm = LLM(model=str(model_path), dtype='bfloat16', seed=seed, gpu_memory_utilization=memory_fraction,
+                       enable_prefix_caching=True)
+        self.stops, self.pad_id, self.max_new_tokens = stops, pad_id, max_new_tokens
+
+    def __call__(self, prompts, n, seeds):
+        from vllm import SamplingParams
+        params = [SamplingParams(n=n, temperature=1.0, top_p=1.0, top_k=-1, repetition_penalty=1.0, seed=s,
+                                 max_tokens=self.max_new_tokens, stop_token_ids=list(self.stops), detokenize=False)
+                  for s in seeds]
+        outputs = self.llm.generate([dict(prompt_token_ids=list(p)) for p in prompts], params, use_tqdm=False)
+        return [[generation_record(stop_trimmed(vllm_action_ids(c, self.stops), self.stops), self.stops, self.pad_id)
+                 for c in output.outputs] for output in outputs]
 
 
 def state_key(goals):
     return tuple(' '.join(goal.split()) for goal in goals)
-
-
-def tactic_block(text):
-    # The pinned REPL parses one tactic, rather than a bare tactic sequence.
-    return 'first |\n' + textwrap.indent(textwrap.dedent(text).strip(), '  ')
 
 
 def close_repl(repl):
@@ -278,6 +365,23 @@ def local_feedback(result):
     return dict(result, reward=reward, reward_component=component)
 
 
+def v2_feedback(result):
+    """error_feedback_v1 for environment v2: one penalty per action, positive reward only for an accepted proof.
+
+    Format, syntax, forbidden code and unresolved names cost -0.2; type and tactic failures, unchanged goals,
+    repeated states, unclassified Lean rejections and rejected replays cost -0.1. Valid steps, timeouts, crashes
+    and prompt-cap endings cost nothing. A partial action is scored by the failure that stopped it."""
+    kind = result.get('failure', result['status'])
+    if kind in ('no_progress', 'cycle'):
+        return dict(result, reward=-0.1, reward_component=kind)
+    if kind == 'invalid_backtrack':
+        return dict(result, reward=-0.2, reward_component=kind)
+    scored = local_feedback(dict(result, status=kind if kind == 'rejected' else result['status']))
+    if kind == 'rejected' and not scored['reward']:
+        scored = dict(scored, reward=-0.1)
+    return dict(scored, status=result['status'])
+
+
 def bound_state(result, prompt_tokens, maximum):
     if not result['done'] and prompt_tokens > maximum:
         return dict(result, status='prompt_cap', transition_status=result['status'], done=True)
@@ -301,27 +405,17 @@ def advantages(rewards, gamma=1.0):
     Step t gets sum_{k>=t} gamma^k r_k minus the other trajectories' mean discounted return from the
     start, so both terms are measured from step 0. This is the exact gradient of the discounted
     objective; groups with equal returns give zero advantage. gamma = 1 reproduces the old values."""
-    if len(rewards) < 2:
-        raise ValueError('Leave-one-out requires at least two trajectories')
-    totals = [sum(reward * gamma ** k for k, reward in enumerate(row)) for row in rewards]
-    result = []
-    for i, row in enumerate(rewards):
-        baseline = sum(totals[:i] + totals[i + 1:]) / (len(rewards) - 1)
-        future, values = 0.0, []
-        for k in range(len(row) - 1, -1, -1):
-            future += row[k] * gamma ** k
-            values.append(future - baseline)
-        result.append(list(reversed(values)))
-    return result
+    return LeaveOneOutObjective(gamma).advantages(rewards)
 
 
 def training_tasks(tasks, pool, excluded, max_remaining):
-    # Validate every supplied row before curriculum filtering can hide a leak.
-    task_units(tasks, pool)
-    if any(t['name'] in excluded for t in tasks):
-        raise ValueError('Training input contains excluded names')
-    return [t for t in tasks if t['kind'] == 'whole' or
-            (t['kind'] == 'prefix_top' and t['lines_remaining'] <= max_remaining)]
+    return TaskCurriculum(pool, excluded, max_remaining, validate_units=task_units).training(tasks)
+
+
+def assessment_tasks(tasks, pool, excluded, max_remaining, split='train'):
+    if split == 'train':
+        return training_tasks(tasks, pool, excluded, max_remaining)
+    return TaskCurriculum(pool, excluded, max_remaining, validate_units=task_units).assessment(tasks, split)
 
 
 def bank_tasks(bank, rows, excluded_files, eval_spans):
@@ -361,40 +455,71 @@ def evaluation_tasks(pool, names, dev):
 
 def task_order(tasks, seed):
     """Equal root exposure for whole and assisted tasks, shuffled within each kind."""
-    rng = random.Random(seed)
-    kinds = sorted({t['kind'] for t in tasks})
-    banks = {k: sorted((t for t in tasks if t['kind'] == k), key=lambda t: t['task_id']) for k in kinds}
-    positions = dict.fromkeys(kinds, 0)
-    for bank in banks.values():
-        rng.shuffle(bank)
-    while True:
-        for kind in kinds:
-            position = positions[kind]
-            yield banks[kind][position]
-            positions[kind] += 1
-            if positions[kind] == len(banks[kind]):
-                rng.shuffle(banks[kind])
-                positions[kind] = 0
+    return TaskSchedule(tasks).balanced(seed)
 
 
 def scheduled_tasks(tasks, order, max_groups):
     """Consume a frozen schedule exactly; repeats specify explicit exposure."""
-    by_id = {task['task_id']: task for task in tasks}
-    if len(by_id) != len(tasks):
-        raise ValueError('Task bank contains duplicate task IDs')
-    if not isinstance(order, list) or len(order) != max_groups or not order:
-        raise ValueError('Task schedule must contain exactly max_groups entries')
-    if any(not isinstance(task_id, str) or task_id not in by_id for task_id in order):
-        raise ValueError('Task schedule contains an unknown task ID')
-    return iter([by_id[task_id] for task_id in order])
+    return TaskSchedule(tasks).frozen(order, max_groups)
 
 
-def execution_mode(dev_evaluation, assessment_only):
+def pass_rate_filter(tasks, spec):
+    """Keep training tasks whose measured pass rate lies in (min_exclusive, max_inclusive].
+
+    Rates come from steps.jsonl of a completed or capped training-state assessment, so no DEV or held-out
+    outcome selects training tasks. Only complete groups are recorded; a task without a measured rate is dropped.
+    """
+    source = Path(spec['pass_rates_from'])
+    run = json.loads((source / 'run.json').read_text())
+    if run.get('mode') != 'training_state_assessment' or run.get('status') not in ('completed', 'capped'):
+        raise ValueError('Pass rates must come from a completed or capped training-state assessment run')
+    accepted, attempts = Counter(), Counter()
+    with (source / 'steps.jsonl').open() as stream:
+        for line in stream:
+            row = json.loads(line)
+            if row.get('status') == 'censored':
+                continue
+            if row['task_id'].startswith('dev:') or any(v not in (0, 1) for v in row['returns']):
+                raise ValueError('Pass rates need training tasks with terminal 0/1 returns')
+            accepted[row['task_id']] += sum(row['returns'])
+            attempts[row['task_id']] += len(row['returns'])
+    kept, dropped = [], Counter()
+    for task in tasks:
+        n = attempts[task['task_id']]
+        rate = accepted[task['task_id']] / n if n else None
+        if rate is None:
+            dropped['unmeasured'] += 1
+        elif rate <= spec['min_exclusive']:
+            dropped['at_or_below_min'] += 1
+        elif rate > spec['max_inclusive']:
+            dropped['above_max'] += 1
+        else:
+            kept.append(task)
+    if not kept:
+        raise ValueError('The pass-rate filter keeps no training task')
+    return kept, dict(spec, steps_sha256=file_sha256(source / 'steps.jsonl'), kept=len(kept), dropped=dict(dropped))
+
+
+def filter_schedule(schedule, kept_ids):
+    """Drop filtered tasks from a frozen order; equal multiplicities across arms stay equal."""
+    filtered = [task_id for task_id in schedule if task_id in kept_ids]
+    if not filtered:
+        raise ValueError('The pass-rate filter removes every scheduled group')
+    return filtered
+
+
+def execution_mode(dev_evaluation, assessment_only, assessment_split='train'):
+    if assessment_split not in ('train', 'validation', 'test'):
+        raise ValueError('Unknown assessment split')
+    if assessment_split != 'train' and not assessment_only:
+        raise ValueError('A non-training split requires assessment-only mode')
     if dev_evaluation and assessment_only:
         raise ValueError('Training-state assessment cannot be combined with DEV evaluation')
     if dev_evaluation:
         return 'DEV_evaluation'
-    return 'training_state_assessment' if assessment_only else 'training'
+    if assessment_only:
+        return 'training_state_assessment' if assessment_split == 'train' else assessment_split + '_assessment'
+    return 'training'
 
 
 class BudgetReached(Exception):
@@ -402,10 +527,11 @@ class BudgetReached(Exception):
 
 
 def render_observation(task, shown, goals, last_error, failed, remaining, max_tactics=4,
-                       policy_backtrack=False, omit=0):
+                       policy_backtrack=False, omit=0, premises=None):
     """The one v2 observation renderer, shared by RL, evaluation and SFT data builders.
 
-    Every section is always present, so SFT rows from verified proofs show the same template."""
+    Every section is always present, so SFT rows from verified proofs show the same template.
+    premises=None omits the retrieved-lemma section; a list (even empty) shows it."""
     head = task['header'].rstrip()
     head = head if head.endswith(':= by') else head + ' := by'
     if task.get('kind') == 'bank':
@@ -423,17 +549,54 @@ def render_observation(task, shown, goals, last_error, failed, remaining, max_ta
              '/- last action result:\n' + (last_error or 'none') + '\n-/',
              '/- tactics that already failed here:\n' + ('\n'.join('- ' + f[:200] for f in failed[-8:]) or 'none') + '\n-/',
              f'/- actions remaining: {remaining} -/']
+    if premises is not None:
+        notes.insert(1, '/- library lemmas that may help:\n' + ('\n'.join('- ' + p for p in premises) or 'none') + '\n-/')
     instruction = INSTRUCTION_V2.format(n=max_tactics) + (BACKTRACK_V2 if policy_backtrack else '')
     return instruction + '\n\n```lean\n' + '\n'.join(lines + [textwrap.indent(n, '  ') for n in notes]) + '\n```'
 
 
+def anonymous_header(header):
+    """Return (universe command, nonrec example header) without a recursive target binding.
+
+    Put the universe command before any scoped declaration prefix (for example, ``open Nat in``).
+    Keep scoped commands, but drop declaration attributes/modifiers. The signature stays unchanged.
+    """
+    _, code = lex_lines(header.splitlines())
+    ident = r'(?:«[^»]*»|[^\s.:({\[]+)'
+    declaration = re.search(r'\b(?:theorem|lemma)\s+' + ident + r'(?:\.' + ident + r')*'
+                            r'(?:\.\{([^}]*)\})?', code)
+    if declaration is None:
+        raise ValueError('Expected a named theorem or lemma header')
+    universes = declaration.group(1)
+    command = 'universe ' + ' '.join(universes.replace(',', ' ').split()) + '\n' if universes else ''
+    prefix = code[:declaration.start()]
+    while re.search(r'\b(?:private|protected|noncomputable|nonrec)\s*$', prefix):
+        prefix = re.sub(r'\b(?:private|protected|noncomputable|nonrec)\s*$', '', prefix)
+    # Reuse the verifier's supported declaration-prefix boundary; never discard other commands.
+    remaining, _ = split_prefix(prefix)
+    if remaining.strip():
+        raise ValueError('Unsupported declaration prefix for anonymous root')
+    scope = ''.join(line.strip() + '\n' for line in prefix.splitlines()
+                    if re.fullmatch(r'(?:open|set_option|attribute)\b.*\sin', line.strip()))
+    # Without nonrec, Lean inserts its auxiliary _example into the saved local context.
+    return command, scope + 'nonrec example' + code[declaration.end():].rstrip()
+
+
+# Lockstep rollouts step several episodes in worker threads; every shared counter update holds this lock.
+COUNTS_LOCK = threading.Lock()
+
+
 class LeanEpisode:
     def __init__(self, ctx, task, output, counts, reward_mode='goal_change_v1', max_repair_attempts=0,
-                 version=1, horizon=None, max_tactics=4, backtrack_owner='harness', backtrack_after=2):
+                 version=1, horizon=None, max_tactics=4, backtrack_owner='harness', backtrack_after=2, premises=None,
+                 repl_log='episodes.log'):
         self.ctx, self.task, self.output, self.counts = ctx, task, output, counts
+        self.repl_log = repl_log  # Lockstep rollouts give each sample's REPL its own log.
+        self.premises = premises  # Optional goals -> lemma lines; part of the observation in training and evaluation.
         self.reward_mode = reward_mode
-        if version not in (1, 2) or (version == 2 and (max_repair_attempts or reward_mode != 'goal_change_v1')):
-            raise ValueError('Environment v2 has no repair or local-feedback reward')
+        if version not in (1, 2) or (version == 2 and (max_repair_attempts or reward_mode not in
+                                                        ('goal_change_v1', 'error_feedback_v1'))):
+            raise ValueError('Environment v2 has no repair and only the terminal or error-feedback reward')
         if backtrack_owner not in ('harness', 'policy') or max_tactics < 1 or backtrack_after < 1:
             raise ValueError('Invalid v2 chunk or backtrack setting')
         self.version, self.horizon = version, horizon
@@ -445,16 +608,19 @@ class LeanEpisode:
         self.repl = None
 
     def send(self, request, timeout):
-        self.counts['lean_calls'] += 1
+        with COUNTS_LOCK:
+            self.counts['lean_calls'] += 1
         start = time.monotonic()
         try:
             response, wall, cpu = self.repl.send(request, timeout)
         except (TimeoutError, EOFError):
-            self.counts['lean_seconds'] += time.monotonic() - start
+            with COUNTS_LOCK:
+                self.counts['lean_seconds'] += time.monotonic() - start
             self.close()
             raise
-        self.counts['lean_seconds'] += wall
-        self.counts['lean_cpu_seconds'] += cpu or 0.0
+        with COUNTS_LOCK:
+            self.counts['lean_seconds'] += wall
+            self.counts['lean_cpu_seconds'] += cpu or 0.0
         return response
 
     def _setup(self):
@@ -464,18 +630,19 @@ class LeanEpisode:
                                self.ctx.sources, 'file', self.ctx.eval_spans)
             if q is None or q['header'] != self.task['header'] or q['name'] != self.task['name']:
                 raise RuntimeError('Bank root does not rebuild: ' + str(skip or 'metadata differs'))
-            head, _ = split_prefix(q['prefix'])
-        self.repl = Repl(self.ctx, self.output / 'repl' / 'episodes.log')
+            head, tail = split_prefix(q['prefix'])
+        self.repl = Repl(self.ctx, self.output / 'repl' / self.repl_log)
         response = self.send({'cmd': head if bank else HEADER}, self.ctx.setup_timeout)
         if repl_output(response)[0]:
             raise RuntimeError('Lean environment setup failed: ' + repl_output(response)[1])
         self.env = response['env']
+        universes, local_header = anonymous_header((tail if bank else '') + self.task['header'])
         if bank:
-            root = self.ctx.checker.source_for(q, '  sorry\n')[len(head):]
+            root = self.ctx.checker.source_for(dict(q, prefix=head, header=local_header), '  sorry\n')[len(head):]
         else:
-            root = (self.task['header'] + ' := by\n' + self.ctx.checker.guard(self.task['name'])
+            root = (local_header + ' := by\n' + self.ctx.checker.guard(self.task['name'])
                     + self.task['given'] + '  sorry\n')
-        response = self.send({'cmd': root, 'env': self.env}, self.ctx.timeout)
+        response = self.send({'cmd': universes + root, 'env': self.env}, self.ctx.timeout)
         sorries = response.get('sorries', [])
         if repl_output(response)[0] or len(sorries) != 1:
             raise RuntimeError('Training root does not replay: ' + repl_output(response)[1])
@@ -518,13 +685,15 @@ class LeanEpisode:
         """v2 Lean-file rendering of the state; omit hides the oldest policy steps for the prompt cap."""
         return render_observation(self.task, self.shown, self.goals, self.last_error,
                                   self.failed.get(self.frames[-1][2], []), self.horizon - self.steps_used,
-                                  self.max_tactics, self.backtrack_owner == 'policy', omit)
+                                  self.max_tactics, self.backtrack_owner == 'policy', omit,
+                                  self.premises(self.goals) if self.premises else None)
 
     def step(self, tactic, bonus):
         if self.version == 2:
             self.last_error = ''
             self.steps_used += 1
-            return self._step_v2(tactic)
+            result = self._step_v2(tactic)
+            return v2_feedback(result) if self.reward_mode == 'error_feedback_v1' else result
         feedback = self.reward_mode == 'error_feedback_v1'
         result = self._step(tactic, 0.0 if feedback else bonus)
         result = local_feedback(result) if feedback else result
@@ -534,6 +703,138 @@ class LeanEpisode:
             self.last_error = (result.get('error') or 'Return a tactic or one complete fenced Lean block.')[:600]
             result = dict(result, done=False, repair_offered=True, repair_attempt=self.repairs_used)
         return result
+
+    def candidate_menu(self, candidates, *, max_candidates, max_lean_calls):
+        """Check bounded single-tactic branches without committing a policy action.
+
+        Probes share the physical call counters and REPL snapshots. Keep one
+        branch in memory. The caller must also enforce its wall/token budgets.
+        Only fully valid transitions enter the menu; partial chunks do not.
+        This is an environment API, not a masked PPO implementation.
+        """
+        if self.version != 2 or not self.goals or self.horizon is None or self.steps_used >= self.horizon:
+            raise ValueError('Candidate menus require an active v2 episode')
+        if not 0 < len(candidates) <= max_candidates:
+            raise ValueError('Candidate count exceeds the registered bound')
+        # One tactic, up to two replay setup attempts, and one proof call.
+        if self.counts['lean_calls'] + 4 * (len(candidates) + 1) > max_lean_calls:
+            raise BudgetReached('lean_call_cap')
+        menu = dict(status='ready', owner=id(self), proof_state=self.state,
+                    observation=self.prompt_state(), steps_used=self.steps_used,
+                    max_lean_calls=max_lean_calls, actions=[], probes=[])
+        fields = ('state', 'goals', 'path', 'shown', 'frames', 'failed', 'steps_used', 'last_error')
+        for index, text in enumerate(candidates):
+            action = parse_action(text, 1)
+            if action['kind'] != 'tactics' or forbidden(text):
+                menu['probes'].append(dict(id=index, status='invalid_candidate'))
+                continue
+            branch = copy.copy(self)
+            for field in fields:
+                setattr(branch, field, copy.deepcopy(getattr(self, field)))
+            result = branch.step(text, 0.0)
+            menu['probes'].append(dict(id=index, **result))
+            if result.get('censored') or result['status'] == 'timeout':
+                self.close()  # A closed or busy shared REPL cannot supply a mask.
+                return dict(menu, status=result['status'], actions=[],
+                            censored=bool(result.get('censored')))
+            if result['status'] == 'changed' or (result['accepted'] and result['done']):
+                menu['actions'].append(dict(id=index, tactic=text))
+        if not menu['actions']:
+            menu['status'] = 'empty'
+        return menu
+
+    def select_candidate(self, menu, choice):
+        """Recheck a menu choice against the same live state, then commit it."""
+        if (menu['owner'] != id(self) or menu['proof_state'] != self.state
+                or menu['steps_used'] != self.steps_used or menu['observation'] != self.prompt_state()):
+            raise ValueError('Candidate menu is stale')
+        selected = next((a for a in menu['actions'] if type(choice) is int and a['id'] == choice), None)
+        if menu['status'] != 'ready' or selected is None:
+            raise ValueError('Invalid candidate choice')
+        if self.counts['lean_calls'] + 4 > menu['max_lean_calls']:
+            raise BudgetReached('lean_call_cap')
+        return self.step(selected['tactic'], 0.0)
+
+    BRANCH_FIELDS = ('state', 'goals', 'path', 'shown', 'frames', 'failed', 'steps_used', 'last_error')
+
+    def _branch(self):
+        """A copy that shares the REPL and call counters but owns its proof path."""
+        branch = copy.copy(self)
+        for field in self.BRANCH_FIELDS:
+            setattr(branch, field, copy.deepcopy(getattr(self, field)))
+        return branch
+
+    def _adopt(self, branch):
+        for field in self.BRANCH_FIELDS:
+            setattr(self, field, getattr(branch, field))
+
+    def search_step(self, texts):
+        """Try each sampled action on a copy and keep the best; the result equals one step with it.
+
+        Rank: accepted proof, changed goals, partial progress by applied tactics, then sample order.
+        A timeout or crash ends the search, because the shared REPL may stop answering. The kept
+        action is selected, not an on-policy sample: use this for evaluation and data collection.
+        A probe that leaves the state unchanged records the observation the policy would see next.
+        """
+        if self.version != 2 or not texts:
+            raise ValueError('Step search needs environment v2 and at least one action')
+
+        def rank(result):
+            if result['accepted']:
+                return 3
+            return {'changed': 2, 'partial': 1}.get(result['status'], -1 if result['done'] else 0)
+        probes, best = [], None
+        for index, text in enumerate(texts):
+            branch = self._branch()
+            result = branch.step(text, 0.0)
+            probe = dict(index=index, status=result['status'], error=(result.get('error') or '')[:600],
+                         tactics_applied=result.get('tactics_applied', 0))
+            if not result['done'] and branch.state == self.state and branch.shown == self.shown:
+                probe['observation_after'] = branch.prompt_state()
+            probes.append(probe)
+            if result.get('censored') or result['status'] == 'timeout':
+                best = (None, index, branch, result)
+                break
+            key = (rank(result), result.get('tactics_applied', 0))
+            if best is None or key > best[0]:
+                best = (key, index, branch, result)
+            if result['accepted']:
+                break
+        _, index, branch, result = best
+        self._adopt(branch)
+        return dict(result=result, chosen=index, probes=probes)
+
+    def try_automation(self, tactics, commit=True):
+        """Try fixed automation tactics on the current goals; return the first that completes the proof.
+
+        Each try runs on a copy. An automation-completed proof is Lean-verified but is not a policy
+        action, so the caller reports it apart from model proofs. commit=False only probes.
+        """
+        if self.version != 2 or not self.goals:
+            return None
+        for tactic in tactics:
+            branch = self._branch()
+            result = branch.step(tactic, 0.0)
+            if result.get('censored') or result['status'] == 'timeout':
+                return dict(tactic=tactic, result=result)
+            if result['accepted']:
+                if commit:
+                    self._adopt(branch)
+                return dict(tactic=tactic, result=result)
+        return None
+
+    def _verify(self, unit, body):
+        record = {}
+        try:
+            record = verify_group(self.ctx, unit, [body])[0]
+            return record
+        except VerifierSetupError as error:
+            record = error.counts
+            raise
+        finally:
+            with COUNTS_LOCK:
+                for key in ('lean_calls', 'lean_seconds', 'lean_cpu_seconds'):
+                    self.counts[key] += record.get(key, 0)
 
     def _step(self, tactic, bonus):
         raw_tactic = tactic
@@ -550,7 +851,7 @@ class LeanEpisode:
             response = self.send({'tactic': tactic, 'proofState': self.state}, self.ctx.timeout)
         except (TimeoutError, EOFError) as exc:
             return dict(status='timeout' if isinstance(exc, TimeoutError) else 'crash',
-                        reward=0.0, done=True, accepted=False)
+                        reward=0.0, done=True, accepted=False, censored=isinstance(exc, EOFError))
         result = transition(response, self.seen, bonus)
         if result['status'] not in ('changed', 'needs_replay'):
             return result
@@ -560,10 +861,9 @@ class LeanEpisode:
             # Every line gets the outer proof indentation. Preserve nested blocks.
             body = '\n'.join('  ' + line for block in self.path for line in block.splitlines()) + '\n'
             unit = self.task if self.task['kind'] == 'bank' else lean_unit(self.task)
-            replay = verify_group(self.ctx, unit, [body])[0]
-            for key in ('lean_calls', 'lean_seconds', 'lean_cpu_seconds'):
-                self.counts[key] += replay[key]
-            return finish(result, replay)
+            replay = self._verify(unit, body)
+            result = finish(result, replay)
+            return dict(result, censored=True) if replay['status'] == 'crash' else result
         self.seen.add(result.pop('state_key'))
         return result
 
@@ -635,7 +935,7 @@ class LeanEpisode:
             note = ' The harness reverted your last step.' if reverted else ''
             if applied:
                 self.last_error = cap_message(f'{applied} tactic(s) applied, then {status}: ', message, note)
-                return dict(status='partial', reward=0.0, done=False, accepted=False, error=message,
+                return dict(status='partial', failure=status, reward=0.0, done=False, accepted=False, error=message,
                             tactics_applied=applied, harness_backtrack=reverted)
             return dict(self._loop(status, message, note), tactics_applied=0, harness_backtrack=reverted)
         if self.goals:
@@ -643,11 +943,9 @@ class LeanEpisode:
         # Every line gets the outer proof indentation. Preserve nested blocks.
         body = '\n'.join('  ' + line for block in self.path for line in block.splitlines()) + '\n'
         unit = self.task if self.task['kind'] == 'bank' else lean_unit(self.task)
-        replay = verify_group(self.ctx, unit, [body])[0]
-        for name in ('lean_calls', 'lean_seconds', 'lean_cpu_seconds'):
-            self.counts[name] += replay[name]
+        replay = self._verify(unit, body)
         result = finish(dict(status='needs_replay', reward=0.0, done=True, accepted=False,
-                             tactics_applied=applied), replay)
+                             tactics_applied=applied, proof_body=body), replay)
         # A replay crash is an infrastructure failure, not a failed proof: censor the group.
         return dict(result, censored=True) if replay['status'] == 'crash' else result
 
@@ -655,6 +953,119 @@ class LeanEpisode:
         if self.repl is not None:
             close_repl(self.repl)
             self.repl = None
+
+
+def lockstep_group(envs, generate, decode, observe, pool, *, depth, candidates, automation, max_prompt_tokens,
+                   bonus, seeds, emit, counts, solved, name):
+    """Roll out one group with all samples advancing together; each episode owns its Lean REPL.
+
+    Each step makes one generate call for every active sample, then steps their episodes in the worker
+    pool. Per-sample rules match the sequential loop: prompt cap, state bound, step search, automation
+    fallback, censoring and the PAD-before-EOS refusal. Records go to emit in sample order, from this
+    thread only. Returns (trajectories, censored, reason, root_automation, automation_done).
+    """
+    from concurrent.futures import wait
+    size = len(envs)
+    trajectories, automation_done, root_automation = [[] for _ in envs], [False] * size, None
+    resets = [pool.submit(env.reset) for env in envs]
+    wait(resets)
+    states = []
+    for future in resets:
+        error = future.exception()
+        if isinstance(error, (TimeoutError, EOFError, OSError, RuntimeError)):
+            return trajectories, True, 'setup_failure: ' + str(error)[:200], None, automation_done
+        states.append(future.result())
+    if automation:
+        root_automation = envs[0].try_automation(automation, commit=False)
+        if root_automation and root_automation['result'].get('censored'):
+            return trajectories, True, 'automation_root_' + root_automation['result']['status'], None, automation_done
+        if root_automation and not root_automation['result']['accepted']:
+            # A timed-out probe is a failed automation outcome. Its REPL closed, so rebuild the root.
+            try:
+                states[0] = envs[0].reset()
+            except (TimeoutError, EOFError, OSError, RuntimeError) as error:
+                return trajectories, True, 'setup_failure: ' + str(error)[:200], root_automation, automation_done
+        elif root_automation:
+            with COUNTS_LOCK:
+                counts['automation_root_solved'] += 1
+    active, pending = list(range(size)), [None] * size
+    for step in range(depth):
+        if not active:
+            break
+        prompts = []
+        for i in active:
+            ids = pending[i] or observe(envs[i])
+            pending[i] = None
+            if len(ids) > max_prompt_tokens:
+                return trajectories, True, 'prompt_cap', root_automation, automation_done
+            prompts.append(ids)
+        batches = generate(prompts, candidates, [seeds(i, step) for i in active])
+        texts = {}
+        for i, ids, generations in zip(active, prompts, batches):
+            for generation in generations:
+                with COUNTS_LOCK:
+                    counts['generated_tokens'] += generation['generated_tokens']
+                    counts['retained_tokens'] += generation['retained_tokens']
+                if generation['pad_before_eos']:
+                    emit(dict(sample=i, step=step, prompt_ids=ids, status='generation_contract_violation', reward=None,
+                              accepted=False, done=True, censored=True, **generation))
+                    raise RuntimeError('Sampled PAD before EOS; refuse an unmatched training update')
+            texts[i] = [decode(g['action_ids']) for g in generations]
+        act = (lambda i: envs[i].step(texts[i][0], bonus)) if candidates == 1 else (lambda i: envs[i].search_step(texts[i]))
+        futures = {i: pool.submit(act, i) for i in active}
+        wait(futures.values())
+        finished, censored = [], None
+        for i, ids, generations in zip(active, prompts, batches):
+            outcome = futures[i].result()  # An unexpected environment error propagates, as in the sequential loop.
+            if candidates == 1:
+                search, generation, tactic, result = None, generations[0], texts[i][0], outcome
+            else:
+                search, chosen = outcome, outcome['chosen']
+                generation, tactic, result = generations[chosen], texts[i][chosen], outcome['result']
+            if not result['done']:
+                pending[i] = observe(envs[i])
+                result = bound_state(result, len(pending[i]), max_prompt_tokens)
+                if result['status'] == 'prompt_cap':
+                    with COUNTS_LOCK:
+                        counts['prompt_cap_ends'] += 1  # Truncation scored 0, counted separately.
+            item = dict(prompt_ids=ids, **generation, tactic=tactic, state=states[i], **result)
+            if search:
+                item.update(chosen=search['chosen'], candidates=[
+                    dict(probe, tactic=texts[i][probe['index']],
+                         generated_tokens=generations[probe['index']]['generated_tokens'])
+                    for probe in search['probes']])
+            trajectories[i].append(item)
+            if result['accepted']:
+                with COUNTS_LOCK:
+                    counts['accepted'] += 1
+                if name not in solved:
+                    solved.append(name)
+            emit(dict(sample=i, step=step, **item))
+            if result.get('censored'):
+                censored = censored or result['status']
+            if result['done']:
+                finished.append(i)
+            else:
+                states[i] = envs[i].prompt_state()
+        if censored:
+            return trajectories, True, censored, root_automation, automation_done
+        active = [i for i in active if i not in finished]
+    if automation:
+        eligible = [i for i in range(size) if trajectories[i] and not trajectories[i][-1]['done']]
+        futures = {i: pool.submit(envs[i].try_automation, automation) for i in eligible}
+        wait(futures.values())
+        for i in eligible:
+            automated = futures[i].result()
+            if not automated:
+                continue
+            emit(dict(sample=i, step=len(trajectories[i]), automation=True, tactic=automated['tactic'], **automated['result']))
+            if automated['result'].get('censored'):
+                return trajectories, True, 'automation_' + automated['result']['status'], root_automation, automation_done
+            if automated['result']['accepted']:
+                automation_done[i] = True
+                with COUNTS_LOCK:
+                    counts['automation_accepted'] += 1
+    return trajectories, False, None, root_automation, automation_done
 
 
 def action_logprob(model, prompt_ids, action_ids, torch):
@@ -681,31 +1092,9 @@ def update(model, optimizer, trajectories, torch, autocast, gamma=1.0, checkpoin
 
     With checkpointing, Hugging Face recomputes activations only in train mode; main() enables it
     only for models without dropout, so train mode computes the same function as eval mode."""
-    values = advantages([[step['reward'] for step in path] for path in trajectories], gamma)
-    optimizer.zero_grad(set_to_none=True)
-    loss_value, informative = 0.0, False
-    if checkpointing:
-        model.train()
-    try:
-        for path, adv in zip(trajectories, values):
-            for step, value in zip(path, adv):
-                if not value:
-                    continue
-                informative = True
-                with autocast():
-                    loss = -value * action_logprob(model, step['prompt_ids'], step['action_ids'], torch) / len(trajectories)
-                if not torch.isfinite(loss):
-                    raise RuntimeError('Non-finite policy loss')
-                loss.backward()
-                loss_value += float(loss.detach())
-    finally:
-        model.eval()
-    norm = 0.0
-    if informative:
-        norm = float(torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0, error_if_nonfinite=True))
-        optimizer.step()
-    return dict(loss=loss_value, gradient_norm=norm, optimizer_updated=informative,
-                advantages=values)
+    updater = PolicyGradientUpdater(model, optimizer, torch, autocast,
+        advantages=lambda rewards: advantages(rewards, gamma), action_logprob=action_logprob)
+    return updater.update(trajectories, checkpointing)
 
 
 REQUIRED_KEYS = ('run_id', 'seed', 'lean', 'mathlib', 'group_size', 'max_groups', 'max_episode_steps',
@@ -745,6 +1134,52 @@ def validate_config(config):
     cap = config.get('band_cap_ratio', 1.5)
     if isinstance(cap, bool) or not isinstance(cap, (int, float)) or cap < 1:
         raise ValueError('band_cap_ratio must be a number of at least 1')
+    candidates = config.get('step_candidates', 1)
+    if isinstance(candidates, bool) or not isinstance(candidates, int) or candidates < 1:
+        raise ValueError('step_candidates must be an integer of at least 1')
+    automation = config.get('automation_fallback', [])
+    if not isinstance(automation, list) or any(
+            not isinstance(t, str) or forbidden(t) or parse_action(t, 1)['kind'] != 'tactics' for t in automation):
+        raise ValueError('automation_fallback must be a list of single allowed tactics')
+    if (candidates > 1 or automation) and version != 2:
+        raise ValueError('Step search and automation fallback require environment v2')
+    spec = config.get('task_filter')
+    if spec is not None:
+        if not isinstance(spec, dict) or set(spec) != {'pass_rates_from', 'min_exclusive', 'max_inclusive'}:
+            raise ValueError('task_filter needs exactly pass_rates_from, min_exclusive and max_inclusive')
+        low, high = spec['min_exclusive'], spec['max_inclusive']
+        if (any(isinstance(v, bool) or not isinstance(v, (int, float)) for v in (low, high))
+                or not 0 <= low < high <= 1):
+            raise ValueError('task_filter needs 0 <= min_exclusive < max_inclusive <= 1')
+    rollout = config.get('rollout', 'sequential')
+    if rollout not in ('sequential', 'lockstep') or (rollout == 'lockstep' and version != 2):
+        raise ValueError('rollout must be sequential, or lockstep with environment v2')
+    workers = config.get('lean_workers', config['group_size'])
+    if isinstance(workers, bool) or not isinstance(workers, int) or workers < 1:
+        raise ValueError('lean_workers must be an integer of at least 1')
+    backend = config.get('generation_backend', 'hf')
+    if backend not in ('hf', 'vllm') or (backend == 'vllm' and rollout != 'lockstep'):
+        raise ValueError('generation_backend must be hf, or vllm with lockstep rollout')
+    fraction = config.get('vllm_memory_fraction', 0.4)
+    if isinstance(fraction, bool) or not isinstance(fraction, (int, float)) or not 0.05 <= fraction <= 0.9:
+        raise ValueError('vllm_memory_fraction must lie in [0.05, 0.9]')
+    retrieval = config.get('premise_retrieval')
+    if retrieval is not None:
+        if (version != 2 or not isinstance(retrieval, dict) or set(retrieval) != {'corpus', 'k'}
+                or isinstance(retrieval['k'], bool) or not isinstance(retrieval['k'], int) or not 1 <= retrieval['k'] <= 16):
+            raise ValueError('premise_retrieval needs environment v2, a corpus path and 1 <= k <= 16')
+
+
+def check_mode_settings(config, evaluating):
+    """Keep search, automation and task filtering in the mode where their measurement stays valid."""
+    if not evaluating and (config.get('step_candidates', 1) > 1 or config.get('automation_fallback')):
+        raise ValueError('Step search and automation fallback are evaluation and data-collection settings; '
+                         'a selected or automation-completed action is not an on-policy REINFORCE sample')
+    if evaluating and config.get('task_filter'):
+        raise ValueError('task_filter selects training tasks; evaluation populations stay fixed')
+    if not evaluating and config.get('generation_backend', 'hf') == 'vllm':
+        raise ValueError('vLLM sampling is evaluation-only until a weight-sync path is validated on a GPU; '
+                         'training samples must come from the live policy')
 
 
 def lean_reservation(size, depth, per_action, setup_calls, replay_calls):
@@ -776,9 +1211,13 @@ def main():
     parser.add_argument('--exclude-files', type=Path, help='Additional DEV/excluded mathlib files, one per line')
     parser.add_argument('--units', type=Path, help='Optional bank task IDs, one per line')
     parser.add_argument('--evaluation-names', type=Path, help='Frozen DEV subset of --exclude-names; disables all optimizer updates')
-    parser.add_argument('--assessment-only', action='store_true', help='Assess training reset states without an optimizer or checkpoint export')
+    parser.add_argument('--assessment-only', action='store_true', help='Assess frozen reset states without an optimizer or checkpoint export')
+    parser.add_argument('--assessment-split', choices=('train', 'validation', 'test'),
+                        help='Declared pool split for --assessment-only; defaults to train')
     parser.add_argument('--task-order', type=Path, help='Frozen JSON list of admitted training task IDs, including explicit repeats')
     args = parser.parse_args()
+    if args.assessment_split is not None and (not args.assessment_only or args.bank):
+        parser.error('assessment-split requires --assessment-only with pool tasks')
     if args.bank:
         if not (args.train and args.eval and args.exclude_files) or any(
                 (args.pool, args.tasks, args.exclude_names, args.evaluation_names)):
@@ -803,14 +1242,14 @@ def main():
     version, gamma = config.get('environment_version', 1), config.get('discount', 1.0)
     if version not in (1, 2) or not 0 < gamma <= 1:  # validate_config already rejects a v1 discount.
         raise ValueError('Unknown environment version or invalid discount')
-    if version == 2 and (reward_mode != 'goal_change_v1' or config['exploration_bonus'] or max_repair_attempts):
-        raise ValueError('Environment v2 uses only the terminal Lean-verified reward')
+    if version == 2 and (config['exploration_bonus'] or max_repair_attempts):
+        raise ValueError('Environment v2 has no goal-text bonus and no repair attempt')
     chunk = dict(max_tactics=config.get('max_chunk_tactics', 4), backtrack_owner=config.get('backtrack_owner', 'harness'),
                  backtrack_after=config.get('harness_backtrack_after', 2)) if version == 2 else {}
     args.output.mkdir(parents=True, exist_ok=False)
     (args.output / 'config.json').write_text(json.dumps(config, indent=2) + '\n')
     started = time.monotonic()
-    counts = dict(generated_tokens=0, lean_calls=0, lean_seconds=0.0, lean_cpu_seconds=0.0,
+    counts = dict(generated_tokens=0, retained_tokens=0, lean_calls=0, lean_seconds=0.0, lean_cpu_seconds=0.0,
                   trajectories=0, accepted=0, groups=0, optimizer_updates=0, censored_groups=0, prompt_cap_ends=0)
     run = dict(status='starting', config=config, counts=counts, experiment_id=config.get('experiment_id', 'EXP-019'),
                run_id=config['run_id'], environment_version=version, discount=gamma, **chunk,
@@ -819,6 +1258,12 @@ def main():
                max_repair_attempts=max_repair_attempts,
                reward_components={'terminal': 'Lean-verified',
                                   'error_penalties' if reward_mode == 'error_feedback_v1' else 'exploration': 'heuristic'})
+    candidates, automation = config.get('step_candidates', 1), config.get('automation_fallback', [])
+    if candidates > 1 or automation:
+        run.update(step_candidates=candidates, automation_fallback=automation)
+    if automation:
+        counts.update(automation_accepted=0, automation_root_solved=0)
+        run['reward_components']['automation'] = 'Lean-verified; automation-completed proofs are counted apart from policy proofs'
 
     def save():
         run['wall_seconds'] = time.monotonic() - started
@@ -836,14 +1281,19 @@ def main():
     signal.signal(signal.SIGALRM, alarm)
     signal.signal(signal.SIGTERM, terminated)  # Service stop or Spot interruption still saves run.json.
     signal.alarm(config['max_wall_seconds'])
-    ctx = None
+    ctx = executor = None
     try:
-        pool = [json.loads(line) for line in args.pool.open()] if args.pool else []
+        pool = []
+        if args.pool:
+            with args.pool.open() as stream:
+                pool = [json.loads(line) for line in stream]
         excluded = set(args.exclude_names.read_text().split()) if args.exclude_names else set()
         rows, eval_spans = [], {}
         dev_evaluation = args.evaluation_names is not None
-        mode = execution_mode(dev_evaluation, args.assessment_only)
+        assessment_split = args.assessment_split or 'train'
+        mode = execution_mode(dev_evaluation, args.assessment_only, assessment_split)
         evaluating = mode != 'training'
+        check_mode_settings(config, evaluating)
         if args.bank:
             for path in args.eval:
                 with zipfile.ZipFile(path) as archive:
@@ -862,11 +1312,18 @@ def main():
         elif dev_evaluation:
             tasks = evaluation_tasks(pool, set(args.evaluation_names.read_text().split()), excluded)
         else:
-            tasks = training_tasks([json.loads(line) for line in args.tasks.open()], pool, excluded,
-                                   config['curriculum_max_lines_remaining'])
+            with args.tasks.open() as stream:
+                task_rows = [json.loads(line) for line in stream]
+            if args.assessment_only:
+                tasks = assessment_tasks(task_rows, pool, excluded, config['curriculum_max_lines_remaining'], assessment_split)
+            else:
+                tasks = training_tasks(task_rows, pool, excluded, config['curriculum_max_lines_remaining'])
         if not tasks:
             raise ValueError('Empty training curriculum')
+        if config.get('task_filter'):
+            tasks, run['task_filter'] = pass_rate_filter(tasks, config['task_filter'])
         run['mode'] = mode
+        run['assessment_split'] = assessment_split if args.assessment_only else None
         run['population'] = [t['name'] for t in tasks] if evaluating else None
         run['solved_names'] = []
         population_file = 'evaluation_task_ids.json' if evaluating else 'training_task_ids.json'
@@ -876,10 +1333,18 @@ def main():
             input_names += ['bank', 'exclude_files'] + (['units'] if args.units else [])
         else:
             input_names += ['pool', 'exclude_names', 'evaluation_names' if dev_evaluation else 'tasks']
+        planned_groups = len(tasks) if evaluating else config['max_groups']
         if args.task_order:
             input_names.append('task_order')
             schedule = json.loads(args.task_order.read_text())
-            order = scheduled_tasks(tasks, schedule, config['max_groups'])
+            planned, planned_groups = schedule, config['max_groups']
+            if config.get('task_filter'):
+                if len(schedule) != config['max_groups']:
+                    raise ValueError('Task schedule must contain exactly max_groups entries')
+                planned = filter_schedule(schedule, {t['task_id'] for t in tasks})
+                planned_groups = len(planned)
+                run['filtered_task_order'] = planned
+            order = scheduled_tasks(tasks, planned, planned_groups)
             run['planned_task_order'] = schedule
             (args.output / 'planned_task_order.json').write_text(json.dumps(schedule) + '\n')
         else:
@@ -900,9 +1365,16 @@ def main():
         for kind in ('train', 'eval'):
             for index, path in enumerate(getattr(args, kind)):
                 run['inputs'][f'{kind}_{index}'] = entry(path)
+        premise_index = None
+        if config.get('premise_retrieval'):
+            from rl_components.premises import load_index
+            corpus = Path(config['premise_retrieval']['corpus'])
+            premise_index = load_index(corpus, config['premise_retrieval']['k'], {t['name'] for t in tasks})
+            run['inputs']['premise_corpus'] = entry(corpus)
         run['model_source'] = str(args.model)
         run['model_sha256'] = file_sha256(args.model / 'model.safetensors')
         run['script_sha256'] = file_sha256(__file__)
+        run['component_sha256'] = component_fingerprints()
         run['repl_sha256'] = file_sha256(args.repl)
         mathlib = args.environment / 'mathlib'
         run['lean'] = (mathlib / 'lean-toolchain').read_text().strip()
@@ -965,29 +1437,49 @@ def main():
                     break
             return ids
 
+        lockstep = config.get('rollout', 'sequential') == 'lockstep'
+        if lockstep:
+            from concurrent.futures import ThreadPoolExecutor
+            # One thread per concurrently stepped episode; each episode and replay thread owns its Lean REPL.
+            executor = ThreadPoolExecutor(max_workers=config.get('lean_workers', config['group_size']))
+            if config.get('generation_backend', 'hf') == 'vllm':
+                generator = VLLMGenerator(args.model, stops, tokenizer.pad_token_id, config['max_action_tokens'],
+                                          config.get('vllm_memory_fraction', 0.4), config['seed'])
+            else:
+                generator = HFGenerator(model, tokenizer, torch, autocast, device, stops, config['max_action_tokens'], set_seed)
+            decode = lambda ids: tokenizer.decode(ids, skip_special_tokens=True)  # noqa: E731
+            run.update(rollout='lockstep', generation_backend=config.get('generation_backend', 'hf'),
+                       lean_workers=config.get('lean_workers', config['group_size']),
+                       sampling_seeds='per (task visit, sample, step) request seed' if config.get('generation_backend') == 'vllm'
+                       else 'one stream per batched step, seeded from the active samples')
         run.update(status='running', phase='idle')
         save()
         with (args.output / 'rollouts.jsonl').open('x') as stream, (args.output / 'steps.jsonl').open('x') as steps:
-            groups = len(tasks) if evaluating and not args.task_order else config['max_groups']
+            groups = planned_groups
             visits = {}
             for group in range(groups):
                 size, depth = config['group_size'], config['max_episode_steps']
                 # Reserve the whole group so later trajectories keep identical caps.
-                if counts['generated_tokens'] + size * depth * config['max_action_tokens'] > config['max_generated_tokens']:
+                if counts['generated_tokens'] + size * depth * candidates * config['max_action_tokens'] > config['max_generated_tokens']:
                     raise BudgetReached('token_cap')
                 setup_calls = 6 if args.bank else 5  # Bank prefixes use one additional tactic-mode call.
                 per_action, replay_calls = (chunk['max_tactics'], 2) if version == 2 else (1, 0)
-                if counts['lean_calls'] + lean_reservation(size, depth, per_action, setup_calls, replay_calls) > config['max_lean_calls']:
+                # Automation tries each tactic once per trajectory and once at the root, each with a replay.
+                automation_calls = (size + 1) * len(automation) * (1 + replay_calls)
+                if counts['lean_calls'] + lean_reservation(size, depth * candidates, per_action, setup_calls,
+                                                           replay_calls) + automation_calls > config['max_lean_calls']:
                     raise BudgetReached('lean_call_cap')
                 task = sampler.next_task() if sampler else next(order)
                 visit = visits.get(task['task_id'], 0)
                 visits[task['task_id']] = visit + 1
                 env = LeanEpisode(ctx, task, args.output, counts, reward_mode=reward_mode,
-                                  max_repair_attempts=max_repair_attempts, version=version, horizon=depth, **chunk)
+                                  max_repair_attempts=max_repair_attempts, version=version, horizon=depth,
+                                  premises=premise_index, **chunk)
                 trajectories, censored = [], False
+                root_automation, automation_done = None, []
                 run['phase'] = 'sampling'
                 try:
-                    for sample in range(size):
+                    for sample in (() if lockstep else range(size)):
                         set_seed(trajectory_seed(config['seed'], task['task_id'], visit, sample))
                         try:
                             state, trajectory = env.reset(), []
@@ -995,6 +1487,23 @@ def main():
                             censored = True  # Setup failure is infrastructure or data, never a policy outcome.
                             run['last_censor_reason'] = 'setup_failure: ' + str(exc)[:200]
                             break
+                        if automation and sample == 0:
+                            # Automation alone at the root is the baseline for automation-completed proofs.
+                            root_automation = env.try_automation(automation, commit=False)
+                            if root_automation and root_automation['result'].get('censored'):
+                                censored = True  # A crashed REPL is infrastructure.
+                                run['last_censor_reason'] = 'automation_root_' + root_automation['result']['status']
+                                break
+                            if root_automation and not root_automation['result']['accepted']:
+                                # A timed-out probe is a failed automation outcome. Its REPL closed, so rebuild the root.
+                                try:
+                                    state = env.reset()
+                                except (TimeoutError, EOFError, OSError, RuntimeError) as exc:
+                                    censored = True
+                                    run['last_censor_reason'] = 'setup_failure: ' + str(exc)[:200]
+                                    break
+                            elif root_automation:
+                                counts['automation_root_solved'] += 1
                         pending = None
                         for step in range(depth):
                             prompt_ids = pending or observe(env)
@@ -1005,19 +1514,42 @@ def main():
                                 break
                             inputs = torch.tensor(prompt_ids, device=device)[None]
                             with torch.no_grad(), autocast():
-                                sequence = model.generate(input_ids=inputs, attention_mask=torch.ones_like(inputs),
+                                rows = model.generate(input_ids=inputs, attention_mask=torch.ones_like(inputs),
                                     do_sample=True, temperature=1.0, top_p=1.0, top_k=0, repetition_penalty=1.0,
-                                    max_new_tokens=config['max_action_tokens'], pad_token_id=tokenizer.eos_token_id)[0]
-                            ids = sequence[len(prompt_ids):].tolist()
-                            counts['generated_tokens'] += len(ids)
-                            tactic = tokenizer.decode(ids, skip_special_tokens=True)
-                            result = env.step(tactic, config['exploration_bonus'] / depth)
+                                    max_new_tokens=config['max_action_tokens'], pad_token_id=tokenizer.eos_token_id,
+                                    num_return_sequences=candidates)
+                            generations = [generation_record(stop_trimmed(row[len(prompt_ids):].tolist(), stops),
+                                                             stops, tokenizer.pad_token_id) for row in rows]
+                            for generation in generations:
+                                for key in ('generated_tokens', 'retained_tokens'):
+                                    counts[key] += generation[key]
+                                if generation['pad_before_eos']:
+                                    stream.write(json.dumps(dict(group=group, sample=sample, step=step,
+                                        task_id=task['task_id'], kind=task['kind'], prompt_ids=prompt_ids,
+                                        status='generation_contract_violation', reward=None, accepted=False,
+                                        done=True, censored=True, **generation)) + '\n')
+                                    stream.flush()
+                                    save()
+                                    raise RuntimeError('Sampled PAD before EOS; refuse an unmatched training update')
+                            texts = [tokenizer.decode(g['action_ids'], skip_special_tokens=True) for g in generations]
+                            if candidates == 1:
+                                search, generation, tactic = None, generations[0], texts[0]
+                                result = env.step(tactic, config['exploration_bonus'] / depth)
+                            else:
+                                search = env.search_step(texts)
+                                generation, tactic = generations[search['chosen']], texts[search['chosen']]
+                                result = search['result']
                             if not result['done']:
                                 pending = observe(env)
                                 result = bound_state(result, len(pending), config['max_prompt_tokens'])
                                 if result['status'] == 'prompt_cap':
                                     counts['prompt_cap_ends'] += 1  # Truncation scored 0, counted separately.
-                            item = dict(prompt_ids=prompt_ids, action_ids=ids, tactic=tactic, state=state, **result)
+                            item = dict(prompt_ids=prompt_ids, **generation, tactic=tactic, state=state, **result)
+                            if search:
+                                item.update(chosen=search['chosen'], candidates=[
+                                    dict(probe, tactic=texts[probe['index']],
+                                         generated_tokens=generations[probe['index']]['generated_tokens'])
+                                    for probe in search['probes']])
                             trajectory.append(item)
                             if result['accepted']:
                                 counts['accepted'] += 1
@@ -1033,13 +1565,50 @@ def main():
                             if result['done']:
                                 break
                             state = env.prompt_state()
+                        automated = None
+                        if automation and not censored and trajectory and not trajectory[-1]['done']:
+                            automated = env.try_automation(automation)
+                            if automated:
+                                stream.write(json.dumps(dict(group=group, sample=sample, step=len(trajectory),
+                                    task_id=task['task_id'], kind=task['kind'], automation=True,
+                                    tactic=automated['tactic'], **automated['result']), ensure_ascii=False) + '\n')
+                                stream.flush()
+                                if automated['result'].get('censored'):
+                                    censored = True
+                                    run['last_censor_reason'] = 'automation_' + automated['result']['status']
+                                elif automated['result']['accepted']:
+                                    counts['automation_accepted'] += 1
                         trajectories.append(trajectory)
+                        automation_done.append(bool(automated and automated['result']['accepted']))
                         if trajectory:
                             counts['trajectories'] += 1
                         if censored:
                             break
                 finally:
                     env.close()
+                if lockstep:
+                    envs = [LeanEpisode(ctx, task, args.output, counts, reward_mode=reward_mode,
+                                        max_repair_attempts=max_repair_attempts, version=version, horizon=depth,
+                                        premises=premise_index, repl_log=f'episodes_s{i}.log', **chunk) for i in range(size)]
+
+                    def emit(record):
+                        stream.write(json.dumps(dict(group=group, task_id=task['task_id'], kind=task['kind'], **record),
+                                                ensure_ascii=False) + '\n')
+                        stream.flush()
+                        save()
+                    try:
+                        trajectories, censored, reason, root_automation, automation_done = lockstep_group(
+                            envs, generator, decode, observe, executor, depth=depth, candidates=candidates,
+                            automation=automation, max_prompt_tokens=config['max_prompt_tokens'],
+                            bonus=config['exploration_bonus'] / depth,
+                            seeds=lambda i, step: step_seed(config['seed'], task['task_id'], visit, i, step),
+                            emit=emit, counts=counts, solved=run['solved_names'], name=task['name'])
+                    finally:
+                        for episode in envs:
+                            episode.close()
+                    if censored:
+                        run['last_censor_reason'] = reason
+                    counts['trajectories'] += sum(1 for path in trajectories if path)
                 if censored:
                     counts['censored_groups'] += 1
                     steps.write(json.dumps(dict(group=group, status='censored', reason=run['last_censor_reason'])) + '\n')
@@ -1056,10 +1625,16 @@ def main():
                     sampler.observe(task, sum(any(s['accepted'] for s in path) for path in trajectories))
                     result = dict(result, sampler=sampler.state())
                 run['phase'] = 'idle'
+                # Policy returns exclude automation; automation outcomes stay in their own fields.
+                extra = dict(automation_accepted=automation_done,
+                             automation_root=root_automation['tactic'] if root_automation and root_automation['result']['accepted'] else None,
+                             automation_root_status=root_automation['result']['status'] if root_automation else None) if automation else {}
                 steps.write(json.dumps(dict(group=group, task_id=task['task_id'], kind=task['kind'],
                     returns=[sum(s['reward'] for s in path) for path in trajectories],
                     discounted_returns=[sum(s['reward'] * gamma ** k for k, s in enumerate(path)) for path in trajectories],
-                    n_steps=[len(path) for path in trajectories], **result)) + '\n')
+                    n_steps=[len(path) for path in trajectories],
+                    # Penalties can make a proved episode's return zero or negative; count proofs from this field.
+                    accepted=[any(s['accepted'] for s in path) for path in trajectories], **result, **extra)) + '\n')
                 steps.flush()
                 every = config.get('checkpoint_every', 0)
                 if every and not evaluating and counts['groups'] % every == 0:
@@ -1096,6 +1671,8 @@ def main():
         raise
     finally:
         signal.alarm(0)
+        if executor is not None:
+            executor.shutdown(wait=False, cancel_futures=True)
         if ctx is not None:
             for repl in ctx.pool_repls:
                 close_repl(repl)

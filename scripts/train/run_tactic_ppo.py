@@ -56,7 +56,8 @@ def one_action_score(ctx, by_id, task_ids, completions, executor):
         try:
             checked_state(env, by_id[task_id])
             result = env.step(text, 0.0)
-            verdicts.append(dict(counts, status='accepted' if result['accepted'] else 'rejected',
+            status = result['status'] if result.get('censored') else 'accepted' if result['accepted'] else 'rejected'
+            verdicts.append(dict(counts, status=status, censored=bool(result.get('censored')),
                                  episode_result=result))
         finally:
             env.close()

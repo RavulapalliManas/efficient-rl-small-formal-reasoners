@@ -11,6 +11,7 @@ This project tests when reinforcement learning (RL) helps a small language model
 | Curriculum data and builders | [Curriculum](#curriculum) |
 | Experiment catalogue, protocols, evidence, ownership, and decisions | [EXPERIMENTS.md](docs/EXPERIMENTS.md) |
 | Generalization: Abhinav; curriculum: Manas | [Generalization](docs/EXPERIMENTS.md#exp-026); [curriculum](docs/EXPERIMENTS.md#exp-027); [Abhinav's handoff](docs/EXPERIMENTS.md#abhinavs-task-handoff-and-checklist); [report](docs/tex/project_report.pdf) |
+| Every dataset of the number-theory study: what it is, how it was made, its frozen copy, and the fetch-and-verify steps | [Data handoff for Abhinav](docs/EXPERIMENTS.md#data-handoff-for-abhinav-20-october-2026-ist) |
 | Evaluation questions, expected answers and semantic issues | [Evaluation review pack](docs/EXPERIMENTS.md#exp-025-evaluation-specification-and-semantic-review-17-october-2026) |
 | Description of every DEV and TEST question | [Report appendix A](docs/tex/project_report.pdf#page=24); [source and verification](docs/EXPERIMENTS.md#full-evaluation-question-descriptions-17-october-2026) |
 | Prerequisite curriculum, proof strategy and reward discussion | [Current handoff](docs/EXPERIMENTS.md#handoff-prerequisites-proof-strategy-and-reward-14-october) |
@@ -49,6 +50,12 @@ The prepared package is cpu-angad `formal_rl/nt_benchmark_v2_20261016/prepared_v
 Its `data/` directory contains the pool, TRAIN/DEV/TEST tasks and SFT inputs.
 The [v1 config](configs/data/nt_benchmark_v1.json) remains available for the earlier pilot.
 Topic and duplicate groups use text rules. Mathematical family review and model difficulty calibration remain pending.
+
+The main study (EXP-026 and EXP-027) trains on the later `validated_v2` release (506 TRAIN roots, 1,880 SFT action rows), not on `prepared_v1`.
+It evaluates on the fixed DEV 8 of `release_v3`; the TEST 21 of `release_v3` stays untouched.
+The [data handoff](docs/EXPERIMENTS.md#data-handoff-for-abhinav-20-october-2026-ist) describes every dataset, how it was made, its frozen copy and the steps to fetch and verify it.
+A fresh clone cannot rebuild these datasets: several builders are private, and at `main` the benchmark `verify` stage admits no candidate because the screen marks `exact?` forbidden.
+The archived copies expire between 11 and 19 November 2026 unless they are moved to permanent storage.
 
 ## Modify the pipeline
 
@@ -112,7 +119,8 @@ Weights and optimizer state retain their original contents.
 4. Run `uv run pre-commit install`.
 5. Run the tests with `uv run python -m unittest discover -s tests`.
 
-Training and inference run on cpu-angad and rented GPUs, not on a laptop. Those environments supply `torch`, `transformers`, `trl`, and `tensorboardX`, which `pyproject.toml` does not list.
+Training and inference run on rented AWS GPUs, not on a laptop. Those environments supply `torch`, `transformers`, `trl`, and `tensorboardX`, which `pyproject.toml` does not list.
+cpu-angad holds historical working copies only; new jobs do not run there.
 
 ## Layout
 

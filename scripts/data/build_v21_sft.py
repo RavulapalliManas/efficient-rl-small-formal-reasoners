@@ -34,6 +34,7 @@ sys.path[:0] = [str(Path(__file__).resolve().parents[1] / d) for d in ('train', 
 from build_nt_sft_data import body_of, strip_comments  # noqa: E402
 from build_proof_tasks import top_level_steps  # noqa: E402
 from run_tactic_rl import parse_action, render_observation  # noqa: E402
+from rl_components.sft import chat_token_lengths  # noqa: E402
 
 AUTOMATION = re.compile(r'(aesop|simp_all|omega|tauto|norm_num|simp|nlinarith|linarith|rfl|ring_nf|decide|'
                         r'push_cast|field_simp|positivity)\b')
@@ -73,7 +74,8 @@ def supplied_text(done):
     return ''.join(textwrap.indent(t, '  ') + '\n' for t in done)
 
 
-def row(name, header, mode, done, given, goal, rest, max_tactics, horizon, source):
+def row(name, header, mode, done, given, goal, rest, max_tactics, horizon, source,
+        *, tokenizer=None, max_action_tokens=None):
     """One example. mode 'supplied': `given` is shown as supplied lines. mode 'shown': `done` as policy steps."""
     chunk = rest[:max_tactics]
     target = '```lean\n' + '\n'.join(chunk) + '\n```'
@@ -85,9 +87,51 @@ def row(name, header, mode, done, given, goal, rest, max_tactics, horizon, sourc
         # Assume one action per earlier tactic, the slowest RL path to this cut; keep one action for the target.
         task, shown, remaining = dict(kind='whole', header=header, given=''), done, max(horizon - len(done), 1)
     prompt = render_observation(task, shown, [goal], '', [], remaining, max_tactics)
+    if max_action_tokens is not None:
+        if tokenizer is None or max_action_tokens < 1:
+            raise ValueError('A positive action budget requires a tokenizer')
+        # Never cut inside a nested tactic or leave an unclosed Lean fence.
+        while chunk:
+            target = '```lean\n' + '\n'.join(chunk) + '\n```'
+            messages = [dict(role='user', content=prompt), dict(role='assistant', content=target)]
+            if chat_token_lengths(messages, tokenizer)[1] <= max_action_tokens:
+                break
+            chunk = chunk[:-1]
+        if not chunk:
+            return None
     return dict(format='v21_observation', source=source, theorem=name, steps_done=len(done), mode=mode,
                 header=header, given=given, done=done, state=goal, horizon=horizon, max_tactics=max_tactics, target_tactics=chunk, automation=is_automation(chunk),
                 messages=[{'role': 'user', 'content': prompt}, {'role': 'assistant', 'content': target}])
+
+
+def recovery_row(example, last_error, failed, *, tokenizer, max_action_tokens=192, max_tokens=2048):
+    """One failed action at a verified source cut, followed by its unchanged correct target.
+
+    The caller supplies real environment feedback. Format-only failures use the parser's
+    self-loop feedback and leave ``failed`` empty, as the live environment does.
+    """
+    supplied = example['mode'] == 'supplied'
+    shown = [] if supplied else example['done']
+    remaining = example['horizon'] - len(shown) - 1
+    if remaining < 1:
+        return None
+    if not last_error:
+        raise ValueError('A recovery row requires failure feedback')
+    target = example['messages'][1]
+    action = parse_action(target['content'], example['max_tactics'])
+    if action.get('tactics') != example['target_tactics']:
+        raise ValueError('Recovery target differs from the verified source tactics')
+    task = dict(kind='prefix_top' if supplied else 'whole', header=example['header'],
+                given=example['given'] if supplied else '')
+    prompt = render_observation(task, shown, [example['state']], last_error, failed,
+                                remaining, example['max_tactics'])
+    messages = [dict(role='user', content=prompt), dict(target)]
+    total, completion = chat_token_lengths(messages, tokenizer)
+    if total >= max_tokens or completion > max_action_tokens:
+        return None
+    return dict(example, messages=messages, tokens=total, completion_tokens=completion,
+                recovery_remaining_actions=remaining, recovery_last_error=last_error,
+                recovery_failed_tactics=list(failed))
 
 
 def pool_header(statement):

@@ -53,35 +53,24 @@ import sys
 import time
 import zipfile
 
-sys.path[:0] = [str(Path(__file__).resolve().parents[1] / d) for d in ("data", "audit", "eval")]
+sys.path[:0] = [str(Path(__file__).resolve().parents[1] / d) for d in ("train", "data", "audit", "eval")]
 from bench_lean_verifier import repl_context, verify_group  # noqa: E402
 from prepare_grpo_pilot import load_checker  # noqa: E402
 from probe_nt_pool import INSTRUCTION as PROOF_INSTRUCTION, header, lean_unit, prompt  # noqa: E402
 from probe_start_depth import FORBIDDEN, INSTRUCTION as CONTINUE_INSTRUCTION  # noqa: E402
 from replay_training_proofs import load, proof_body  # noqa: E402
+from rl_components import PoolTaskAdmission, component_fingerprints  # noqa: E402
 
 
 def train_statements(pool, names=None):
     """Pool rows of split train, or only `names`; raises if a name is not a train statement of the pool."""
-    if names is None:
-        return [r for r in pool if r["split"] == "train"]
-    split = {r["name"]: r["split"] for r in pool}
-    outside = sorted(n for n in names if split.get(n) != "train")
-    if outside:  # validation and test statements stay out of training, prompts, and adaptive sampling
-        raise RuntimeError(f"{len(outside)} names are not train statements of the pool, for example {outside[:3]}")
-    return [r for r in pool if r["name"] in names]
+    return PoolTaskAdmission(pool, header=header, unit_factory=lean_unit, forbidden=FORBIDDEN).train_statements(names)
 
 
-def task_units(tasks, pool):
-    """verify_group units (with goal state) of RL tasks; raises if a name is not a train statement of the pool, a header
+def task_units(tasks, pool, split='train'):
+    """verify_group units (with goal state) of RL tasks; raises if a name is outside the declared split, a header
     is not the pool statement's header, a given text has a FORBIDDEN match, or a task_id repeats."""
-    rows = {r["name"]: r for r in train_statements(pool, {t["name"] for t in tasks})}
-    bad = sorted(t["task_id"] for t in tasks if t["header"] != header(rows[t["name"]]) or FORBIDDEN.search(t["given"]))
-    if bad:
-        raise RuntimeError(f"{len(bad)} tasks differ from the pool statement or have a FORBIDDEN given text, for example {bad[:3]}")
-    if len({t["task_id"] for t in tasks}) != len(tasks):
-        raise RuntimeError("task_id values repeat")
-    return [dict(lean_unit(t), state=t["state"]) for t in tasks]
+    return PoolTaskAdmission(pool, header=header, unit_factory=lean_unit, forbidden=FORBIDDEN).units(tasks, split)
 
 
 def excluded_names(units, excluded):
@@ -232,6 +221,7 @@ def main():
         json.dumps([rows[i % len(rows)]['task_id'] for i in range(needed)]) + '\n')
     by_id = {u["task_id"]: u for u in units}
     run = {"config": config, "model": str(args.model), **sources_info, "units": len(units),
+           "component_sha256": component_fingerprints(),
            "units_with_prompts": len(rows), "dropped_long_prompts": dropped,
            "lean": "v4.10.0-rc1", "mathlib": "29dcec074de168ac2bf835a77ef68bbe069194c5", "repl": str(ctx.repl),
            "device": torch.cuda.get_device_name(0) if torch.cuda.is_available() else "cpu", "status": "running"}

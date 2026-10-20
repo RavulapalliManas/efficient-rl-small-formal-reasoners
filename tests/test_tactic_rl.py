@@ -21,6 +21,20 @@ class TacticRLTest(unittest.TestCase):
     def setUp(self):
         self.assertTrue(PATH.exists(), 'Interactive tactic trainer is missing')
 
+    def test_generation_record_preserves_terminal_probability_and_physical_tokens(self):
+        self.assertTrue(hasattr(self.rl, 'generation_record'), 'Shared generation boundary is missing')
+        for raw, retained, violation in (([1, 0, 0], [1], False),
+                                         ([0, 5, 1], [0, 5, 1], True),
+                                         ([5, 0, 6, 1], [5, 0, 6, 1], True),
+                                         ([5, 6, 5], [5, 6, 5], False)):
+            with self.subTest(raw=raw):
+                record = self.rl.generation_record(raw, 1, 0)
+                self.assertEqual(record['raw_response_ids'], raw)
+                self.assertEqual(record['action_ids'], retained)
+                self.assertEqual(record['generated_tokens'], len(raw))
+                self.assertEqual(record['retained_tokens'], len(retained))
+                self.assertEqual(record['pad_before_eos'], violation)
+
     def test_changed_goals_get_bounded_credit_even_when_goal_count_increases(self):
         seen = {self.rl.state_key(['⊢ P ∧ Q'])}
         response = {'proofState': 2, 'goals': ['⊢ P', '⊢ Q']}
@@ -164,7 +178,8 @@ class TacticRLTest(unittest.TestCase):
             self.assertNotIn('reference_rest', state)
             head, _ = split_prefix(q['prefix'])
             self.assertEqual(commands[0], {'cmd': head})
-            self.assertEqual(commands[1], {'cmd': source_for(q, '  sorry\n')[len(head):], 'env': 7})
+            local_q = dict(q, header='nonrec example : True ∧ True')
+            self.assertEqual(commands[1], {'cmd': source_for(local_q, '  sorry\n')[len(head):], 'env': 7})
             self.assertEqual(commands[2], {'tactic': self.rl.tactic_block('  constructor'), 'proofState': 9})
             self.assertEqual(env.goals, ['case left\n⊢ True', 'case right\n⊢ True'])
             self.assertEqual(env.state, 10)
@@ -175,6 +190,21 @@ class TacticRLTest(unittest.TestCase):
                                  lean_seconds=0, lean_cpu_seconds=0)]) as replay:
                 self.assertEqual(env.step('exact h', 0)['reward'], 1)
                 self.assertEqual(replay.call_args.args[1], task)
+
+    def test_anonymous_header_preserves_signature_and_universe_binders(self):
+        cases = [
+            ('theorem p : True', ('', 'nonrec example : True')),
+            ('private theorem N.p (n : Nat) : n = n', ('', 'nonrec example (n : Nat) : n = n')),
+            ('@[simp] protected theorem N.p : True', ('', 'nonrec example : True')),
+            ('open Nat in\n@[simp]\nprivate\ntheorem p : True', ('', 'open Nat in\nnonrec example : True')),
+            ('lemma N.«a b».{u, v} (α : Sort u) (β : Sort v) : True',
+             ('universe u v\n', 'nonrec example (α : Sort u) (β : Sort v) : True')),
+        ]
+        for header, expected in cases:
+            with self.subTest(header=header):
+                self.assertEqual(self.rl.anonymous_header(header), expected)
+        with self.assertRaisesRegex(ValueError, 'Unsupported declaration prefix'):
+            self.rl.anonymous_header('open\n  Nat in\ntheorem p : True')
 
     def test_evaluation_uses_dev_statements_without_proof_prefixes(self):
         self.assertTrue(hasattr(self.rl, 'evaluation_tasks'), 'Interactive DEV evaluation is missing')
@@ -208,6 +238,63 @@ class TacticRLTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'DEV'):
             self.rl.execution_mode(True, True)
 
+    def test_nontraining_assessment_requires_the_declared_split_and_training_exclusions(self):
+        self.assertTrue(hasattr(self.rl, 'assessment_tasks'), 'Explicit split assessment admission is missing')
+        task = dict(task_id='p:whole', name='p', header='theorem p : True', kind='whole',
+                    given='', state='⊢ True')
+        for split in ('validation', 'test'):
+            pool = [dict(name='p', split=split, formal_statement='theorem p : True := by sorry')]
+            with self.subTest(split=split):
+                self.assertEqual(self.rl.assessment_tasks([task], pool, {'p'}, 3, split), [task])
+                self.assertEqual(pool[0]['split'], split)
+                with self.assertRaisesRegex(ValueError, 'excluded'):
+                    self.rl.assessment_tasks([task], pool, set(), 3, split)
+                with self.assertRaises(RuntimeError):
+                    self.rl.training_tasks([task], pool, set(), 3)
+                with self.assertRaises(RuntimeError):
+                    self.rl.assessment_tasks([task], [dict(pool[0], split='train')], {'p'}, 3, split)
+                self.assertEqual(self.rl.execution_mode(False, True, split), split + '_assessment')
+
+    def test_assessment_split_cannot_enable_training_or_native_bank_evaluation(self):
+        import contextlib
+        import io
+        for extra in (['--pool', 'unused', '--tasks', 'unused', '--exclude-names', 'unused'],
+                      ['--bank', 'unused', '--train', 'unused', '--eval', 'unused',
+                       '--exclude-files', 'unused', '--assessment-only']):
+            command = ['run_tactic_rl.py'] + [part for name in
+                ('config', 'model', 'checker', 'environment', 'mathlib-identity', 'repl', 'output')
+                for part in ('--' + name, 'unused')] + extra + ['--assessment-split', 'validation']
+            error = io.StringIO()
+            with self.subTest(extra=extra), patch.object(self.rl.sys, 'argv', command), \
+                    contextlib.redirect_stderr(error), self.assertRaises(SystemExit):
+                self.rl.main()
+            self.assertIn('assessment-split requires --assessment-only with pool tasks', error.getvalue())
+
+    def test_assessment_freezes_truthful_split_and_ids_before_loading_models(self):
+        with TemporaryDirectory() as directory:
+            base = Path(directory)
+            config = json.loads((PATH.parents[2] / 'configs/eval/qwen_05b_curriculum_stage_probe_v21prompt.json').read_text())
+            task = dict(task_id='p:whole', name='p', header='theorem p : True', kind='whole', given='', state='⊢ True')
+            files = dict(config=json.dumps(config), pool=json.dumps(dict(name='p', split='validation',
+                formal_statement='theorem p : True := by sorry')) + '\n', tasks=json.dumps(task) + '\n',
+                exclude_names='p\n', checker='', mathlib_identity='{}')
+            for name, text in files.items():
+                (base / name).write_text(text)
+            command = ['run_tactic_rl.py'] + [part for name in
+                ('config', 'pool', 'tasks', 'exclude_names', 'model', 'checker', 'environment',
+                 'mathlib_identity', 'repl', 'output') for part in ('--' + name.replace('_', '-'), str(base / name))]
+            command += ['--assessment-only', '--assessment-split', 'validation']
+            with patch.object(self.rl.sys, 'argv', command), patch.object(self.rl.signal, 'signal'), \
+                    patch.object(self.rl.signal, 'alarm'), \
+                    patch.object(self.rl, 'file_sha256', side_effect=RuntimeError('fixture stops before model load')):
+                with self.assertRaisesRegex(RuntimeError, 'fixture stops'):
+                    self.rl.main()
+            run = json.loads((base / 'output/run.json').read_text())
+            self.assertEqual(run['mode'], 'validation_assessment')
+            self.assertEqual(run['assessment_split'], 'validation')
+            self.assertEqual(run['counts']['optimizer_updates'], 0)
+            self.assertEqual(json.loads((base / 'output/evaluation_task_ids.json').read_text()), ['p:whole'])
+
     def test_forbidden_tactic_is_rejected_without_calling_lean(self):
         with TemporaryDirectory() as directory:
             env = self.rl.LeanEpisode(None, dict(task_id='p', name='p', header='theorem p : False',
@@ -215,6 +302,24 @@ class TacticRLTest(unittest.TestCase):
             result = env.step('sorry', 0.025)
             self.assertEqual(result['status'], 'forbidden_construct')
             self.assertEqual(result['reward'], 0)
+
+    def test_v1_action_and_replay_crashes_censor_the_group(self):
+        task = dict(task_id='p', name='p', header='theorem p : True', given='', kind='whole')
+        for stage in ('action', 'replay'):
+            with self.subTest(stage=stage), TemporaryDirectory() as directory:
+                counts = dict(lean_calls=0, lean_seconds=0.0, lean_cpu_seconds=0.0)
+                env = self.rl.LeanEpisode(SimpleNamespace(timeout=1), task, Path(directory), counts)
+                env.state, env.path, env.seen = 1, [], {self.rl.state_key(['⊢ True'])}
+                verdict = dict(status='crash', lean_calls=1, lean_seconds=0.0, lean_cpu_seconds=0.0)
+                with patch.object(env, 'send', side_effect=EOFError() if stage == 'action' else None,
+                                  return_value={'proofState': 2, 'goals': []}), \
+                        patch.object(self.rl, 'verify_group', return_value=[verdict]):
+                    result = env.step('trivial', 0)
+                self.assertEqual(result['status'], 'crash' if stage == 'action' else 'replay_crash')
+                self.assertTrue(result.get('censored'), 'A crashed verifier must not supply a training outcome')
+                self.assertTrue(result['done'])
+                self.assertFalse(result['accepted'])
+                self.assertEqual(result['reward'], 0.0)
 
     def test_one_repair_keeps_verified_state_and_preserves_error_reward(self):
         with TemporaryDirectory() as directory:
@@ -376,6 +481,89 @@ class EnvironmentV2Test(unittest.TestCase):
             self.assertIn('actions remaining: 0', env.prompt_state())
             self.assertEqual(env.sent, ['exact x', 'skip'])  # Other actions never reach Lean.
 
+    def test_candidate_menu_filters_without_changing_the_live_proof(self):
+        responses = {'intro h': {'proofState': 1, 'goals': ['h : P\n⊢ Q']},
+                     'exact missing': {'message': 'Lean error:\nunknown identifier missing'}}
+        with TemporaryDirectory() as directory:
+            env = self.episode(directory, responses)
+            send = env.send
+            def counted_send(request, timeout):
+                env.counts['lean_calls'] += 1
+                return send(request, timeout)
+            env.send = counted_send
+            before = env.prompt_state()
+            menu = env.candidate_menu(['intro h', 'exact missing', 'sorry', 'intro h\nsimp'],
+                                      max_candidates=4, max_lean_calls=20)
+            self.assertEqual(menu['actions'], [{'id': 0, 'tactic': 'intro h'}])
+            self.assertEqual(env.prompt_state(), before)
+            self.assertEqual(env.state, 0)
+            self.assertEqual(env.steps_used, 0)
+            self.assertEqual(env.failed, {})
+            self.assertEqual(env.sent, ['intro h', 'exact missing'])
+            self.assertEqual(env.counts['lean_calls'], 2)
+            with self.assertRaisesRegex(ValueError, 'choice'):
+                env.select_candidate(menu, 1)
+            result = env.select_candidate(menu, 0)
+            self.assertEqual(result['status'], 'changed')
+            self.assertEqual(env.state, 1)
+            self.assertEqual(env.counts['lean_calls'], 3)
+            with self.assertRaisesRegex(ValueError, 'stale'):
+                env.select_candidate(menu, 0)
+
+    def test_candidate_menu_reserves_calls_and_requires_complete_proof_replay(self):
+        responses = {'close': {'proofState': 1, 'goals': []}}
+        with TemporaryDirectory() as directory:
+            env = self.episode(directory, responses)
+            send = env.send
+            def counted_send(request, timeout):
+                env.counts['lean_calls'] += 1
+                return send(request, timeout)
+            env.send = counted_send
+            with self.assertRaisesRegex(self.rl.BudgetReached, 'lean_call_cap'):
+                env.candidate_menu(['close'], max_candidates=1, max_lean_calls=2)
+            self.assertEqual(env.sent, [])
+            rejected = dict(status='rejected', lean_calls=3, lean_seconds=0, lean_cpu_seconds=0)
+            with patch.object(self.rl, 'lean_unit', return_value='unit'), \
+                    patch.object(self.rl, 'verify_group', return_value=[rejected]):
+                menu = env.candidate_menu(['close'], max_candidates=1, max_lean_calls=8)
+            self.assertEqual(menu['status'], 'empty')
+            self.assertEqual(menu['actions'], [])
+            self.assertEqual(env.counts['lean_calls'], 4)
+            self.assertEqual(env.state, 0)
+
+    def test_candidate_menu_aborts_on_a_crash_instead_of_returning_a_partial_mask(self):
+        responses = {'intro h': {'proofState': 1, 'goals': ['h : P\n⊢ Q']}, 'crash': EOFError()}
+        with TemporaryDirectory() as directory:
+            env = self.episode(directory, responses)
+            menu = env.candidate_menu(['intro h', 'crash'], max_candidates=2, max_lean_calls=12)
+            self.assertEqual(menu['status'], 'crash')
+            self.assertEqual(menu['actions'], [])
+            self.assertTrue(menu['censored'])
+            self.assertEqual(env.state, 0)
+
+    def test_candidate_menu_counts_both_failed_replay_setup_attempts(self):
+        verifier = __import__('bench_lean_verifier')
+        def setup_failure(ctx, head, tag, record):
+            record['lean_calls'] += 1
+            record['setup_error'] = 'EOFError'
+            return None, None
+        unit = dict(kind='statement', task_id='t', name='t', header='theorem t : True', given_steps=[])
+        with TemporaryDirectory() as directory:
+            env = self.episode(directory, {'close': {'proofState': 1, 'goals': []}})
+            env.ctx.local, env.ctx.pool_repls, env.ctx.restart_after = SimpleNamespace(), set(), 8
+            send = env.send
+            def counted_send(request, timeout):
+                env.counts['lean_calls'] += 1
+                return send(request, timeout)
+            env.send = counted_send
+            with patch.object(self.rl, 'lean_unit', return_value=unit), \
+                    patch.object(verifier, 'open_repl', side_effect=setup_failure), \
+                    self.assertRaisesRegex(RuntimeError, 'setup failed twice'):
+                env.candidate_menu(['close'], max_candidates=1, max_lean_calls=8)
+            self.assertEqual(env.counts['lean_calls'], 3)
+            self.assertEqual(env.state, 0)
+            self.assertEqual(env.steps_used, 0)
+
     def test_chunk_keeps_the_valid_prefix_and_stops_at_the_first_error(self):
         responses = {'induction n': {'proofState': 1, 'goals': ['⊢ 0 + 0 = 0', '⊢ n + 1 + 0 = n + 1']},
                      'simp': {'proofState': 2, 'goals': ['⊢ n + 1 + 0 = n + 1']},
@@ -445,6 +633,25 @@ class EnvironmentV2Test(unittest.TestCase):
                 self.assertEqual(env.sent, ['simp'])
                 self.assertEqual(result['replay']['body'], '  first |\n    -- close it\n    simp\n')
 
+    def test_final_body_preserves_verified_prefix_after_backtrack_and_chunk_truncation(self):
+        responses = {'a': {'proofState': 1, 'goals': ['⊢ P']},
+                     'split': {'proofState': 2, 'goals': ['⊢ Q']},
+                     'bad': {'message': 'Lean error:\nunknown identifier bad'},
+                     'close': {'proofState': 3, 'goals': []}}
+        verdict = dict(status='accepted', lean_calls=1, lean_seconds=0, lean_cpu_seconds=0)
+        with TemporaryDirectory() as directory, patch.object(self.rl, 'lean_unit', lambda task: 'unit'), \
+                patch.object(self.rl, 'verify_group', return_value=[verdict]) as replay:
+            env = self.episode(directory, responses, backtrack_owner='policy')
+            env.step('a', 0)
+            env.step('backtrack 0', 0)
+            self.assertEqual(env.step('split\nbad', 0)['status'], 'partial')
+            result = env.step('close\nunused', 0)
+            expected = '  first |\n    split\n  first |\n    close\n'
+            self.assertEqual(replay.call_args.args[2], [expected])
+            self.assertIn('proof_body', result, 'The replayed body must survive the rollout handoff')
+            self.assertEqual(result['proof_body'], expected)
+            self.assertEqual(json.loads(json.dumps(result))['proof_body'], expected)
+
     def test_timeout_ends_the_episode_and_a_crash_censors_it(self):
         with TemporaryDirectory() as directory:
             env = self.episode(directory, {'slow': TimeoutError(), 'boom': EOFError()})
@@ -460,12 +667,62 @@ class EnvironmentV2Test(unittest.TestCase):
             text = self.episode(directory, {}, task).prompt_state()
             self.assertIn('theorem b : True := by\n  -- supplied lines (already checked):\n  have h := 1\n  skip\n', text)
 
-    def test_v2_rejects_heuristic_rewards_repair_and_bad_settings(self):
+    def test_v2_rejects_unknown_rewards_repair_and_bad_settings(self):
         with TemporaryDirectory() as directory:
-            for kwargs in (dict(reward_mode='error_feedback_v1'), dict(max_repair_attempts=1),
+            for kwargs in (dict(reward_mode='goal_text_bonus'), dict(max_repair_attempts=1),
+                           dict(reward_mode='error_feedback_v1', max_repair_attempts=1),
                            dict(backtrack_owner='search'), dict(max_tactics=0), dict(backtrack_after=0)):
                 with self.subTest(kwargs=kwargs), self.assertRaises(ValueError):
                     self.rl.LeanEpisode(None, {}, Path(directory), None, version=2, horizon=4, **kwargs)
+            env = self.rl.LeanEpisode(None, {}, Path(directory), None, version=2, horizon=4,
+                                      reward_mode='error_feedback_v1')
+            self.assertEqual(env.reward_mode, 'error_feedback_v1')
+
+    def test_v2_error_feedback_scores_each_action_outcome(self):
+        def score(status, **fields):
+            return self.rl.v2_feedback({**dict(status=status, reward=0.0, accepted=False, done=False), **fields})
+        cases = [(score('accepted', accepted=True, done=True), 1.0, 'accepted'),
+                 (score('format_error'), -0.2, 'format_error'),
+                 (score('forbidden_construct'), -0.2, 'forbidden_construct'),
+                 (score('invalid_backtrack'), -0.2, 'invalid_backtrack'),
+                 (score('rejected', error="error: unknown identifier 'missing'"), -0.2, 'rejected'),
+                 (score('rejected', error="error: unexpected token ')'; expected tactic"), -0.2, 'rejected'),
+                 (score('rejected', error='error: type mismatch\n  0\nexpected True'), -0.1, 'rejected'),
+                 (score('rejected', error='error: internal exception #4'), -0.1, 'rejected'),
+                 (score('no_progress'), -0.1, 'no_progress'),
+                 (score('cycle'), -0.1, 'cycle'),
+                 (score('partial', failure='no_progress', error='the goals are unchanged.'), -0.1, 'partial'),
+                 (score('partial', failure='rejected', error="error: unknown identifier 'x'"), -0.2, 'partial'),
+                 (score('replay_rejected', done=True), -0.1, 'replay_rejected'),
+                 (score('replay_forbidden_construct', done=True), -0.2, 'replay_forbidden_construct'),
+                 (score('changed'), 0.0, 'changed'), (score('backtrack'), 0.0, 'backtrack'),
+                 (score('timeout', done=True), 0.0, 'timeout'), (score('crash', done=True), 0.0, 'crash'),
+                 (score('replay_timeout', done=True), 0.0, 'replay_timeout')]
+        for result, reward, status in cases:
+            with self.subTest(status=status, error=result.get('error')):
+                self.assertEqual(result['reward'], reward)
+                self.assertEqual(result['status'], status)  # The environment status survives scoring.
+
+    def test_v2_error_feedback_penalizes_each_failed_action_and_not_valid_steps(self):
+        same = {'proofState': 2, 'goals': ['n : ℕ\n⊢ n + 0 = n']}
+        responses = {'exact x': {'proofState': 1, 'goals': [], 'messages': [
+                         {'severity': 'error', 'data': 'unknown identifier x'}]},
+                     'skip': same, 'intro h': {'proofState': 3, 'goals': ['h : P\n⊢ Q']},
+                     'exact missing': {'message': 'Lean error:\nunknown identifier missing'}}
+        with TemporaryDirectory() as directory:
+            env = self.episode(directory, responses, backtrack_after=10, reward_mode='error_feedback_v1')
+            for text, status, reward in (('exact x', 'rejected', -0.2), ('skip', 'no_progress', -0.1),
+                                         ('```lean\nsimp', 'format_error', -0.2),
+                                         ('sorry', 'forbidden_construct', -0.2),
+                                         ('intro h\nexact missing', 'partial', -0.2)):
+                with self.subTest(text=text):
+                    result = env.step(text, 0)
+                    self.assertEqual((result['status'], result['reward']), (status, reward), result)
+                    self.assertFalse(result['done'])
+            self.assertEqual(env.shown, ['intro h'])  # The valid prefix of the partial action stays.
+            plain = self.episode(directory, responses, backtrack_after=10)
+            self.assertEqual(plain.step('intro h', 0)['reward'], 0.0)
+            self.assertEqual(plain.step('skip', 0)['reward'], 0.0)  # The default v2 reward stays terminal.
 
     def test_discounted_advantages_prefer_shorter_proofs(self):
         short, long, failed = [1.0], [0.0, 0.0, 1.0], [0.0, 0.0]
@@ -716,6 +973,333 @@ class EnvironmentV2Test(unittest.TestCase):
             result = env.step('simp', 0)
             self.assertEqual((result['status'], result['done'], result['censored']), ('crash', True, True))
             self.assertIsNone(env.repl)
+
+    def replay(self, verdict):
+        return patch.object(self.rl, 'verify_group', lambda ctx, unit, bodies: [
+            dict(status=verdict, lean_calls=1, lean_seconds=0.1, lean_cpu_seconds=0.1, body=bodies[0])])
+
+    def test_step_search_keeps_the_best_candidate_as_one_step(self):
+        responses = {'exact missing': {'message': 'Lean error:\nunknown identifier missing'},
+                     'intro h': {'proofState': 1, 'goals': ['h : P\n⊢ Q']},
+                     'skip': {'proofState': 2, 'goals': ['n : ℕ\n⊢ n + 0 = n']}}
+        with TemporaryDirectory() as directory:
+            env = self.episode(directory, responses)
+            search = env.search_step(['exact missing', 'intro h', 'skip'])
+            self.assertEqual((search['chosen'], search['result']['status']), (1, 'changed'))
+            self.assertEqual((env.state, env.shown, env.steps_used), (1, ['intro h'], 1))
+            self.assertEqual(env.sent, ['exact missing', 'intro h', 'skip'])
+            probes = {p['index']: p for p in search['probes']}
+            # A rejected probe leaves the state unchanged and records the next observation for repair data.
+            self.assertIn('unknown identifier missing', probes[0]['observation_after'])
+            self.assertIn('exact missing', probes[0]['observation_after'])
+            self.assertNotIn('observation_after', probes[1])
+            self.assertEqual(probes[2]['status'], 'no_progress')
+            failed = self.episode(directory, responses)
+            search = failed.search_step(['exact missing', 'skip'])
+            self.assertEqual((search['chosen'], failed.state, failed.steps_used), (0, 0, 1))
+
+    def test_step_search_stops_at_a_verified_proof_and_at_a_timeout(self):
+        responses = {'close': {'proofState': 1, 'goals': []}, 'intro h': {'proofState': 2, 'goals': ['⊢ Q']},
+                     'slow': TimeoutError()}
+        with TemporaryDirectory() as directory, patch.object(self.rl, 'lean_unit', lambda task: 'unit'), \
+                self.replay('accepted'):
+            env = self.episode(directory, responses)
+            search = env.search_step(['intro h', 'close', 'intro h'])
+            self.assertEqual(search['chosen'], 1)
+            self.assertTrue(search['result']['accepted'])
+            self.assertEqual(env.sent, ['intro h', 'close'])
+            slow = self.episode(directory, responses)
+            search = slow.search_step(['slow', 'intro h'])
+            self.assertEqual((search['chosen'], search['result']['status']), (0, 'timeout'))
+            self.assertEqual(slow.sent, ['slow'])
+        with TemporaryDirectory() as directory:
+            with self.assertRaisesRegex(ValueError, 'v2'):
+                self.episode(directory, responses).search_step([])
+
+    def test_automation_completes_only_through_replay_and_a_probe_does_not_commit(self):
+        responses = {'omega': {'message': 'Lean error:\nomega could not prove the goal'},
+                     'simp': {'proofState': 1, 'goals': []}}
+        for verdict in ('accepted', 'rejected'):
+            with TemporaryDirectory() as directory, patch.object(self.rl, 'lean_unit', lambda task: 'unit'), \
+                    self.replay(verdict):
+                env = self.episode(directory, responses)
+                probe = env.try_automation(['omega', 'simp'], commit=False)
+                self.assertEqual((env.state, env.path, env.steps_used), (0, [], 0))
+                if verdict == 'rejected':
+                    self.assertIsNone(probe)
+                    continue
+                self.assertEqual(probe['tactic'], 'simp')
+                done = env.try_automation(['omega', 'simp'])
+                self.assertTrue(done['result']['accepted'])
+                self.assertEqual(env.shown, ['simp'])
+
+    def test_search_automation_and_task_filter_settings_are_validated(self):
+        base = json.loads((PATH.parents[2] / 'configs/eval/qwen_05b_curriculum_stage_probe_v21prompt.json').read_text())
+        v1 = json.loads((PATH.parents[2] / 'configs/eval/qwen_05b_curriculum_stage_probe_v1prompt.json').read_text())
+        spec = dict(pass_rates_from='/runs/train_assessment', min_exclusive=0, max_inclusive=0.75)
+        self.rl.validate_config(dict(base, step_candidates=8, automation_fallback=['omega', 'simp_all'], task_filter=spec))
+        bad = [dict(base, step_candidates=0), dict(base, step_candidates=True), dict(base, automation_fallback='omega'),
+               dict(base, automation_fallback=['sorry']), dict(base, automation_fallback=['simp\nomega']),
+               dict(v1, step_candidates=2), dict(base, task_filter=dict(spec, extra=1)),
+               dict(base, task_filter=dict(spec, min_exclusive=0.8)), dict(base, task_filter=dict(spec, max_inclusive=1.5))]
+        for config in bad:
+            with self.subTest(config={k: config.get(k) for k in ('step_candidates', 'automation_fallback', 'task_filter')}):
+                with self.assertRaises(ValueError):
+                    self.rl.validate_config(config)
+        self.rl.check_mode_settings(dict(base, step_candidates=8, automation_fallback=['omega']), evaluating=True)
+        self.rl.check_mode_settings(dict(base, task_filter=spec), evaluating=False)
+        for config, evaluating in ((dict(base, step_candidates=8), False), (dict(base, automation_fallback=['omega']), False),
+                                   (dict(base, task_filter=spec), True)):
+            with self.assertRaises(ValueError):
+                self.rl.check_mode_settings(config, evaluating)
+
+    def test_pass_rate_filter_keeps_the_measured_mixed_band_from_training_assessment_only(self):
+        rows = [dict(group=0, task_id='a', returns=[0, 0, 0, 0]), dict(group=1, task_id='b', returns=[1, 0, 0, 0]),
+                dict(group=2, task_id='c', returns=[1, 1, 1, 1]), dict(group=3, status='censored', reason='prompt_cap'),
+                dict(group=4, task_id='b', returns=[1, 1, 0, 0])]
+        tasks = [dict(task_id=name) for name in 'abcd']
+        with TemporaryDirectory() as directory:
+            source = Path(directory)
+            (source / 'steps.jsonl').write_text(''.join(json.dumps(row) + '\n' for row in rows))
+            spec = dict(pass_rates_from=str(source), min_exclusive=0, max_inclusive=0.75)
+            for run in (dict(mode='DEV_evaluation', status='completed'), dict(mode='training_state_assessment', status='running'),
+                        dict(mode='training_state_assessment', status='failed')):
+                (source / 'run.json').write_text(json.dumps(run))
+                with self.assertRaisesRegex(ValueError, 'training-state assessment'):
+                    self.rl.pass_rate_filter(tasks, spec)
+            (source / 'run.json').write_text(json.dumps(dict(mode='training_state_assessment', status='completed')))
+            kept, report = self.rl.pass_rate_filter(tasks, spec)
+            self.assertEqual([t['task_id'] for t in kept], ['b'])  # 3 of 8 attempts accepted.
+            self.assertEqual(report['dropped'], {'at_or_below_min': 1, 'above_max': 1, 'unmeasured': 1})
+            self.assertEqual(report['kept'], 1)
+            (source / 'run.json').write_text(json.dumps(dict(mode='training_state_assessment', status='capped')))
+            self.assertEqual([t['task_id'] for t in self.rl.pass_rate_filter(tasks, spec)[0]], ['b'])
+            (source / 'steps.jsonl').write_text(json.dumps(dict(task_id='dev:x', returns=[1, 0])) + '\n')
+            with self.assertRaisesRegex(ValueError, 'training tasks'):
+                self.rl.pass_rate_filter(tasks, spec)
+        self.assertEqual(self.rl.filter_schedule(['a', 'b', 'a', 'c'], {'a', 'c'}), ['a', 'a', 'c'])
+        with self.assertRaisesRegex(ValueError, 'every scheduled group'):
+            self.rl.filter_schedule(['a'], {'b'})
+
+    def test_retrieved_lemmas_enter_the_observation_only_when_configured(self):
+        with TemporaryDirectory() as directory:
+            plain = self.episode(directory, {}).prompt_state()
+            self.assertNotIn('library lemmas', plain)
+            env = self.episode(directory, {}, premises=lambda goals: ['Nat.add_zero : ∀ (n : ℕ), n + 0 = n'])
+            text = env.prompt_state()
+            self.assertIn('/- library lemmas that may help:\n  - Nat.add_zero : ∀ (n : ℕ), n + 0 = n\n  -/', text)
+            self.assertLess(text.index('tactic state'), text.index('library lemmas'))
+            self.assertLess(text.index('library lemmas'), text.index('last action result'))
+            empty = self.episode(directory, {}, premises=lambda goals: []).prompt_state()
+            self.assertIn('/- library lemmas that may help:\n  none\n  -/', empty)
+        base = json.loads((PATH.parents[2] / 'configs/eval/qwen_05b_curriculum_stage_probe_v21prompt.json').read_text())
+        v1 = json.loads((PATH.parents[2] / 'configs/eval/qwen_05b_curriculum_stage_probe_v1prompt.json').read_text())
+        self.rl.validate_config(dict(base, premise_retrieval=dict(corpus='/runs/corpus.jsonl', k=8)))
+        for bad in (dict(base, premise_retrieval=dict(corpus='c', k=0)), dict(base, premise_retrieval=dict(corpus='c')),
+                    dict(v1, premise_retrieval=dict(corpus='c', k=4))):
+            with self.assertRaises(ValueError):
+                self.rl.validate_config(bad)
+
+    def test_batch_padding_after_a_stop_is_not_part_of_a_candidate(self):
+        stops = [151645, 151643]
+        self.assertEqual(self.rl.stop_trimmed([5, 7, 151645, 151645, 151645], stops), [5, 7, 151645])
+        self.assertEqual(self.rl.stop_trimmed([5, 7, 9], stops), [5, 7, 9])
+
+
+class FakeEpisode:
+    """Scripted episode: results[step] per step; optional barrier proves concurrent stepping."""
+
+    def __init__(self, name, results, barrier=None, reset_error=None, automation=None, prompt=(1, 2, 3), root=None):
+        self.name, self.results, self.barrier, self.reset_error = name, list(results), barrier, reset_error
+        self.root, self.resets = root, 0
+        self.automation, self.prompt, self.steps, self.closed, self.threads = automation, list(prompt), [], False, set()
+
+    def reset(self):
+        self.resets += 1
+        if self.reset_error:
+            raise self.reset_error
+        return f'state {self.name}'
+
+    def step(self, text, bonus):
+        import threading
+        self.threads.add(threading.get_ident())
+        barrier, self.barrier = self.barrier, None  # Only the first step must meet the other samples.
+        if barrier:
+            barrier.wait()
+        self.steps.append(text)
+        return self.results.pop(0)
+
+    def search_step(self, texts):
+        self.steps.append(tuple(texts))
+        result = self.results.pop(0)
+        return dict(result=result, chosen=len(texts) - 1,
+                    probes=[dict(index=k, status='rejected', error='', tactics_applied=0) for k in range(len(texts))])
+
+    def prompt_state(self):
+        return f'state {self.name} after {len(self.steps)}'
+
+    def try_automation(self, tactics, commit=True):
+        return self.automation if commit else self.root
+
+    def close(self):
+        self.closed = True
+
+
+def outcome(status='changed', accepted=False, done=False, **extra):
+    return dict(status=status, accepted=accepted, done=done, reward=1.0 if accepted else 0.0, **extra)
+
+
+class LockstepTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        spec = importlib.util.spec_from_file_location('tactic_rl_lockstep', PATH)
+        cls.rl = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(cls.rl)
+
+    def generation(self, ids=(7, 151645), pad=False):
+        return dict(raw_response_ids=list(ids), action_ids=list(ids), generated_tokens=len(ids),
+                    retained_tokens=len(ids), pad_before_eos=pad)
+
+    def run_group(self, envs, candidates=1, automation=(), depth=3, max_prompt_tokens=10, gen=None):
+        from concurrent.futures import ThreadPoolExecutor
+        calls, records = [], []
+        counts = dict(generated_tokens=0, retained_tokens=0, accepted=0, prompt_cap_ends=0,
+                      automation_accepted=0, automation_root_solved=0)
+
+        def generate(prompts, n, seeds):
+            calls.append((len(prompts), n, list(seeds)))
+            return [[(gen or self.generation)() for _ in range(n)] for _ in prompts]
+        with ThreadPoolExecutor(max_workers=len(envs)) as pool:
+            out = self.rl.lockstep_group(
+                envs, generate, lambda ids: f'tactic {ids[0]}', lambda env: env.prompt, pool, depth=depth,
+                candidates=candidates, automation=list(automation), max_prompt_tokens=max_prompt_tokens, bonus=0.0,
+                seeds=lambda i, step: 100 * i + step, emit=records.append, counts=counts, solved=solved, name='t')
+        return out, calls, records, counts
+
+    def setUp(self):
+        global solved
+        solved = []
+
+    def test_samples_advance_together_drop_out_when_done_and_step_concurrently(self):
+        import threading
+        barrier = threading.Barrier(2, timeout=5)
+        envs = [FakeEpisode(0, [outcome('accepted', True, True)], barrier),
+                FakeEpisode(1, [outcome(), outcome('accepted', True, True)], barrier)]
+        (trajectories, censored, reason, _, _), calls, records, counts = self.run_group(envs)
+        self.assertFalse(censored)
+        self.assertEqual([c[0] for c in calls], [2, 1])  # Step 0 batches both samples; step 1 only the active one.
+        self.assertEqual(calls[0][2], [0, 100])
+        self.assertEqual([(r['sample'], r['step']) for r in records], [(0, 0), (1, 0), (1, 1)])
+        self.assertEqual([len(t) for t in trajectories], [1, 2])
+        self.assertEqual((counts['accepted'], counts['generated_tokens'], solved), (2, 6, ['t']))
+        self.assertEqual(records[2]['state'], 'state 1 after 1')
+
+    def test_prompt_cap_setup_failure_and_episode_censoring_censor_the_group(self):
+        envs = [FakeEpisode(0, [outcome()]), FakeEpisode(1, [outcome()], prompt=range(20))]
+        self.assertEqual(self.run_group(envs)[0][1:3], (True, 'prompt_cap'))
+        envs = [FakeEpisode(0, []), FakeEpisode(1, [], reset_error=TimeoutError('slow setup'))]
+        result = self.run_group(envs)[0]
+        self.assertTrue(result[1] and result[2].startswith('setup_failure'))
+        envs = [FakeEpisode(0, [outcome('crash', done=True, censored=True)]), FakeEpisode(1, [outcome()])]
+        self.assertEqual(self.run_group(envs)[0][1:3], (True, 'crash'))
+
+    def test_search_records_the_chosen_candidate_and_automation_finishes_unfinished_paths(self):
+        automated = dict(tactic='omega', result=outcome('accepted', True, True))
+        envs = [FakeEpisode(0, [outcome(), outcome()], automation=automated), FakeEpisode(1, [outcome('accepted', True, True)])]
+        (trajectories, censored, _, root, done), calls, records, counts = self.run_group(
+            envs, candidates=2, automation=['omega'], depth=2)
+        self.assertFalse(censored)
+        self.assertEqual(calls[0][1], 2)
+        self.assertEqual(envs[0].steps[0], ('tactic 7', 'tactic 7'))
+        self.assertEqual(records[0]['chosen'], 1)
+        self.assertEqual(len(records[0]['candidates']), 2)
+        self.assertEqual((done, counts['automation_accepted'], counts['accepted']), ([True, False], 1, 1))
+        self.assertTrue(records[-1]['automation'])
+        self.assertEqual(sum(t[-1]['reward'] for t in trajectories), 1.0)  # Automation never enters policy returns.
+
+    def test_a_root_automation_timeout_rebuilds_the_root_instead_of_censoring(self):
+        timeout = dict(tactic='aesop', result=outcome('timeout', done=True))
+        envs = [FakeEpisode(0, [outcome('accepted', True, True)], root=timeout), FakeEpisode(1, [outcome()])]
+        (trajectories, censored, reason, root, _), _, _, counts = self.run_group(envs, automation=['aesop'], depth=1)
+        self.assertFalse(censored)
+        self.assertEqual((envs[0].resets, envs[1].resets), (2, 1))
+        self.assertEqual((root['result']['status'], counts['automation_root_solved'], counts['accepted']), ('timeout', 0, 1))
+        crash = dict(tactic='aesop', result=outcome('crash', done=True, censored=True))
+        envs = [FakeEpisode(0, [outcome()], root=crash), FakeEpisode(1, [outcome()])]
+        self.assertEqual(self.run_group(envs, automation=['aesop'], depth=1)[0][1:3], (True, 'automation_root_crash'))
+
+    def test_pad_before_eos_is_recorded_and_refused(self):
+        envs = [FakeEpisode(0, [outcome()]), FakeEpisode(1, [outcome()])]
+        with self.assertRaisesRegex(RuntimeError, 'PAD before EOS'):
+            self.run_group(envs, gen=lambda: self.generation(pad=True))
+
+    def test_counters_stay_exact_under_concurrent_lean_calls(self):
+        import threading
+        counts = dict(lean_calls=0, lean_seconds=0.0, lean_cpu_seconds=0.0)
+        envs = []
+        for _ in range(8):
+            env = self.rl.LeanEpisode(SimpleNamespace(timeout=1), dict(task_id='t', name='t', kind='whole', header='h',
+                                                                          given=''), Path('.'), counts, version=2, horizon=6)
+            env.repl = SimpleNamespace(send=lambda request, timeout: ({}, 0.001, 0.001))
+            envs.append(env)
+        threads = [threading.Thread(target=lambda e=e: [e.send({}, 1) for _ in range(2000)]) for e in envs]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join()
+        self.assertEqual(counts['lean_calls'], 16000)
+        self.assertAlmostEqual(counts['lean_seconds'], 16.0, places=6)
+
+    def test_batching_helpers_split_rows_and_keep_stop_tokens(self):
+        rl = self.rl
+        ids, mask, width = rl.pad_left([[5, 6, 7], [8]], 0)
+        self.assertEqual((ids, mask, width), ([[5, 6, 7], [0, 0, 8]], [[1, 1, 1], [0, 0, 1]], 3))
+        stops = [151645, 151643]
+        done = SimpleNamespace(token_ids=[4, 5], finish_reason='stop', stop_reason=None)
+        self.assertEqual(rl.vllm_action_ids(done, stops), [4, 5, 151645])
+        self.assertEqual(rl.vllm_action_ids(SimpleNamespace(token_ids=[4, 151643], finish_reason='stop', stop_reason=151643), stops), [4, 151643])
+        self.assertEqual(rl.vllm_action_ids(SimpleNamespace(token_ids=[4], finish_reason='stop', stop_reason=151643), stops), [4, 151643])
+        self.assertEqual(rl.vllm_action_ids(SimpleNamespace(token_ids=[4, 5], finish_reason='length', stop_reason=None), stops), [4, 5])
+        self.assertEqual(rl.step_seed(1, 't', 0, 0, 0), rl.step_seed(1, 't', 0, 0, 0))
+        self.assertEqual(len({rl.step_seed(1, 't', 0, s, k) for s in range(4) for k in range(6)}), 24)
+
+    def test_hf_generator_returns_n_samples_per_prompt_in_row_order(self):
+        class Rows(list):
+            def __getitem__(self, key):
+                if isinstance(key, tuple):
+                    return Rows([row[key[1]] for row in self])
+                return list.__getitem__(self, key)
+
+            def tolist(self):
+                return [list(row) for row in self]
+        seen = {}
+
+        def generate(**kwargs):
+            seen.update(kwargs)
+            width = len(kwargs['input_ids'][0])
+            return Rows([[0] * width + [10 * r + 1, 151645, 151645] for r in range(len(kwargs['input_ids']) * kwargs['num_return_sequences'])])
+        torch = SimpleNamespace(tensor=lambda data, device=None: data, no_grad=lambda: __import__('contextlib').nullcontext())
+        tokenizer = SimpleNamespace(pad_token_id=151643, eos_token_id=151645)
+        generator = self.rl.HFGenerator(SimpleNamespace(generate=generate), tokenizer, torch,
+                                        __import__('contextlib').nullcontext, 'cpu', [151645, 151643], 192, lambda seed: None)
+        out = generator([[1, 2, 3], [4]], 2, [11, 12])
+        self.assertEqual([[g['action_ids'] for g in row] for row in out], [[[1, 151645], [11, 151645]], [[21, 151645], [31, 151645]]])
+        self.assertEqual(seen['attention_mask'], [[1, 1, 1], [0, 0, 1]])
+        self.assertEqual((seen['temperature'], seen['top_p'], seen['top_k'], seen['num_return_sequences']), (1.0, 1.0, 0, 2))
+
+    def test_lockstep_and_backend_settings_are_validated(self):
+        base = json.loads((PATH.parents[2] / 'configs/eval/qwen_05b_curriculum_stage_probe_v21prompt.json').read_text())
+        v1 = json.loads((PATH.parents[2] / 'configs/eval/qwen_05b_curriculum_stage_probe_v1prompt.json').read_text())
+        self.rl.validate_config(dict(base, rollout='lockstep', lean_workers=4, generation_backend='vllm', vllm_memory_fraction=0.4))
+        for bad in (dict(base, rollout='batch'), dict(v1, rollout='lockstep'), dict(base, rollout='lockstep', lean_workers=0),
+                    dict(base, generation_backend='vllm'), dict(base, rollout='lockstep', generation_backend='tgi'),
+                    dict(base, rollout='lockstep', generation_backend='vllm', vllm_memory_fraction=0.95)):
+            with self.assertRaises(ValueError):
+                self.rl.validate_config(bad)
+        vllm = dict(base, rollout='lockstep', generation_backend='vllm')
+        self.rl.check_mode_settings(vllm, evaluating=True)
+        with self.assertRaisesRegex(ValueError, 'evaluation-only'):
+            self.rl.check_mode_settings(vllm, evaluating=False)
 
 
 try:

@@ -46,13 +46,62 @@ class TacticIntegration(unittest.TestCase):
         task = dict(task_id='synthetic', name='tactic_fixture', kind='whole', given='', state='', header=header)
         return self.rl.LeanEpisode(self.ctx, task, self.output, self.counts, version=2, horizon=6, **kwargs)
 
+    def test_candidate_menu_preserves_live_state_and_selected_path_replays(self):
+        """Authored fixture only; requires a source receipt, not benchmark proofs."""
+        import copy
+        pin = (self.root / 'lean_env_full/mathlib/lean-toolchain').read_text().strip()
+        self.assertEqual(pin, 'leanprover/lean4:v4.10.0-rc1')
+        identity = self.rl.mathlib_identity(Path(os.environ['TACTIC_RL_IDENTITY']),
+            '29dcec074de168ac2bf835a77ef68bbe069194c5')
+        version = subprocess.run([str(self.ctx.checker.LEAN / 'lean'), '--version'],
+            capture_output=True, text=True, check=True).stdout.strip()
+        self.assertIn('4.10.0-rc1', version)
+        evidence = dict(lean=pin, lean_binary=version, mathlib=identity, fixture='authored synthetic',
+                        benchmark_performance=False, menus=[])
+        env = self.episode_v2('theorem tactic_fixture (p q : Prop) (hp : p) (hq : q) : p ∧ q',
+                              max_tactics=1)
+        try:
+            env.reset()
+            for candidates, chosen in [
+                    (['constructor', 'exact hp', 'exact missing_candidate', 'skip', 'sorry'], 'constructor'),
+                    (['assumption', 'exact hq'], 'assumption'),
+                    (['exact hq', 'exact missing_candidate'], 'exact hq')]:
+                fields = ('state', 'goals', 'path', 'shown', 'steps_used', 'failed', 'frames')
+                before = copy.deepcopy({key: getattr(env, key) for key in fields})
+                calls = self.counts['lean_calls']
+                menu = env.candidate_menu(candidates, max_candidates=5, max_lean_calls=200)
+                self.assertEqual(menu['status'], 'ready', menu)
+                self.assertEqual({key: getattr(env, key) for key in fields}, before)
+                self.assertGreater(self.counts['lean_calls'], calls)
+                admitted = {action['tactic']: action['id'] for action in menu['actions']}
+                self.assertIn(chosen, admitted)
+                self.assertNotIn('exact missing_candidate', admitted)
+                self.assertNotIn('skip', admitted)
+                self.assertNotIn('sorry', admitted)
+                result = env.select_candidate(menu, admitted[chosen])
+                evidence['menus'].append(dict(menu=menu, selected=chosen, result=result))
+            self.assertTrue(result['accepted'], result)
+            self.assertEqual(result['replay']['status'], 'accepted')
+            self.assertEqual(env.shown, ['constructor', 'assumption', 'exact hq'])
+            self.assertNotIn('missing_candidate', result['proof_body'])
+        finally:
+            env.close()
+            evidence['counts'] = dict(self.counts)
+            (self.output / 'candidate_menu.json').write_text(json.dumps(evidence, indent=2) + '\n')
+
     def test_v2_commented_chunk_closes_and_replays(self):
         env = self.episode_v2('theorem tactic_fixture : True ∧ True')
         try:
             env.reset()
-            result = env.step('-- split the conjunction\nconstructor\n/- both sides -/\nexact True.intro\nexact True.intro', 0)
+            with patch.object(self.rl, 'verify_group', wraps=self.rl.verify_group) as replay:
+                result = env.step('-- split the conjunction\nconstructor\n/- both sides -/\nexact True.intro\nexact True.intro', 0)
             self.assertTrue(result['accepted'], result)
             self.assertEqual((result['tactics_applied'], result['replay']['status']), (3, 'accepted'))
+            expected = ('  first |\n    -- split the conjunction\n    constructor\n'
+                        '  first |\n    /- both sides -/\n    exact True.intro\n'
+                        '  first |\n    exact True.intro\n')
+            self.assertEqual(result['proof_body'], expected)
+            self.assertEqual(replay.call_args.args[2], [result['proof_body']])
         finally:
             env.close()
 
@@ -68,8 +117,15 @@ class TacticIntegration(unittest.TestCase):
             loop = env.step('exact missing_other', 0)
             self.assertEqual((loop['status'], loop['done'], env.state), ('rejected', False, state), loop)
             self.assertIn('missing_fixture', env.prompt_state())
-            final = env.step('exact True.intro\nexact True.intro', 0)
+            with patch.object(self.rl, 'verify_group', wraps=self.rl.verify_group) as replay:
+                final = env.step('exact True.intro\nexact True.intro', 0)
             self.assertTrue(final['accepted'], final)
+            expected = ('  first |\n    constructor\n'
+                        '  first |\n    exact True.intro\n  first |\n    exact True.intro\n')
+            self.assertEqual(final['proof_body'], expected)
+            self.assertNotIn('missing_fixture', final['proof_body'])
+            self.assertNotIn('missing_other', final['proof_body'])
+            self.assertEqual(replay.call_args.args[2], [final['proof_body']])
         finally:
             env.close()
 
@@ -94,7 +150,12 @@ class TacticIntegration(unittest.TestCase):
             env.reset()
             env.step('constructor', 0)
             self.assertEqual(env.step('backtrack 0', 0)['status'], 'backtrack')
-            self.assertTrue(env.step('exact ⟨hp, hq⟩', 0)['accepted'])
+            with patch.object(self.rl, 'verify_group', wraps=self.rl.verify_group) as replay:
+                final = env.step('exact ⟨hp, hq⟩', 0)
+            self.assertTrue(final['accepted'], final)
+            self.assertEqual(final['proof_body'], '  first |\n    exact ⟨hp, hq⟩\n')
+            self.assertNotIn('constructor', final['proof_body'])
+            self.assertEqual(replay.call_args.args[2], [final['proof_body']])
         finally:
             env.close()
 
@@ -282,6 +343,37 @@ class TacticIntegration(unittest.TestCase):
         finally:
             env.close()
 
+    def test_local_root_hides_target_and_preserves_named_replay(self):
+        cases = [
+            ('tactic_fixture', 'theorem tactic_fixture : True', 'exact True.intro'),
+            ('tactic_fixture', 'private theorem tactic_fixture : True', 'exact True.intro'),
+            ('tactic_fixture', '@[simp] theorem tactic_fixture : True', 'exact True.intro'),
+            ('Fixture.target', 'theorem Fixture.target (p : Prop) (hp : p) : p', 'exact hp'),
+            ('tactic_fixture', 'theorem tactic_fixture.{u} (α : Type u) (a : α) : a = a', 'rfl'),
+        ]
+        for name, header, proof in cases:
+            with self.subTest(header=header):
+                task = dict(task_id='synthetic', name=name, kind='whole', given='', state='', header=header)
+                env = self.rl.LeanEpisode(self.ctx, task, self.output, self.counts, version=2, horizon=6)
+                try:
+                    observation = env.reset()
+                    self.assertIn(header, observation)
+                    goals = list(env.goals)
+                    reference = env.step('have stolen := ' + name, 0)
+                    self.assertEqual(reference['status'], 'rejected', reference)
+                    self.assertNotIn('replay', reference)
+                    self.assertEqual(env.goals, goals)
+                    anonymous = env.step('have stolen := _example', 0)
+                    self.assertEqual(anonymous['status'], 'rejected', anonymous)
+                    self.assertNotIn('replay', anonymous)
+                    self.assertEqual(env.goals, goals)
+                    final = env.step(proof, 0)
+                    self.assertTrue(final['accepted'], final)
+                    self.assertEqual(final['replay']['status'], 'accepted')
+                    self.assertEqual(task['header'], header)
+                finally:
+                    env.close()
+
     def test_native_bank_scoped_context_reset_and_complete_replay(self):
         """Synthetic file-context fixture; no library source or reference proof is loaded."""
         task = dict(task_id='native-fixture:k2', theorem_id='native-fixture', kind='bank',
@@ -289,7 +381,7 @@ class TacticIntegration(unittest.TestCase):
                     given_steps=['  have h : True := premise', '  constructor'], state='HIDDEN_REFERENCE_SENTINEL')
         q = dict(name=task['name'], header=task['header'], closing=['end NativeBankFixture'],
                  prefix=('import Lean.Elab.Tactic\nnamespace NativeBankFixture\n'
-                         'theorem premise : True := True.intro\nopen Nat in\n'))
+                         'theorem premise : True := True.intro\nopen Nat in\n@[simp]\nprivate\n'))
         self.ctx.rows['native-fixture'] = {}
         try:
             with patch.object(self.rl, 'question', return_value=(q, None)), \
@@ -301,6 +393,14 @@ class TacticIntegration(unittest.TestCase):
                     self.assertEqual(len(env.goals), 2)
                     self.assertNotIn(task['state'], state)
                     original = env.state
+                    reference = env.step('have stolen := target', 0)
+                    self.assertEqual(reference['status'], 'rejected', reference)
+                    self.assertNotIn('replay', reference)
+                    self.assertEqual(env.state, original)
+                    reference = env.step('have stolen := NativeBankFixture.target', 0)
+                    self.assertEqual(reference['status'], 'rejected', reference)
+                    self.assertNotIn('replay', reference)
+                    self.assertEqual(env.state, original)
                     result = env.step('exact NativeBankFixture.target', 0)
                     self.assertFalse(result['accepted'], result)
                     self.assertEqual(result['reward'], 0)
@@ -351,6 +451,25 @@ class TacticIntegration(unittest.TestCase):
             self.assertEqual(result['reward'], 0.0)
             final = env.step('```lean\nexact h\n```', 0.025)
             self.assertEqual(final['reward'], 1.0, final)
+            self.assertEqual(final['replay']['status'], 'accepted')
+        finally:
+            env.close()
+
+    def test_real_v2_error_feedback_penalties(self):
+        """Real Lean diagnostics map to the v2 penalties; only the accepted proof earns positive reward."""
+        env = self.episode_v2('theorem tactic_fixture : True', reward_mode='error_feedback_v1')
+        try:
+            env.reset()
+            for text, status, reward in (('exact missing_fixture', 'rejected', -0.2),
+                                         ('exact (0 : Nat)', 'rejected', -0.1),
+                                         ('skip', 'no_progress', -0.1),
+                                         ('```lean\nsimp', 'format_error', -0.2),
+                                         ('have h : True := by trivial\nexact missing_fixture', 'partial', -0.2)):
+                result = env.step(text, 0.0)
+                self.assertEqual((result['status'], result['reward']), (status, reward), result)
+                self.assertFalse(result['done'], result)
+            final = env.step('exact h', 0.0)
+            self.assertEqual((final['status'], final['reward']), ('accepted', 1.0), final)
             self.assertEqual(final['replay']['status'], 'accepted')
         finally:
             env.close()

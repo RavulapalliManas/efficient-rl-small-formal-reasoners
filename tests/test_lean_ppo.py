@@ -15,6 +15,20 @@ from unittest.mock import patch
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts' / 'train'))
 
 
+def prescribed_generation(model, queries, pad_token_id, generation_config):
+    """Planted valid trajectories with actual policy logits; no sampling-quality claim."""
+    import torch
+    from trl.trainer.utils import forward
+    response = torch.tensor([[1, pad_token_id, pad_token_id], [5, 1, pad_token_id], [5, 6, 5]],
+                            device=queries.device)
+    offset = getattr(prescribed_generation, 'calls', 0)
+    prescribed_generation.calls = offset + queries.shape[0]
+    response = response[(torch.arange(queries.shape[0], device=queries.device) + offset) % 3]
+    sequences = torch.cat([queries, response], 1)
+    logits = forward(model, sequences, pad_token_id).logits[:, queries.shape[1] - 1:-1]
+    return sequences, logits / generation_config.temperature
+
+
 @unittest.skipUnless(importlib.util.find_spec('torch'), 'Torch checks run on the CPU fleet')
 class LeanPPO(unittest.TestCase):
     def setUp(self):
@@ -31,6 +45,32 @@ class LeanPPO(unittest.TestCase):
         backend.pre_tokenizer = Whitespace()
         self.tokenizer = PreTrainedTokenizerFast(tokenizer_object=backend, pad_token='<pad>', eos_token='<eos>',
                                                  unk_token='<unk>', padding_side='left')
+
+    def test_generation_boundary_records_raw_tokens_before_pad_abort(self):
+        import torch
+        import lean_ppo
+        from trl.trainer.utils import first_true_indices, truncate_response
+        self.assertTrue(hasattr(lean_ppo, 'checked_generate'), 'Raw generation check is missing')
+        query = torch.tensor([[3], [3], [3], [3]])
+        responses = torch.tensor([[1, 0, 0], [0, 5, 1], [5, 0, 1], [5, 6, 5]])
+        seen = []
+        def generate(*_):
+            return torch.cat([query, responses], 1), torch.zeros(4, 3, 7)
+        with self.assertRaisesRegex(RuntimeError, 'PAD before EOS'):
+            lean_ppo.checked_generate(generate, self.tokenizer, lambda q, r: seen.extend(r),
+                                      None, query, 0, None)
+        self.assertEqual(sum(row['generated_tokens'] for row in seen), 12)
+        self.assertEqual([row['action_ids'] for row in seen], [[1], [0, 5, 1], [5, 0, 1], [5, 6, 5]])
+        self.assertEqual([row['pad_before_eos'] for row in seen], [False, True, True, False])
+        # The pinned PPO mask retains EOS, including an EOS-first response.
+        valid = responses[[0, 3]]
+        processed = truncate_response(1, 0, valid)
+        lengths = first_true_indices(processed == 0) - 1
+        for row, length, expected in zip(valid.tolist(), lengths.tolist(), ([1], [5, 6, 5])):
+            self.assertEqual(row[:length + 1], expected)
+        result = (torch.cat([query[:2], valid], 1), torch.zeros(2, 3, 7))
+        self.assertIs(lean_ppo.checked_generate(lambda *_: result, self.tokenizer, None,
+                                               None, query[:2], 0, None), result)
 
     def test_bridge_preserves_verdicts_and_rejects_unregistered_prompt(self):
         import torch
@@ -51,7 +91,7 @@ class LeanPPO(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'unregistered'):
             get_reward(model, torch.tensor([[0, 2, 5, 1]]), 0, 2)
 
-    def test_real_ppo_updates_policy_and_critic(self):
+    def test_pinned_ppo_updates_policy_and_critic_on_prescribed_valid_trajectories(self):
         import torch
         from datasets import Dataset
         from transformers import Qwen2Config, Qwen2ForCausalLM, Qwen2ForSequenceClassification
@@ -96,6 +136,7 @@ class LeanPPO(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as output:
             with patch('lean_ppo.ppo_masked_mean', audit_mean), \
+                    patch('trl.trainer.utils.generate', prescribed_generation), \
                     patch.object(ppo_trainer, 'batch_generation', audit_generation):
                 trainer = make_trainer(settings, self.tokenizer, policy, critic, copy.deepcopy(policy), data, reward, output, [])
                 trainer.train()
@@ -122,11 +163,10 @@ class LeanPPO(unittest.TestCase):
             self.assertTrue(result['delta_finite'], name)
             self.assertGreater(result['delta_squared'], 0.0, name)
         sampled = [row for batch in generations for row in batch]
-        self.assertTrue(any(row[0] == self.tokenizer.pad_token_id for row in sampled))
+        self.assertFalse(any(row[0] == self.tokenizer.pad_token_id for row in sampled))
         self.assertTrue(any(row[0] == self.tokenizer.eos_token_id for row in sampled))
         empty_means = [row for row in means if row['denominator'] == 0]
-        self.assertTrue(empty_means)
-        self.assertTrue(all(row['result'] == 0.0 for row in empty_means))
+        self.assertFalse(empty_means)
         self.assertTrue(all(math.isfinite(row['loss/policy_avg']) for row in trainer.state.log_history))
         self.assertTrue(policy.is_gradient_checkpointing)
         self.assertTrue(critic.is_gradient_checkpointing)
@@ -201,6 +241,39 @@ class LeanPPO(unittest.TestCase):
                 self.assertEqual(json.loads((output / 'run.json').read_text())['status'], 'failed')
                 self.assertFalse((output / 'final').exists())
                 self.assertFalse(math.isfinite(json.loads((output / 'steps.jsonl').read_text())['loss/policy_avg']))
+
+    def test_runner_preserves_pad_failure_before_scoring_or_checkpoint_export(self):
+        import torch
+        from datasets import Dataset
+        from lean_ppo import checked_generate, run_ppo
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            settings = dict(seed=7, num_generations=4, verifier_workers=1)
+            def trainer(*args):
+                bridge = args[6]
+                result = Namespace(state=Namespace(global_step=0))
+                def train():
+                    query = torch.tensor([[3]])
+                    generated = (torch.tensor([[3, 0, 5, 1]]), torch.zeros(1, 3, 7))
+                    checked_generate(lambda *_: generated, self.tokenizer, bridge.record_generation,
+                                     None, query, 0, None)
+                result.train = train
+                return result
+            with patch('transformers.AutoModelForCausalLM.from_pretrained', return_value=object()), \
+                    patch('transformers.AutoModelForSequenceClassification.from_pretrained', return_value=object()), \
+                    patch('lean_ppo.make_trainer', trainer), patch('run_lean_grpo.score') as scorer:
+                with self.assertRaisesRegex(RuntimeError, 'PAD before EOS'):
+                    run_ppo(Namespace(model=output, output=output), settings, Namespace(pool_repls=set()), {},
+                            Dataset.from_list([{'prompt': 'goal', 'task_id': 'a'}]), self.tokenizer, {})
+            scorer.assert_not_called()
+            run = json.loads((output / 'run.json').read_text())
+            self.assertEqual(run['status'], 'failed')
+            self.assertEqual(run['counts']['generated_tokens'], 3)
+            self.assertEqual(run['counts']['samples'], 0)
+            row = json.loads((output / 'generations.jsonl').read_text())
+            self.assertEqual(row['raw_response_ids'], [0, 5, 1])
+            self.assertEqual(row['status'], 'generation_contract_violation')
+            self.assertFalse((output / 'final').exists())
 
     def test_response_stops_at_first_pad_and_preserves_eos(self):
         import torch
@@ -281,7 +354,8 @@ class LeanPPO(unittest.TestCase):
             model.save_pretrained(parent)
             output.mkdir()
             run = {'config': settings, 'status': 'running'}
-            with patch('run_lean_grpo.score', side_effect=planted_score):
+            with patch('run_lean_grpo.score', side_effect=planted_score), \
+                    patch('trl.trainer.utils.generate', prescribed_generation):
                 run_ppo(Namespace(model=parent, output=output), settings, Namespace(pool_repls=set()),
                         {}, data, self.tokenizer, run)
             record = json.loads((output / 'run.json').read_text())
@@ -293,6 +367,10 @@ class LeanPPO(unittest.TestCase):
             self.assertTrue((output / 'critic/model.safetensors').is_file())
             rows = [json.loads(line) for line in (output / 'rollouts.jsonl').read_text().splitlines()]
             self.assertEqual([r['reward'] for r in rows], [1.0, 1.0, 0.0, 0.0])
+            generated = [json.loads(line) for line in (output / 'generations.jsonl').read_text().splitlines()]
+            self.assertEqual(record['counts']['generated_tokens'], sum(r['generated_tokens'] for r in generated))
+            self.assertEqual(record['counts']['generated_tokens'], 12)
+            self.assertLess(record['counts']['retained_tokens'], record['counts']['generated_tokens'])
 
 
 if __name__ == '__main__':

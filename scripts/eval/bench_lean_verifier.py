@@ -283,6 +283,14 @@ def open_repl(ctx, head, tag, record):
     return repl, response["env"]
 
 
+class VerifierSetupError(RuntimeError):
+    """A failed replay setup whose physical calls must survive propagation."""
+
+    def __init__(self, message, counts):
+        super().__init__(message)
+        self.counts = dict(counts)
+
+
 def verify_group(ctx, unit, continuations):
     """Lean verdicts for one unit's completions: the one scoring path of probe_nt_pool.py, pass_rate_map.py, and
     run_lean_grpo.py.
@@ -335,7 +343,8 @@ def verify_group(ctx, unit, continuations):
                     repl, env = open_repl(ctx, head, tag, record)
                     uses = 0
                     if repl is None and attempt == 2:
-                        raise RuntimeError(f"REPL setup failed twice for {unit['task_id']}: {record['setup_error']}")
+                        raise VerifierSetupError(
+                            f"REPL setup failed twice for {unit['task_id']}: {record['setup_error']}", record)
                     if repl is None:
                         continue
                     if statement:

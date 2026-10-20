@@ -8,12 +8,31 @@ With microbatch 2, one full-vocabulary logits tensor is 2 x 2304 x 152000 x 4 = 
 This is an estimate, not measured GPU memory. The managed runner supplies hard caps.
 """
 from concurrent.futures import ThreadPoolExecutor
+from collections import deque
+from rl_components.objectives import proof_rewards
 import json
 import math
 import time
 from types import SimpleNamespace
 
 import torch
+
+
+def checked_generate(generate, tokenizer, observe, model, queries, pad_token_id, generation_config):
+    """Record decode work before TRL padding and stop before an ambiguous likelihood update."""
+    from run_tactic_rl import generation_record
+    result = generate(model, queries, pad_token_id, generation_config)
+    sequences, logits = result
+    responses = sequences[:, queries.shape[1]:]
+    if responses.shape[1] != logits.shape[1]:
+        raise RuntimeError('Generation score count differs from response width')
+    records = [generation_record(ids, tokenizer.eos_token_id, tokenizer.pad_token_id)
+               for ids in responses.tolist()]
+    if observe is not None:
+        observe(queries.tolist(), records)
+    if any(row['pad_before_eos'] for row in records):
+        raise RuntimeError('Sampled PAD before EOS; refuse an unmatched training update')
+    return result
 
 
 def ppo_masked_mean(values, mask, axis=None):
@@ -80,6 +99,7 @@ def make_trainer(config, tokenizer, policy, critic, reference, dataset, reward, 
     from torch.utils.data import DataLoader
     from transformers import DataCollatorWithPadding
     from trl import PPOConfig, PPOTrainer
+    from trl.trainer.utils import generate as pinned_generate
     from unittest.mock import patch
 
     if version('trl') != '0.24.0':
@@ -132,6 +152,14 @@ def make_trainer(config, tokenizer, policy, critic, reference, dataset, reward, 
     trainer.dataloader = DataLoader(
         dataset, batch_size=trainer.local_dataloader_batch_size, shuffle=False, drop_last=True,
         num_workers=0, collate_fn=collate)
+    def generate(model, queries, pad_token_id, generation_config):
+        reserve = getattr(reward, 'reserve_generation', None)
+        if reserve is not None:
+            reserve(queries.shape[0] * generation_config.max_new_tokens)
+        return checked_generate(pinned_generate, tokenizer, getattr(reward, 'record_generation', None),
+                                model, queries, pad_token_id, generation_config)
+    # The utility sees each physical microbatch before batch_generation adds synthetic padding.
+    trainer.train = patch('trl.trainer.utils.generate', new=generate)(trainer.train)
     # Scope the scalar reduction to this call; core rollout whitening stays unchanged.
     trainer.train = patch('trl.trainer.ppo_trainer.masked_mean', new=ppo_masked_mean)(trainer.train)
     return trainer
@@ -148,9 +176,12 @@ def run_ppo(args, config, ctx, by_id, dataset, tokenizer, run, score_fn=None):
 
     scorer = score if score_fn is None else score_fn
     started = time.monotonic()
-    counts = dict(generated_tokens=0, lean_calls=0, lean_seconds=0.0, lean_cpu_seconds=0.0,
+    counts = dict(generated_tokens=0, retained_tokens=0, generation_samples=0,
+                  lean_calls=0, lean_seconds=0.0, lean_cpu_seconds=0.0,
                   samples=0, accepted=0, forbidden=0, timeouts=0, capped=0)
     rollouts = (args.output / 'rollouts.jsonl').open('x')
+    generations = (args.output / 'generations.jsonl').open('x')
+    pending_generations = deque()
     steps = (args.output / 'steps.jsonl').open('x')
     executor = ThreadPoolExecutor(config['verifier_workers'])
     gpus = torch.cuda.device_count() if torch.cuda.is_available() else 0
@@ -158,24 +189,45 @@ def run_ppo(args, config, ctx, by_id, dataset, tokenizer, run, score_fn=None):
     presented = set()
     stop_reason = 'requested_steps'
 
+    def reserve_generation(tokens):
+        if counts['generated_tokens'] + tokens > config['max_generated_tokens']:
+            raise ResourceCapReached('physical generation token cap reached before next microbatch')
+
+    def record_generation(queries, records):
+        for query, record in zip(queries, records):
+            key = tuple(token for token in query if token != tokenizer.pad_token_id)
+            task_id = bridge.prompts[key]
+            for field in ('generated_tokens', 'retained_tokens'):
+                counts[field] += record[field]
+            counts['generation_samples'] += 1
+            pending_generations.append(record)
+            generations.write(json.dumps(dict(step=trainer.state.global_step, task_id=task_id,
+                status='generation_contract_violation' if record['pad_before_eos'] else 'generated',
+                **record)) + '\n')
+        generations.flush()
+
     def reward(task_ids, completions, completion_ids):
         presented.update(task_ids)
         texts, _, verdicts = scorer(ctx, by_id, task_ids, completions, executor)
         rewards = [float(v['status'] == 'accepted') for v in verdicts]
         for tid, text, ids, result, value in zip(task_ids, texts, completion_ids, verdicts, rewards):
-            tokens = len(ids) - int(bool(ids) and ids[-1] == tokenizer.eos_token_id)
+            generation = pending_generations.popleft()
+            if ids != generation['action_ids']:
+                raise RuntimeError('PPO reward tokens differ from recorded action likelihood boundary')
             for key in ('lean_calls', 'lean_seconds', 'lean_cpu_seconds'):
                 counts[key] += result[key]
-            counts['generated_tokens'] += tokens
             counts['samples'] += 1
             counts['accepted'] += value
-            counts['capped'] += tokens >= config['max_completion_tokens']
+            counts['capped'] += (len(ids) >= config['max_completion_tokens']
+                                 and ids[-1] != tokenizer.eos_token_id)
             counts['forbidden'] += result['status'] == 'forbidden_construct'
             counts['timeouts'] += result['status'] in ('timeout', 'crash')
             rollouts.write(json.dumps(dict(step=trainer.state.global_step, task_id=tid, text=text,
-                                          completion_ids=ids, generated_tokens=tokens, reward=value, **result)) + '\n')
+                completion_ids=ids, **generation,
+                reward=None if result.get('censored') or result['status'] in ('crash', 'replay_crash') else value,
+                **result)) + '\n')
         rollouts.flush()
-        return rewards
+        return proof_rewards(verdicts)
 
     class Records(TrainerCallback):
         def on_log(self, _args, state, control, logs=None, **kwargs):
@@ -198,6 +250,8 @@ def run_ppo(args, config, ctx, by_id, dataset, tokenizer, run, score_fn=None):
         set_seed(config['seed'])
         prompts = [(tokenizer(r['prompt'], add_special_tokens=False)['input_ids'], r['task_id']) for r in dataset]
         bridge = LeanRewardModel(tokenizer, prompts, reward)
+        bridge.reserve_generation = reserve_generation
+        bridge.record_generation = record_generation
         token_data = Dataset.from_list([{'input_ids': ids} for ids, _ in prompts
                                        for _ in range(config['num_generations'])])
         policy = AutoModelForCausalLM.from_pretrained(args.model, dtype=torch.float32)
@@ -222,6 +276,7 @@ def run_ppo(args, config, ctx, by_id, dataset, tokenizer, run, score_fn=None):
         run.update(wall_seconds=wall, gpu_seconds=wall * gpus, counts=counts)
         (args.output / 'run.json').write_text(json.dumps(run, indent=2) + '\n')
         rollouts.close()
+        generations.close()
         steps.close()
         executor.shutdown()
         for repl in list(ctx.pool_repls):

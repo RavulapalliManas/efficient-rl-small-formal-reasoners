@@ -9,7 +9,7 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'scripts/train'))
 sys.path.insert(0, str(ROOT / 'scripts/data'))
-from build_v21_sft import is_automation, merge_continuations, rl_tactics  # noqa: E402
+from build_v21_sft import is_automation, merge_continuations, rl_tactics, row, recovery_row  # noqa: E402
 from run_tactic_rl import parse_action, render_observation  # noqa: E402
 
 HEADER = 'theorem t1 (n : ℕ) (h : n % 2 = 1) : n ^ 2 % 2 = 1'
@@ -47,6 +47,51 @@ def task(kind='prefix_top', name='t1', given='  rw [pow_two]\n', rest='  rw [Nat
 
 
 class BuildV21SFTTest(unittest.TestCase):
+    def test_recovery_uses_live_observation_fields_and_preserves_correct_target(self):
+        class Tokenizer:
+            def apply_chat_template(self, messages, tokenize=True, add_generation_prompt=False):
+                text = messages[0]['content'] + '<assistant>'
+                if len(messages) > 1:
+                    text += messages[1]['content'] + '<eos>'
+                return list(text)
+
+        clean = row('t1', HEADER, 'shown', ['rw [pow_two]'], '', STATE, ['exact h'], 4, 6, 'fixture')
+        error = 'rejected: unknown identifier missing'
+        recovered = recovery_row(clean, error, ['exact missing'], tokenizer=Tokenizer(),
+                                 max_action_tokens=192, max_tokens=2048)
+        expected = render_observation(dict(kind='whole', header=HEADER, given=''), ['rw [pow_two]'],
+                                      [STATE], error, ['exact missing'], 4, 4)
+        self.assertEqual(recovered['messages'][0]['content'], expected)
+        self.assertEqual(recovered['messages'][1], clean['messages'][1])
+        self.assertNotIn('missing', recovered['messages'][1]['content'])
+        self.assertIn('last action result:\n  none', clean['messages'][0]['content'])
+        self.assertIsNone(recovery_row(clean, error, [], tokenizer=Tokenizer(), max_tokens=10))
+        self.assertIsNone(recovery_row(clean, error, [], tokenizer=Tokenizer(), max_action_tokens=1))
+
+    def test_recovery_cannot_add_an_action_after_the_episode_horizon(self):
+        clean = row('t1', HEADER, 'shown', ['skip'] * 5, '', STATE, ['exact h'], 4, 6, 'fixture')
+        self.assertIsNone(recovery_row(clean, 'format_error: bad fence', [], tokenizer=None))
+
+    def test_action_budget_keeps_whole_tactics_and_counts_chat_terminator(self):
+        class Tokenizer:
+            def apply_chat_template(self, messages, tokenize=True, add_generation_prompt=False):
+                text = messages[0]['content'] + '<assistant>'
+                if len(messages) > 1:
+                    text += messages[1]['content'] + '<eos>'
+                return list(text)
+
+        tactics = ['have h : True := by\n  exact True.intro', 'exact h']
+        target = '```lean\n' + tactics[0] + '\n```'
+        cap = len(target) + len('<eos>')
+        args = ('t1', 'theorem t1 : True', 'shown', [], '', '⊢ True', tactics, 4, 6, 'fixture')
+        example = row(*args, tokenizer=Tokenizer(), max_action_tokens=cap)
+        self.assertEqual(example['target_tactics'], tactics[:1])
+        self.assertEqual(example['messages'][1]['content'], target)
+        self.assertEqual(parse_action(target)['tactics'], tactics[:1])
+        self.assertIsNone(row(*args, tokenizer=Tokenizer(), max_action_tokens=cap - 1))
+        full_cap = len('```lean\n' + '\n'.join(tactics) + '\n```<eos>')
+        self.assertEqual(row(*args, tokenizer=Tokenizer(), max_action_tokens=full_cap)['target_tactics'], tactics)
+
     def test_rows_match_the_rl_observation_and_exclude_dev_and_prefix_have(self):
         with TemporaryDirectory() as directory:
             tasks = [task(), task(kind='prefix_have'), task(name='dev_name', given='  skip\n', rest='  trivial')]

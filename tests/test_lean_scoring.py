@@ -297,6 +297,17 @@ TASKS = [{"task_id": "t1:prefix_top:1", "name": "t1", "kind": "prefix_top", "hea
 
 
 class TaskTest(unittest.TestCase):
+    def test_explicit_assessment_split_keeps_pool_labels_and_metadata_guards(self):
+        task = dict(TASKS[1], task_id='v1:whole:0', name='v1', header='theorem v1 : True')
+        units = run_lean_grpo.task_units([task], TASK_POOL, split='validation')
+        self.assertEqual(units[0]['name'], 'v1')
+        self.assertEqual(TASK_POOL[-1]['split'], 'validation')
+        for tasks, split in (([task], 'train'), ([task], 'test'), (TASKS, 'validation'),
+                             ([dict(task, header='theorem v1 : False')], 'validation'),
+                             ([dict(task, given='  sorry\n')], 'validation')):
+            with self.subTest(tasks=tasks, split=split), self.assertRaises(RuntimeError):
+                run_lean_grpo.task_units(tasks, TASK_POOL, split=split)
+
     def test_units_carry_given_and_state(self):
         units = run_lean_grpo.task_units(TASKS, TASK_POOL)
         self.assertEqual([(u["task_id"], u["name"], u["given"], u["state"]) for u in units],

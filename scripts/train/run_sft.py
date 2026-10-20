@@ -6,8 +6,10 @@ batch x max_length tokens in BF16; batch 32 x 1024 fits a 48 GiB L40S. Host: <8 
 Saves full checkpoints at the configured milestone steps and at the end.
 """
 import argparse
+import hashlib
 import json
 from pathlib import Path
+import sys
 import time
 
 import torch
@@ -15,16 +17,14 @@ from datasets import Dataset
 from transformers import AutoModelForCausalLM, AutoTokenizer, TrainerCallback
 from trl import SFTConfig, SFTTrainer
 
+# The managed launcher uses runpy, which does not add this script's directory.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from rl_components import SFTDataset, component_fingerprints  # noqa: E402
+from rl_components.sft import sft_input_receipt  # noqa: E402
+
 
 def rows(path, limit=None):
-    data = []
-    with open(path) as f:
-        for line in f:
-            r = json.loads(line)
-            data.append({"prompt": r["messages"][:1], "completion": r["messages"][1:], "format": r["format"]})
-            if limit and len(data) >= limit:
-                break
-    return Dataset.from_list(data)
+    return Dataset.from_list(SFTDataset.from_jsonl(path, limit).records)
 
 
 class Milestones(TrainerCallback):
@@ -44,13 +44,19 @@ def main():
     parser.add_argument("--limit", type=int, help="Use only the first N training rows (smoke tests)")
     args = parser.parse_args()
     config = json.loads(args.config.read_text())
-    train = rows(args.data / "sft_train.jsonl", args.limit)
-    val = rows(args.data / "sft_val.jsonl", config.get("eval_rows"))
+    source_components = component_fingerprints()
+    train_source = SFTDataset.from_jsonl(args.data / "sft_train.jsonl", args.limit)
+    val_source = SFTDataset.from_jsonl(args.data / "sft_val.jsonl", config.get("eval_rows"))
+    train, val = (Dataset.from_list(data.records) for data in (train_source, val_source))
+    input_receipt = sft_input_receipt(args.config, args.model, train_source, val_source)
+    input_receipt['component_sha256'] = source_components
+    input_receipt['run_sft_sha256'] = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
+    args.output.mkdir(parents=True, exist_ok=True)
+    (args.output / "input_receipt.json").write_text(json.dumps(input_receipt, indent=2) + "\n")
     tokenizer = AutoTokenizer.from_pretrained(args.model)
     # Refuse rather than truncate: the loss sits on the completion at the end of each row, so truncation cuts the target.
-    lengths = [len(tokenizer.apply_chat_template(r["prompt"] + r["completion"], tokenize=True)) for d in (train, val) for r in d]
-    if max(lengths) >= config["max_length"]:
-        raise SystemExit(f"{sum(n >= config['max_length'] for n in lengths)} rows reach max_length {config['max_length']}; drop them in the data build")
+    lengths = [n for data in (train, val) for n in SFTDataset(data).validate_token_budget(
+        tokenizer, config["max_length"], config.get("max_action_tokens"))]
     model = AutoModelForCausalLM.from_pretrained(args.model, dtype=torch.float32)
     settings = SFTConfig(
         output_dir=str(args.output), seed=config["seed"], learning_rate=config["learning_rate"],
@@ -68,6 +74,8 @@ def main():
     trainer.save_model(str(args.output / "final"))
     tokenizer.save_pretrained(str(args.output / "final"))
     record = {"train_rows": len(train), "val_rows": len(val), "config": config, "max_row_tokens": max(lengths),
+              "component_sha256": source_components,
+              "input_receipt": input_receipt,
               "global_steps": trainer.state.global_step, "train_seconds": time.monotonic() - start,
               "train_loss": result.training_loss, "log_history": trainer.state.log_history,
               "cuda": torch.cuda.get_device_name(0) if torch.cuda.is_available() else None,

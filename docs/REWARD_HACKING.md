@@ -27,7 +27,7 @@ This file lists every input that the Lean reward accepts, or accepted, without a
 - Mixed group: a GRPO group that holds both a reward of 0 and a reward of 1. Only mixed groups give a learning signal.
 - SFT: supervised fine-tuning on Lean proofs.
 - RLP: a reward for how much the model's reasoning makes a hidden correct answer more likely. It does not check the reasoning.
-- Contamination: evaluation content in the training data, the prompts, or the RL tasks.
+- Contamination: evaluation content in the training data, the prompts, or the RL theorems.
 - REPL: the Lean read-eval-print loop (leanprover-community/repl, tag `v4.10.0-rc1`). It checks each proof as one command in a loaded environment.
 
 ## What the reward pays
@@ -142,9 +142,9 @@ Result: no proof accepted in these runs used an exploit. The re-scoring report d
 
 ### P2. Library search
 
-`exact?` passes the acceptance check. Lean exits with code 0, prints "Try this: exact Nat.dvd_trans h₁ h₂", and lists only allowed axioms. The model does not need to know the lemma.
+The acceptance check accepts `exact?`. Lean exits with code 0, prints "Try this: exact Nat.dvd_trans h₁ h₂", and lists only allowed axioms. The model does not need to know the lemma.
 
-- Effect on a baseline: the single-tactic baseline on the 43 LeanDojo validation theorems was 13/43 with `exact?` and 9/43 without it. It ran 430 attempts, 10 tactics on 43 theorems. `exact?` alone solved 8 theorems.
+- Effect on a baseline: the single-tactic baseline on the 43 LeanDojo validation theorems was 13/43 with `exact?` and 9/43 without it. It ran 430 attempts, 10 tactics on 43 theorems. `exact?` alone proved 8 theorems.
 - Fix: `FORBIDDEN` blocks `exact?`, `apply?`, `rw?`, `rw_search?`, `hint`, and `library_search`. Use 9/43 as the baseline. The attack script confirms `exact?` and `apply?` are rejected before Lean runs.
 - Evidence: `2026-10-09_interleave_rlvr_ledger.md` (Update 1), `trainer_checker_v1/attacks_postfix2`.
 
@@ -165,8 +165,8 @@ These entries need no scorer exploit. Lean accepts the proof, and the proof is c
 - 161 of 3,450 train statements (4.7%) are single-tactic statements. 393 of 31,050 candidates were accepted (`nt_probe/train_v2_single_tactic/summary.json`).
 - 28 of 420 validation statements (6.7%) are single-tactic statements. 55 of 3,780 candidates were accepted (`nt_probe/val_v2_single_tactic`).
 - Accepted train candidates by tactic: `aesop` 97, `tauto` 73, `simp_all` 71, `omega` 60, `norm_num` 31, `simp` 30, `rfl` 14, `linarith` 9, `decide` 8.
-- On 200 train statements, the SFT model solved 0 of 200 (0 of 1,600 samples). The nine single tactics solved 8 of 200 (24 of 1,800 candidates) (`nt_probe/train200_v3_merged/summary.json`).
-- On the LeanDojo validation set, the SFT model solved 3 of 43 theorems at 8 samples. All 3 lie inside the 9 theorems that single tactics solve.
+- On 200 train statements, the SFT model proved 0 of 200 (0 of 1,600 attempts). The nine single tactics proved 8 of 200 (24 of 1,800 candidates) (`nt_probe/train200_v3_merged/summary.json`).
+- On the LeanDojo validation set, the SFT model proved 3 of 43 theorems at 8 attempts. All 3 lie inside the 9 theorems that single tactics prove.
 
 Why it matters for RL: a policy that learns to emit `omega` or `simp_all` first gains reward on these statements with no proof skill. An exact McNemar test (two-sided, alpha 0.05) needs 6 net statements with 0 losses at n = 420 (`2026-10-10_midsem_plan_critique.md`, section 4.2). The 28 validation single-tactic statements exceed that floor.
 
@@ -209,7 +209,7 @@ Evidence: `2026-10-10_data_build_report.md`, Task 1 (`nt_false_hyp_v1/summary.js
 - The filter now also matches `√`, `π`, `Real.`, and `Complex.`. It dropped 86 statements (train 68, validation 9, test 9). `nt_pool_v2` has 4,306 statements.
 - Natural-number subtraction and division cause several vacuous statements (see T2: `lean_workbook_38542`, `lean_workbook_50556`).
 - Drawback: the filter does not catch three statements the coordinator named. They are `lean_workbook_48558` (a definition of `lcm`), `lean_workbook_plus_52344` (a set tautology), and `lean_workbook_plus_75144` (a closed count with no free variable).
-- Of the 8 train statements that single tactics solved in the 200-statement run, at least 5 were trivial or mis-formalized.
+- Of the 8 train statements that single tactics proved in the 200-statement run, at least 5 were trivial or mis-formalized.
 
 Evidence: `2026-10-10_engineering_audit.md` (W6), `2026-10-09_phase0_ledger.md` (Update 7).
 
@@ -219,13 +219,13 @@ These entries need no scorer exploit. Reward rises because the policy recalls co
 
 ### L1. Task bank overlapping evaluation files
 
-- 826 of 1,007 accepted tasks in task bank v1 lie in the 26 LeanDojo evaluation files. 1,137 of 1,350 records lie there.
+- 826 of 1,007 accepted theorems in task bank v1 lie in the 26 LeanDojo evaluation files. 1,137 of 1,350 records lie there.
 - Task bank v3 had 0 of 4,632 records in evaluation files at the time of the check.
-- Fix: RL tasks come only from files outside the evaluation files. README: task bank v2 keeps 2,150 theorems outside evaluation and dev files.
+- Fix: RL theorems come only from files outside the evaluation files. README: task bank v2 keeps 2,150 theorems outside evaluation and dev files.
 
 ### L2. Near-duplicates of validation, test, and miniF2F
 
-- The split key hashes statements after renaming variables. It misses hypothesis-name and parenthesis variants. The token scan found 68 train statements at Jaccard 1.00 to a validation or test statement. 13 of them are SFT problems. The key had missed all 68.
+- The split key hashes statements after renaming variables. It misses hypothesis-name and parenthesis variants. The token scan found 68 train statements at Jaccard 1.00 to a validation or test statement. 13 of them are SFT theorems. The key had missed all 68.
 - Splits v3 exclude train statements at Jaccard 0.85 or higher to a validation or test statement. They exclude statements at 0.7 or higher to a miniF2F statement.
 - Excluded, by reason: 165 near-duplicates of a test statement, 127 of a validation statement, 34 of a miniF2F statement, 17 vacuous, and 16 miniF2F-check names. One statement can have several reasons.
 - Drawback: a cap leaves close statements below it. In splits v2, 192 of 420 validation statements have a train neighbour between 0.70 and 0.85. Report validation results by nearest-train-similarity band.
@@ -233,22 +233,22 @@ These entries need no scorer exploit. Reward rises because the policy recalls co
 
 ### L3. Copying the nearest training proof
 
-`scripts/eval/nearest_proof_baseline.py` takes no model. It pastes the Lean-accepted proofs of the 8 nearest train statements under each validation header.
+`scripts/eval/nearest_proof_baseline.py` takes no model. It pastes the Lean-accepted proofs of the 8 nearest train statements under each validation statement.
 
 | Library of train proofs | All 420 | Non-trivial 392 |
 | --- | --- | --- |
 | Full train split | 37 | 22 |
 | Trainable (285 statements dropped) | 26 | 12 |
 
-- 5 of the 22 non-trivial solves copy a train statement at Jaccard 1.0. All 5 neighbours have proofs in `nt_sft_v2`.
-- Drawback: a model trained on `nt_sft_v2` saw proofs that copy-solve 5 validation statements. Its validation numbers need this caveat.
-- Limit: the baseline pastes bodies verbatim. Renaming hypotheses would likely solve more. Renaming was not tested.
+- 5 of the 22 non-trivial proved theorems copy a train statement at Jaccard 1.0. All 5 neighbours have proofs in `nt_sft_v2`.
+- Drawback: a model trained on `nt_sft_v2` saw proofs that prove 5 validation statements when copied. Its validation numbers need this caveat.
+- Limit: the baseline pastes bodies verbatim. Renaming hypotheses would likely prove more. Renaming was not tested.
 
 Report this baseline next to every arm.
 
 ### L4. Proofs that cite evaluation theorems
 
-The external proof check found 43 citations of evaluation theorem names in accepted proofs (13 distinct names). The detector misses dot notation. A proof that cites a held-out theorem passes by lookup. Rule: drop near-duplicate problems and citing proofs before use.
+The external proof check found 43 citations of evaluation theorem names in accepted proofs (13 distinct names). The detector misses dot notation. A proof that cites a held-out theorem is accepted by lookup. Rule: drop near-duplicate theorems and citing proofs before use.
 
 ### L5. Dev set shares files with SFT data
 
@@ -292,7 +292,7 @@ In the local-action pilot (experiment 11), Lean checked one witness, for example
 
 `R_step` is the planned fraction of generated tactics that elaborate before the first error. Tactics that elaborate and change nothing, for example `skip` or `have h := h`, would earn it. A subgoal reduction is not a proof.
 
-Planned control: count a tactic only if the goal state changes. Keep the `R_step` weight below `R_proof`. Read the ten highest-reward samples each round. None of this is implemented.
+Planned control: count a tactic only if the goal state changes. Keep the `R_step` weight below `R_proof`. Read the ten highest-reward attempts each round. None of this is implemented.
 
 ### R4. RLP reward and accuracy
 
@@ -317,11 +317,11 @@ These entries do not pay for a non-proof. They change which proofs the policy is
 
 ## Checks to run before you report an RL gain
 
-1. Split the solved set of every arm into single-tactic, vacuous, near-duplicate, and other statements. Report the "other" rate as the headline.
+1. Split the proved theorems of every arm into single-tactic, vacuous, near-duplicate, and other statements. Report the "other" rate as the headline.
 2. Report the nearest-proof baseline (L3) next to every arm.
 3. Run `scripts/eval/check_checker_attacks.py` on the final scorer. Require 0 accepted attacks and all controls accepted.
 4. Run `scripts/eval/rescore_accepted.py` on every accepted proof of the final run. Read the scan hits by hand.
-5. Read the highest-reward samples of each round.
+5. Read the highest-reward attempts of each round.
 6. Run the shuffled-reward arm. It keeps the reward rate and the share of mixed groups, and it breaks the link between a completion and its reward.
 7. Report the cap rate, the mean length, and the timeout count per arm.
 
@@ -338,7 +338,7 @@ These come from the trainer-and-checker report. As of 10 October, the decision l
 
 ## Tactic-level pilot, 11 October 2026 IST
 
-The new `run_tactic_rl.py` pilot assigns a bounded heuristic bonus when displayed goals change. Redundant hypotheses and variable renaming can earn that bonus. The bonus can favor longer successful paths. It does not certify proof progress or search efficiency. Repeated displayed states terminate without additional credit; this does not detect every semantic cycle.
+The new `run_tactic_rl.py` pilot assigns a bounded heuristic bonus when displayed goals change. Redundant hypotheses and variable renaming can earn that bonus. The bonus can favor longer accepted attempts. It does not certify proof progress or search efficiency. Repeated displayed states terminate without additional credit; this does not detect every semantic cycle.
 
 Full-proof reward requires the existing `verify_group` target and axiom checks. Closing all tactic-mode goals alone receives no terminal reward. The CPU fixtures exercise complete-proof replay and forbidden/no-op cases. These checks do not establish an exhaustive security guarantee. Compare against `qwen_05b_tactic_rl_terminal.json` at recorded costs, and inspect rewarded paths before interpreting a gain. Raw sampled token IDs remain intact when the action is grouped for the REPL.
 
@@ -348,11 +348,11 @@ Evidence is `tactic_rl_smoke_20261011_v3/checks.log`, `out/trainer_command/`, an
 
 The opt-in `error_feedback_v1` arm replaces the goal-text bonus with penalties derived from the first Lean error. Its weights are heuristic. Whole-proof acceptance remains the positive reward. The terminal-only and earlier goal-text modes remain separate controls. Sources and real Lean fixtures are archived under EXP-021 `reward_feedback_check_v2/`; its first retry failure remains under `reward_feedback_check_v1/`.
 
-- Valid inactivity can outperform an invalid attempt. `skip` and valid unfinished steps receive zero reward, while classified errors receive negative reward. A policy can improve its average return without proving more theorems. Complete-proof coverage is the endpoint.
+- Valid inactivity can outperform an invalid attempt. `skip` and valid unfinished actions receive zero reward, while classified errors receive negative reward. A policy can improve its average return without proving more theorems. Complete-proof coverage is the endpoint.
 - First-error categories are incomplete. Unknown diagnostics remain neutral; an unresolved identifier can be a local variable or an unavailable import, rather than an invented library lemma. Report the recorded diagnostic instead of claiming a hallucination count.
 - Local validity does not certify strategy. Renaming, redundant true hypotheses, and changed goal counts receive no positive credit. The arm has no learned proof-state potential and no policy-invariance guarantee.
-- Errors terminate episodes in the historical default. The new opt-in comparison allows one rejected-action repair from the last verified state, within the same caps. Forbidden code, infrastructure failures, repeated states, and rejected whole-proof replay still terminate. Retrieval and backtracking remain separate interventions.
-- Repair can increase success through additional interaction rather than learned knowledge. Give both reward arms the same retry allowance and compare the unchanged parent with the same inference protocol. Preserve rejected-action likelihoods and penalties; never insert the rejected tactic into the proof path.
+- Errors terminate attempts in the historical default. The new opt-in comparison allows one rejected-action repair from the last verified state, within the same caps. Forbidden code, infrastructure failures, repeated states, and rejected whole-proof replay still terminate. Retrieval and backtracking remain separate interventions.
+- Repair can increase accepted attempts through additional interaction rather than learned knowledge. Give both reward arms the same retry allowance and compare the unchanged parent with the same inference protocol. Preserve rejected-action likelihoods and penalties; never insert the rejected tactic into the proof path.
 
 ## Sources
 

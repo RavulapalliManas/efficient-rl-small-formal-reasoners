@@ -23,7 +23,7 @@
 
 The question is whether reinforcement learning (RL) improves complete, unassisted number-theory proofs after supervised fine-tuning (SFT).
 Training is stopped. The earlier CPU engineering smoke remains isolated from future initialization.
-Prerequisite competence, GPU throughput, and improved proof success remain unverified.
+Prerequisite competence, GPU throughput, and a gain in accepted attempts remain unverified.
 
 \heading{1. Reuse assessments; prepare prerequisites}
 Earlier assessments exist. The saved interactive baseline failed format checks before Lean; it cannot establish capability after the parser correction.
@@ -40,10 +40,10 @@ Optional reinforcement as a pretraining objective (RLP) scores private solution 
 The warm-up is unauthorized.
 Likelihood gain does not certify answer correctness or transfer to Lean.
 
-\heading{2. Separate a proof path from a training trajectory}
+\heading{2. Separate a proof path from an attempt's training record}
 The implemented loop in Figure~\ref{fig:loop} admits checked tactics into the proof path.
 Rejected actions remain outside that path.
-Their original token likelihoods and penalties remain in the training trajectory.
+Their original token likelihoods and penalties remain in the attempt's training record.
 
 \begin{center}
 \begin{tikzpicture}[
@@ -59,7 +59,7 @@ Their original token likelihoods and penalties remain in the training trajectory
 \node[box] (reject) at (5.1,-1.8) {Rejected action\\keep prior state;\\one repair allowed};
 \node[box] (advance) at (10.2,-1.8) {Accepted tactic\\append to path;\\unfinished reward $0$};
 \node[box,text width=3.7cm] (replay) at (10.2,-4.2) {Complete replay\\original target;\\allowed axioms};
-\node[box] (terminal) at (5.1,-4.2) {Replay accepted: $+1$\\else no proof success};
+\node[box] (terminal) at (5.1,-4.2) {Replay accepted: $+1$\\else no accepted\\attempt};
 \node[box,dashed,draw=orange!70!black,text width=3.7cm] (trace) at (0,-4.2) {Training record\\raw token likelihoods\\and all rewards};
 \draw[flow] (state) -- (policy);
 \draw[flow] (policy) -- (check);
@@ -87,7 +87,7 @@ It does not prove implementation soundness, strategy, or learning.
 \newpage
 {\Large\bfseries Objective, controls, and next work}\par
 \heading{3. Use the implemented policy update}
-Let $s_{it}$ be the verified goals plus any repair diagnostic for trajectory $i$ at action $t$.
+Let $s_{it}$ be the verified goals plus any repair diagnostic for trajectory $i$ (one attempt) at action $t$.
 Let $a_{it}$ contain the original sampled tokens, including end-of-sequence when sampled.
 The feedback arm uses:
 
@@ -107,7 +107,7 @@ Neither arm rewards changed goals or valid unfinished tactics.
 Error categories and weights are heuristic; they change the objective without an optimal-policy-preservation claim.
 Improved return can reflect fewer invalid actions without more proofs.
 
-For $G\geq2$ independent trajectories from one root, with lengths $T_i$ and rewards $r_{iu}$, define
+For $G\geq2$ independent trajectories from one theorem, with lengths $T_i$ and rewards $r_{iu}$, define
 \begin{align*}
 R_{it}&=\sum_{u=t}^{T_i}r_{iu},
 & b_i&=\frac{1}{G-1}\sum_{j\ne i}\sum_{u=1}^{T_j}r_{ju},
@@ -122,16 +122,16 @@ Likelihood sums the original token log probabilities; parsing never retokenizes 
 Sampling and replay use the same unwarped policy with dropout disabled.
 
 \heading{4. Hold the comparison fixed}
-Both prepared reward arms share the immutable common-SFT parent, task bank, seed, optimizer, retry allowance, and resource caps.
-Training mixes whole roots and short assisted prefixes; evaluation supplies no proof prefix.
+Both prepared reward arms share the immutable common-SFT parent, theorem bank, seed, optimizer, retry allowance, and resource caps.
+Training mixes whole theorems and short assisted prefixes; evaluation supplies no proof prefix.
 Settings are prepared, not optimized.
 Lean is pinned to \file{v4.10.0-rc1}; mathlib to \file{29dcec074de168ac2bf835a77ef68bbe069194c5}.
 
 Historical SFT/RLP and SFT/GRPO interleaving includes extra SFT refreshes, preventing RL-only attribution.
 The prepared pair compares error feedback with terminal-only reward.
-Complete, unassisted proof success is the endpoint; search efficiency is deferred.
-Select checkpoints and task mixes on DEV only; held-out tests remain untouched.
-Report generated tokens, physical Lean calls, and wall time beside success.
+Accepted attempts with complete, unassisted proofs are the endpoint; search efficiency is deferred.
+Select checkpoints and theorem mixes on DEV only; held-out tests remain untouched.
+Report generated tokens, physical Lean calls, and wall time beside accepted attempts.
 The existing \file{gpu_seconds} field is a CUDA wall-time proxy.
 
 \heading{5. Follow the dependencies}

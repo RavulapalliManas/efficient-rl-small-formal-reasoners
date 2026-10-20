@@ -75,7 +75,7 @@ def fig_pmix():
         ax.plot([0.05], [y], "o", ms=3.5, color=RL if g == 8 else PARENT)
     ax.set_xlim(0, 1)
     ax.set_ylim(0, 1.08)
-    ax.set_xlabel("Success rate p per attempt")
+    ax.set_xlabel("Acceptance rate p per attempt")
     ax.set_ylabel("P(group is mixed)")
     save(fig, "pmix")
 
@@ -126,7 +126,7 @@ def fig_interleaved():
     ax.set_yticks(range(len(rows)), [r[0] for r in rows])
     ax.invert_yaxis()
     ax.set_xlim(0, 8)
-    ax.set_xlabel("Non-trivial validation statements proved (%), 8 samples each")
+    ax.set_xlabel("Non-trivial validation statements proved (%), 8 attempts each")
     save(fig, "interleaved")
 
 
@@ -164,7 +164,7 @@ def fig_curriculum():
                                gridspec_kw={"width_ratios": [1.5, 1], "wspace": 0.7})
     # First action on the same 784 validation attempts.
     outcomes = {"SFT parent": (739, 40, 5), "Ordered RL": (696, 88, 0)}
-    parts = (("Stops at once", LIGHT), ("Valid step", PARENT), ("Complete proof", RL))
+    parts = (("Stops at once", LIGHT), ("Valid action", PARENT), ("Complete proof", RL))
     for i, (name, counts) in enumerate(outcomes.items()):
         left = 0
         for (part, colour), k in zip(parts, counts):
@@ -201,7 +201,7 @@ def fig_probe():
     stages = {"S0": (44, 11, 1, 56), "S1": (14, 18, 0, 32), "S2": (8, 24, 0, 32)}
     for name, (*counts, n) in stages.items():
         assert sum(counts) == n, name
-    parts = (("Mixed (gradient)", RL), ("All fail", LIGHT), ("All succeed", PARENT))
+    parts = (("Mixed (gradient)", RL), ("All fail", LIGHT), ("All accepted", PARENT))
     for i, (name, (*counts, n)) in enumerate(stages.items()):
         bottom = 0
         for (part, colour), k in zip(parts, counts):
@@ -211,7 +211,7 @@ def fig_probe():
         a.text(i, n + 1, f"n = {n}", ha="center", va="bottom", fontsize=7)
     a.set_xticks(range(3), list(stages))
     a.set_ylim(0, 62)
-    a.set_ylabel("Tasks")
+    a.set_ylabel("Theorems")
     a.legend(loc="lower left", bbox_to_anchor=(0, 1.02), ncol=2)
     label(a, "a")
     # Accepted attempts per S2 family, n = 64 each.
@@ -268,7 +268,7 @@ def fig_oct19_heldout():
     a.invert_yaxis()
     a.set_xlim(0, 15)
     a.set_xticks([0, 5, 10, 15])
-    a.set_xlabel("Theorems solved within 2 attempts (%)")
+    a.set_xlabel("Theorems proved within 2 attempts (%)")
     label(a, "a")
     # (b) Kimina theorems solved within 8 samples, by reference-proof length, as (theorems, solved).
     bins = ("≤20 lines", "21–40", ">40")
@@ -290,7 +290,7 @@ def fig_oct19_heldout():
     b.set_xticks(range(3), [f"{s}\nn = {n}" for s, (n, _) in zip(bins, draw1)])
     b.set_ylim(0, 70)
     b.set_xlabel("Reference proof length")
-    b.set_ylabel("Solved within 8 samples (%)")
+    b.set_ylabel("Proved within 8 attempts (%)")
     b.legend(loc="upper right")
     label(b, "b")
     save(fig, "oct19_heldout")
@@ -389,7 +389,7 @@ def fig_oct19_curriculum():
                        capsize=2, elinewidth=0.8, lw=0)
     a.set_xticks(range(4), quarters)
     a.set_ylim(0, 16)
-    a.set_xlabel("Quarter of C's first-pass order")
+    a.set_xlabel("Quarter of C's first-epoch order")
     a.set_ylabel("Accepted attempts (%)")
     a.legend(loc="upper right")
     label(a, "a")
@@ -434,7 +434,7 @@ def fig_oct19_actions():
         ("Format error", DROP, "white"),
         ("Lean error, no tactic applied", "#6E6E6E", "white"),
         ("Some tactics applied, then failure", GREY, "#272727"),
-        ("Valid step, goals remain", PARENT, "white"),
+        ("Valid action, goals remain", PARENT, "white"),
         ("No progress or forbidden", LIGHT, "#272727"),
         ("Proof closed", RL, "white"),
     )
@@ -505,7 +505,7 @@ def fig_oct20_why():
         a.text(i, 100 * hi + 2, f"{k}/{n}", ha="center", va="bottom", fontsize=6.5)
     a.set_xticks(range(3), [r[0] for r in runs], fontsize=6.5)
     a.set_ylim(0, 75)
-    a.set_ylabel("Episodes with a tactic applied (%)")
+    a.set_ylabel("Attempts with a tactic applied (%)")
     label(a, "a")
     # (b) Format errors by cause, as a share of all model actions on the selection set.
     # Format errors (cap, over 4 tactics, other): src, "Action limits". Action totals: oct19_actions above.
@@ -537,7 +537,7 @@ def fig_oct20_why():
     c.set_xticks(list(x))
     c.set_ylim(0, 105)
     c.set_xlabel("Closing action")
-    c.set_ylabel("Accepted episodes (%)")
+    c.set_ylabel("Accepted attempts (%)")
     c.legend(loc="upper right", fontsize=6.5)
     label(c, "c")
     save(fig, "oct20_why")

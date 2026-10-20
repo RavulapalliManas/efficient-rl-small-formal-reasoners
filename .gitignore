@@ -12,3 +12,8 @@ dist/
 artifacts/**
 !artifacts/.gitkeep
 .private/
+docs/tex/**/*.aux
+docs/tex/**/*.fdb_latexmk
+docs/tex/**/*.fls
+docs/tex/**/*.log
+docs/tex/**/*.out

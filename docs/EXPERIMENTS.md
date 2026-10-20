@@ -5809,6 +5809,57 @@ The question of EXP-030 stays open. No result about a dense reward exists.
 
 ## Data handoff for Abhinav, 20 October 2026 IST
 
+#### Start here: one page for Abhinav
+
+Read this page first. The numbered sections below it are reference material; open them only when this page points you there.
+
+Your experiment, EXP-026, compares three models on the same tasks ([protocol](#generalization-experiment-revised-framing-16-october-2026)):
+
+- B: the unchanged `Qwen/Qwen2.5-0.5B-Instruct`.
+- S: B after the project SFT on 1,880 action rows.
+- R: S after REINFORCE on the 506 TRAIN roots in a shuffled order.
+
+All three models already exist. The main lease trained S and R on 18 and 19 October. Results so far:
+
+- DEV: B, S and R each solve 0 of the 8 DEV roots (32 attempts per model). DEV cannot separate them yet.
+- The 164-theorem selection set (EXP-028): S solves 1 of 163 assessed theorems and R solves 1 of 164. B was not measured on it.
+- TEST: not opened.
+
+Use exactly these, and nothing else:
+
+| You need | Use | Where |
+| --- | --- | --- |
+| Code | Branch `main` | GitHub |
+| Training data | `validated_v2`: 506 TRAIN roots and 1,880 SFT action rows | `data.tar.gz` (section 4.1) |
+| DEV, for every choice | 8 roots from `release_v3` | `dev_pool.jsonl` and `dev_names.txt` in `inputs.tar.gz` (sections 4.2 and 4.10) |
+| TEST, for the final measurement only | 21 roots from `release_v3`, opened only after Manas approves | Not staged (section 4.2) |
+| Models | B, S and R | Section 4.9 |
+| Lean | `environment.tar.gz`, plus the checker and REPL in `inputs.tar.gz` | Section 4.10 |
+| Commands and settings | What the main lease ran | Section 7 |
+
+These sets look like DEV or TEST, but they are not yours. Do not use them for choices:
+
+| Name you will see | What it is |
+| --- | --- |
+| `tasks_dev.jsonl` with 164 rows, config `configs/data/nt_validation_v1.json` | The EXP-028 selection set. Earlier runs already used it to choose arms, so results on it are exploratory. The 8-row `release_v3/benchmark/tasks_dev.jsonl` is your DEV |
+| `sft_action/sft_val.jsonl` (125 rows) | The SFT loss monitor. It holds TRAIN theorems |
+| `calibration/tasks.jsonl` (32 rows) | TRAIN roots for a calibration run |
+| `prepared_v1` DEV 34 and TEST 82 | The earlier EXP-025 package. The cleanup reduced them to your DEV 8 and TEST 21 |
+| `nt_benchmark_v1` DEV 9 and TEST 16 | The EXP-025 pilot. Not used |
+| `id_val` (40), held-out (142), `retention` (3), `external` (64) | Panels of the older EXP-023 curriculum study |
+| `nt_pool_v2` validation (420) and the EXP-019 DEV (3 theorems) | Historical sets |
+| `curriculum_validation` in `evaluation_reservations.json` | Not built |
+
+Branches: use `main`. The other branches (`midsem-rl-pipeline`, `docs/repo-navigation`, `docs/lean-reward-audit`) are older working branches, and `main` contains all of them. Ignore them.
+
+People: Manas owns the data, the curriculum experiment and every approval. Anwesha owns the Lean environment. You own EXP-026.
+
+Your first three steps:
+
+1. Ask Manas for read access to the archive bucket, its name and prefix, and the private run configs.
+2. Fetch and verify the data with section 6. Report every mismatch to Manas.
+3. Agree your evaluation panels with Manas before any run. DEV 8 is at the floor for all three models, so it cannot show a difference.
+
 Manas asks for a detailed description of every dataset of the number-theory study, how each one was created, and step-by-step instructions that Abhinav can follow.
 This section is that handoff. Abhinav owns the generalization experiment (EXP-026). Manas owns the data and the curriculum experiment (EXP-027).
 

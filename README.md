@@ -10,6 +10,9 @@ This project tests when reinforcement learning (RL) helps a small language model
 | Saved model checkpoints | [Downloads](#checkpoints) |
 | Curriculum data and builders | [Curriculum](#curriculum) |
 | Experiment catalogue, protocols, evidence, ownership, and decisions | [EXPERIMENTS.md](docs/EXPERIMENTS.md) |
+| Generalization: Abhinav; curriculum: Manas | [Generalization](docs/EXPERIMENTS.md#exp-026); [curriculum](docs/EXPERIMENTS.md#exp-027); [Abhinav's handoff](docs/EXPERIMENTS.md#abhinavs-task-handoff-and-checklist); [report](docs/tex/project_report.pdf) |
+| Evaluation questions, expected answers and semantic issues | [Evaluation review pack](docs/EXPERIMENTS.md#exp-025-evaluation-specification-and-semantic-review-17-october-2026) |
+| Description of every DEV and TEST question | [Report appendix A](docs/tex/project_report.pdf#page=24); [source and verification](docs/EXPERIMENTS.md#full-evaluation-question-descriptions-17-october-2026) |
 | Prerequisite curriculum, proof strategy and reward discussion | [Current handoff](docs/EXPERIMENTS.md#handoff-prerequisites-proof-strategy-and-reward-14-october) |
 | Final curriculum run results and evidence | [Results handoff](docs/EXPERIMENTS.md#handoff-final-curriculum-run-results-14-october) |
 | Main report source. Edit this for project document requests | [project_report.tex](docs/tex/project_report.tex) |
@@ -37,6 +40,43 @@ The selected tasks retain the source context and exclude official evaluation and
 Whole-theorem starts and verified reference-prefix starts share binary complete-proof rewards.
 Hidden continuations remain private; live Lean goals supply the policy observations.
 Reference length is a difficulty proxy. Model-based difficulty calibration remains pending.
+
+The [benchmark builder](scripts/data/build_nt_benchmark.py) freezes a bounded selection from the existing broader corpus.
+Its `select` stage records inputs and duplicate groups; `verify` replays references and screens fixed tactics before export.
+The package separates TRAIN, DEV and TEST tasks and keeps evaluation proofs outside SFT examples.
+Use the [expanded dataset config](configs/data/nt_benchmark_v2.json) and [EXP-025 record](docs/EXPERIMENTS.md#exp-025-expanded-dataset-outcome-16-october-2026) for current inputs and evidence.
+The prepared package is cpu-angad `formal_rl/nt_benchmark_v2_20261016/prepared_v1/`.
+Its `data/` directory contains the pool, TRAIN/DEV/TEST tasks and SFT inputs.
+The [v1 config](configs/data/nt_benchmark_v1.json) remains available for the earlier pilot.
+Topic and duplicate groups use text rules. Mathematical family review and model difficulty calibration remain pending.
+
+## Modify the pipeline
+
+The existing commands remain the entrypoints. Reusable objects own the boundaries below.
+Change the relevant component without copying a training runner or benchmark builder.
+
+| Aspect | Component |
+| --- | --- |
+| Candidate selection and duplicate-aware splits | [`BenchmarkSelector`](scripts/data/nt_benchmark/selection.py) |
+| Data exports and pinned Lean verification | [`BenchmarkExporter`](scripts/data/nt_benchmark/artifacts.py), [`LeanVerifier` and `BenchmarkVerifier`](scripts/data/nt_benchmark/verification.py) |
+| Benchmark orchestration | [`BenchmarkPipeline`](scripts/data/nt_benchmark/pipeline.py), with replaceable selector and verifier objects |
+| Task admission, curriculum cutoff and sampling order | [`PoolTaskAdmission`, `TaskCurriculum` and `TaskSchedule`](scripts/train/rl_components/tasks.py) |
+| REINFORCE objective and optimizer update | [`LeaveOneOutObjective` and `PolicyGradientUpdater`](scripts/train/rl_components/objectives.py) |
+| SFT message conversion | [`SFTDataset`](scripts/train/rl_components/sft.py) |
+| Retained proof reconstruction and fresh replay export | [`ProofTrajectory`](scripts/eval/proof_export/trajectory.py), [`ProofExporter`](scripts/eval/proof_export/exporter.py) |
+
+For example, import `BenchmarkPipeline` from `scripts.data.nt_benchmark` in a repository checkout.
+Pass `selector=your_selector` to replace selection while retaining artifact orchestration.
+Its selector must provide `select(paths, max_input_bytes)` and `partition(candidates)`.
+Verification reads the frozen package configuration, rather than selecting a new population.
+The training updater accepts separate advantage and token-log-probability callables.
+
+The existing `LeanEpisode` class still owns proof interaction.
+TRL still owns the whole-proof GRPO optimizer.
+Configuration files retain model, sampling, reward and budget settings.
+Source receipts include the extracted benchmark and training modules.
+Changes to a component require a new recorded experiment when they change scientific behavior.
+This organization does not establish faster execution or RL improvement.
 
 ## Checkpoints
 
@@ -130,9 +170,18 @@ The fixed-mixture RL final passes 26/48 DEV attempts against the SFT parent's 18
 These small panels do not establish held-out generalization.
 See the [native parity record](docs/EXPERIMENTS.md#native-parity-midterm-completion) and the [fixed-mixture record](docs/EXPERIMENTS.md#fixed-mixture-midterm-completion).
 
+The next delivery targets number theory proof learning before Wednesday, 21 October.
+Complete proofs from the initial goal are the main endpoint; supplied-prefix completions remain a separate diagnostic.
+The [delivery amendment](docs/EXPERIMENTS.md#number-theory-rl-delivery-amendment-18-october-2026-ist) records ownership, dependencies and limits.
+The [pipeline repair record](docs/EXPERIMENTS.md#number-theory-pipeline-repairs-18-october-2026-ist) records the checked engineering changes and their limits.
+
 | ID | Experiment | Config or entry point | Status |
 | --- | --- | --- | --- |
-| [EXP-024](docs/EXPERIMENTS.md#exp-024) | Undergraduate number-theory SFT: new data against equal-token old data | `scripts/train/run_sft.py`, `scripts/eval/curriculum_metrics.py` | Protocol approved 15 October. Mathlib identity check, syllabus, corpus v0 (40,732 problems) and single-tactic screen done; no training or evaluation yet |
+| [EXP-026](docs/EXPERIMENTS.md#exp-026) | Generalization, Abhinav: unchanged Qwen, SFT, and SFT + RLVR | [Revised protocol](docs/EXPERIMENTS.md#generalization-experiment-revised-framing-16-october-2026); [current data and model contract](docs/EXPERIMENTS.md#current-data-and-model-contract-closure-18-october-2026-ist) | The clean study uses fresh SFT from pinned B because historical S trained on examples that invoke a reserved DEV target lemma. The [on-demand L40S main lease](docs/EXPERIMENTS.md#spot-first-amendment-and-launch-18-october-2026-ist) ran from 16:09 IST on 18 October to 07:12 IST on 19 October and terminated (estimated compute USD 33.77 of USD 102.31 reserved). Fresh S trained; B, S and R each solve 0 of 8 DEV roots. R accepts 164 of 4,048 TRAIN attempts with no detected learning (first against second visit, p = 0.93) and solves 1 of 164 held-out theorems in EXP-028 (E7), no gain over S. RL shifts R toward short, malformed actions (DEV format errors 37 to 113 of 192) |
+| [EXP-027](docs/EXPERIMENTS.md#exp-027) | Curriculum, Manas: benchmark performance and generalization | [Protocol and execution guide](docs/EXPERIMENTS.md#exp-027); [common data and execution plan](docs/EXPERIMENTS.md#common-data-and-curriculum-execution-plan-18-october-2026-ist); [report plan](docs/tex/project_report.pdf); `scripts/train/run_tactic_rl.py --task-order` | Full AI source review covers 536 canonical roots and 548 TRAIN proof variants; the primary projection retains 506 roots, and both order files contain 1,012 groups with equal task multiplicities. Annotations have no human confirmation or measured prerequisite necessity. C (prerequisite-first) accepts 255 of 4,048 TRAIN attempts against R's 164 on the same tasks (per-task p = 0.0002), with the gain inside the first pass. C narrows onto `omega`, `simp` and `simp_all` (mean action length 10.4 tokens in the last quarter). C solves 0 of 8 DEV roots; the held-out R/C contrast is not yet measured |
+| [EXP-028](docs/EXPERIMENTS.md#exp-028) | Low-acceptance remedies: step search, automation fallback, lemma retrieval, search-mined SFT, pass-rate-filtered RL | `scripts/train/run_tactic_rl.py` options; `scripts/data/build_search_sft.py`, `add_premises_sft.py`, `build_premise_corpus.py` | Registered 18 October; four leases ran on 18 and 19 October and all terminated (estimated compute USD 52.28 of USD 165.32 reserved). No remedy arm is promoted on the 164-theorem held-out set: S solves 1 (E0); search (E2), lemma retrieval (E3), the SFT seed control (E5), R (E7) and pass-rate-filtered RL (E6) solve 0 to 2. E4 did not run: the S_mined SFT stage failed on a data-builder defect, now fixed. RL_filtered raises acceptance on its 62 TRAIN tasks from 0.31 to 0.60 (p = 0.0001), without measurable transfer. Kimina-Prover-Distill-0.6B solves 47 and 40 of 164 within 8 samples in two draws (56 in either). vLLM lockstep rollout is 4.06 times faster than sequential (timing only; the backend check has not yet passed) |
+| [EXP-025](docs/EXPERIMENTS.md#exp-025) | Broader benchmark and data pipeline | [Builder](scripts/data/build_nt_benchmark.py), [expanded config](configs/data/nt_benchmark_v2.json); [checked prerequisite release](docs/EXPERIMENTS.md#checked-prerequisite-release-outcome-17-october-2026); [full-corpus mapping](docs/EXPERIMENTS.md#full-corpus-mapping-outcome-17-october-2026) | `validated_v2/` supersedes the initial common projection for new consumers. Fresh strict replay accepts all 580 source proofs, and every canonical source root reconstructs under v2. The filtered release retains 1,880 TRAIN actions and 125 separate loss-validation actions. All retained rows pass the actual consumer checks without truncation. Every source record has a retained or quarantine disposition; no records remain pending. Source certificates and frozen evaluation reservations remain bound. Public pretraining exposure and complete semantic alias independence remain unresolved |
+| [EXP-024](docs/EXPERIMENTS.md#exp-024) | Undergraduate number-theory SFT: new data against equal-token old data | `scripts/train/run_sft.py`, `scripts/eval/curriculum_metrics.py` | Protocol approved 15 October. Mathlib identity check, syllabus, corpus v0 (40,732 problems) and single-tactic screen done; no training or evaluation yet. A separate [recovery data revision](docs/EXPERIMENTS.md#recovery-data-preparation-18-october-2026-ist) passes CPU verification and is archived for a future run. It adds format and Lean-error recovery observations, preserves the recorded prerequisite categories and split assignments, and quarantines one theorem whose source action hits the live cycle guard. The active EXP-026 pilot stays fixed; no learning gain is measured for the new dataset |
 | [EXP-023](docs/EXPERIMENTS.md#exp-023) | Broader number theory, reward and curriculum comparisons, PPO and REINFORCE | [Data config](configs/data/nt_expanded_tactic_v1.json), `scripts/train/run_tactic_rl.py`, `scripts/train/run_tactic_ppo.py` | Final curriculum run done 13 October. RL gains on new instances of trained families (`id_val`), no gain on held-out families; the ordered curriculum shows no advantage, and the failed token gate invalidates the efficiency claim |
 | [EXP-001](docs/EXPERIMENTS.md#exp-001) | LeanDojo data subset | `configs/data/leandojo_*.json` | Done. Lean replay done: 5,921 of 8,273 training proofs accepted; task bank v2 keeps 2,150 theorems outside evaluation and dev files |
 | [EXP-002](docs/EXPERIMENTS.md#exp-002) | Base model probe + GSM8K LoRA | `configs/eval/qwen_05b_probe.json` | Done. No accuracy gain |

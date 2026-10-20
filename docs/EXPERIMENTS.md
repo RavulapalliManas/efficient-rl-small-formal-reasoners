@@ -118,6 +118,12 @@ Current execution status appears in the README, not in this register.
 | EXP-019 | Experiment | Does Lean-reward GRPO improve held-out proof completion at matched cost? | [Record](#exp-019) |
 | AUD-001 | Audit | Which proof errors and available starting points inform task selection? | [Record](#aud-001) |
 | AUD-002 | Audit | Can scorer exploits or data exposure invalidate the reward? | [Record](#aud-002) |
+| EXP-025 | Data build | Can the broader corpus provide reproducible benchmark and training inputs? | [Record](#exp-025) |
+| EXP-026 | Prospective experiment | How do unchanged Qwen, SFT and SFT + RLVR differ in generalization? | [Revised protocol](#generalization-experiment-revised-framing-16-october-2026) |
+| EXP-027 | Prospective experiment | Does curriculum improve familiar benchmark performance, generalization, or both? | [Protocol](#exp-027) |
+| EXP-028 | Prospective screen | Do step search, automation fallback, lemma retrieval, search-mined SFT and pass-rate-filtered RL raise held-out acceptance over S? | [Protocol](#exp-028) |
+| EXP-029 | Prospective experiment | Do the RL arms differ from S at 8 attempts on the screened 164-theorem selection set and on the 62 RL_filtered tasks? | [Protocol](#exp-029) |
+| EXP-030 | Exploratory pilot | Do per-action Lean-error penalties make REINFORCE close more proofs than the terminal proof reward alone? | [Protocol](#exp-030) |
 
 ## Adopted inputs and next actions
 
@@ -580,6 +586,25 @@ Implementation source: [TRL 0.24 PPO trainer](https://huggingface.co/docs/trl/v0
 
 ## Decision log
 
+- 2026-10-20 IST: Manas asks to record the why-analysis, its motivation and setup, and the stop in this catalogue and in the report, with diagrams. The EXP-028 entry "Analysis: why RL raises TRAIN acceptance without a held-out gain, 20 October 2026 IST" and the stop entries under EXP-029 and EXP-030 record them. `docs/tex/project_report.tex` gains Sections `sec:oct19-setup` (the version 2.2 MDP as these runs use it, with a table and a diagram), `sec:oct20-why` and `sec:oct20-not-run`. `scripts/report/make_report_figures.py` gains `fig_oct20_why`. Nothing is committed.
+- 2026-10-20 IST: Manas stops all experiments and asks for analysis only. Lease6 is not launched, and EXP-029 and EXP-030 do not run; see their stop entries. Manas then asks whether the missing held-out gain comes from the RL update or from the reward. A read-only analysis of saved records answers it in the EXP-028 analysis entry of 20 October. It adds four recount scripts, `p4_why.py`, `p4b_tests.py`, `p4c_format.py` and `p4d_train_format.py`; `p4d_train_format.py` traces two counts of the limits line below.
+- 2026-10-20 IST: Manas approves the CPU work for one L4 lease within a total budget of about USD 50 and asks for the dense reward. Lease6 (one g6.4xlarge, 28 h, dry-run quote USD 49.51) supersedes the unlaunched lease5. `run_tactic_rl.py` accepts `error_feedback_v1` in environment v2 (`v2_feedback`), and its group records gain an `accepted` list. The EXP-029 amendment and the EXP-030 registration below record the program. Nothing is uploaded, approved for launch or launched; the guard role is not created.
+- 2026-10-20 IST: Manas asks whether the action-token limit, the horizon and the discount are right, and proposes a fixed discount, a dense reward, and a longer horizon without a tactic limit. A read-only recount of the EXP-028 rollouts measures the limits (`.private/ops/report_recount_20261019_v1/scripts/p3_horizon_tokens.py`, output `out/p3_horizon_tokens.json`). On TRAIN (`pass_rates`, 2,024 S episodes), 917 of 11,890 S actions reach the 192-token limit, and 893 of them end as format errors. 468 S actions have more than 4 tactics and are refused before Lean runs them. Together, the two limits cause 1,358 of the 1,416 S format errors. On the selection set, 326 of 1,953 S actions reach the token limit. RL_filtered reaches it in 1 of 1,948 actions, and R in 20 of 1,963. 1,935 of the 2,024 TRAIN episodes use all 6 actions without a proof. S closes 84 proofs, and the share of open episodes that close a proof stays between 0.50% and 0.94% at each action from 1 to 6. No accepted proof uses more than 6 tactics. At a discount of 0.95, a proof closed by the last action earns 0.774 with 6 actions and 0.569 with 12. Environment v2 refuses every reward except the terminal proof reward. No configuration or lease change is made; the proposals wait for a decision.
+- 2026-10-19 IST: Manas asks for an engineering and data readiness check before EXP-029, so that the only remaining action is to run it. Two read-mostly audits run; their findings, fixes and the resulting lease program are in the EXP-029 registration below. Decisions taken by the orchestrator and open to reversal: every arm runs 8 attempts per theorem as required stages, with second-seed 8-attempt evaluations as best-effort trailing stages; the benchmark v3 screening is dropped from this lease; the lease is on-demand only; the termination guard moves from the CPU host to an AWS scheduler. Nothing is uploaded, approved or launched.
+- 2026-10-19 IST: Manas asks to add the 18 and 19 October results to the report, with checked numbers and figures. `docs/tex/project_report.tex` gains Section `sec:oct19-results`, one reading-date sentence, one Main findings item, one Limitations bullet and two bibliography entries. `scripts/report/make_report_figures.py` gains `fig_oct19_heldout`, `fig_oct19_rl_filtered`, `fig_oct19_curriculum` and `fig_oct19_actions`. Every value comes from the read-only recount in the entry "Report recount of the 18 and 19 October results, 19 October 2026 IST". An independent check found 501 numeric values supported, 0 wrong and 0 unsupported. It also found 5 wording overclaims, which are corrected: E3 and E5 start from B, the Kimina probe does not separate model from format and budget, R/C is one run per arm, and the promotion rule, not power, sets the 5-point bar.
+- 2026-10-18 IST: Manas allows up to USD 40 of additional spend for EXP-028 follow-ups. Running leases keep their fixed time caps and cannot be extended. Each new launch still needs approval of its exact quote; the next use is chosen after the Kimina held-out result.
+- 2026-10-18 IST: Manas approves EXP-028 Lease 4, a Kimina-only rerun with chunked saving, at USD 17.35 reserved for 5 h against a USD 20 ceiling, launched now in parallel because Lease 3's single-chunk probe may miss its cap. Spot fails with `InsufficientInstanceCapacity`; the on-demand fallback starts at 18:14:56 UTC with the guard armed; deadline 23:14:56 UTC.
+- 2026-10-18 IST: Manas approves EXP-028 Lease 3 (Kimina-Prover-Distill-0.6B capability probe, rollout backend check and speed test) at its exact quote: USD 17.35 reserved for 5 h against a USD 20 ceiling, in parallel with the main lease and Leases 1 and 2. Spot fails with `InsufficientInstanceCapacity`; the on-demand fallback starts at 17:09:16 UTC with the guard armed; deadline 22:09:16 UTC.
+- 2026-10-18 IST: Manas requests faster rollouts after measurement shows model generation takes 68-93% of wall time at about 50 tokens/s (main R 93%, Lease 2 pass rates 91%, Lease 1 E0 68%); Lean takes the rest. `run_tactic_rl.py` gains default-off `rollout: lockstep` (each sample owns an episode and REPL; one batched generate call per step; episodes step in `lean_workers` threads), `generation_backend: hf|vllm` and `vllm_memory_fraction`. Shared Lean counters now hold a lock and each lockstep episode writes its own REPL log. vLLM (pinned `vllm==0.11.0`, which resolves with torch 2.8.0 and transformers 4.57.1) is refused in training until a weight-sync path is validated on a GPU. Lockstep sampling uses a different random stream from the sequential loop, so its outcomes are valid draws but not identical to sequential ones. `scripts/eval/check_rollout_backends.py` must pass on a GPU (greedy match and paired sign-flip tests of log-probability, length and stop rate) before any lockstep or vLLM result counts. The three running leases keep the sequential code they synced at bootstrap; no speedup is measured yet.
+- 2026-10-18 IST: Manas approves both EXP-028 leases at their exact quotes: Lease 1 (inference and SFT) USD 63.94 reserved for 22 h, and Lease 2 (RL) USD 66.68 reserved for 23 h, each with a USD 70 ceiling, in parallel with the main lease. Spot allocation fails with `InsufficientInstanceCapacity` for both; the on-demand fallbacks start at 13:59:55 and 14:00:43 UTC with guards armed on cpu-angad. Deadlines are 11:59:55 and 13:00:43 UTC on 19 October.
+- 2026-10-18 IST: Manas requests the four literature remedies for low acceptance inside the existing framework. `run_tactic_rl.py` gains default-off config options: `step_candidates` (best-of-K step search), `automation_fallback` (fixed automation tactics after the policy, plus a root automation baseline), `task_filter` (training tasks by TRAIN pass rate from a completed training-state assessment, applied identically to frozen schedules) and `premise_retrieval` (BM25 lemma section in the shared observation). Search and automation are refused in training, because a selected or automation-completed action is not an on-policy REINFORCE sample; automation proofs are counted apart from policy proofs. New tools: `scripts/data/build_search_sft.py` (expert-iteration and repair rows from accepted search paths), `scripts/data/add_premises_sft.py` (adds the lemma section after an exact re-render check) and `scripts/data/build_premise_corpus.py` (Lean dump, not executed). Re-rendering reproduces all 1,880 current SFT prompts exactly; 544 of them already carry a last error. No run uses these options yet, and the running lease's frozen package is unchanged.
+- 2026-10-18 IST: Manas approves the staged EXP-026/027 main lease `exp026-027-nt-clean-main-s20261018-v2` with a USD 110 ceiling. Manas amends allocation to one L40S on AWS, spot first, on-demand only if spot allocation fails. Manas allows the existing termination guard on cpu-angad for this lease only, as an exception to the AWS-only rule. A mid-run spot interruption ends the run without replacement. Spot allocation failed and the on-demand fallback runs; see [spot-first amendment and launch](#spot-first-amendment-and-launch-18-october-2026-ist).
+- 2026-10-17 IST: Manas freezes curriculum and reward work while requesting a delegated SFT-parent audit and preparation of evaluation questions and expected answers. Reuse the existing EXP-025 package without changing split membership. Register `exp025-evaluation-spec-cpu-s20261017-v1`, owner/root writer, cpu-angad output `nt_benchmark_v2_20261016/evaluation_spec_v1/`. Export exact DEV/TEST statements and initial states, a shared answer contract, and private accepted reference answers. The source verdicts remain historical replay evidence. Semantic review flags do not silently repair or replace frozen questions. No model inference, training, paid GPU launch, or reward change follows from this request.
+- 2026-10-16 IST: Manas corrects study ownership: Manas owns the curriculum experiment (EXP-027); Abhinav owns the generalization experiment (EXP-026). This supersedes the preceding assignment of both experiments to Abhinav. Abhinav delivers B/S/R lineage and generalization results. Manas owns prerequisite schedules, C training and R/C curriculum analysis. Share the frozen benchmark, S parent and matched R control through an explicit handoff. Anwesha retains Lean interaction and replay ownership. No experimental setting changes.
+- 2026-10-16 IST: Manas corrects the preceding framing. The project has two major experiments: generalization across unchanged Qwen, SFT and SFT + RLVR (EXP-026), and curriculum effects on both familiar benchmark performance and generalization (EXP-027). The prior curriculum-only EXP-026 draft is superseded, not a third major study. Keep its controls and history; move the scientific emphasis to the two questions. Curriculum initially changes RL order while SFT stays fixed. The unchanged model is the existing Qwen2.5-0.5B-Instruct without project SFT, not a newly selected raw Base checkpoint. No execution is authorized by this amendment.
+- 2026-10-16 IST: Manas requests curriculum experiments and a documented generalization case with an execution guide for Abhinav. Register [EXP-026](#exp-026) as a prospective order comparison from a common SFT parent. Keep the task multiset fixed, distinguish new instances from new skill combinations, and preserve EXP-023's null order result and failed efficiency gate. Scientific narrative is in the dated report section; semantic review, parent calibration and resolved launch settings remain prerequisites. Documentation does not authorize model runs.
+- 2026-10-16 IST: Manas requests a Sol agent for pipeline robustness and assigns benchmark/data work to the root session. Implement the scoped handoff repairs and a maintained builder using existing corpus inputs. CPU preparation and reference checks run on the existing fleet under the limits below. No model training, inference or paid GPU launch is authorized through this work. See [EXP-025](#exp-025).
+- 2026-10-16 IST: Manas selects the existing broader number-theory pool for the first benchmark version. Prioritize benchmark definition, expandable problems and measured difficulty before further training. The [benchmark contract](#benchmark-contract-broader-number-theory-16-october-2026) records this scope and proposed controls. This decision does not replace EXP-024's approved SFT protocol or authorize a model run.
 - 2026-10-15 IST: Manas approves moving local data off the Mac. `artifacts/leandojo_nat_v1`, `artifacts/qwen_05b_instruct_proof` and `artifacts/qwen_05b_probe` (14,896 files, 3.7 GB) are copied to cpu-angad `formal_rl/mac_artifacts_archive_20261015/` with rsync (exit 0). `sha256sum -c` of the Mac manifest (`manifest_mac.sha256`, kept in that directory) exits 0 with no mismatch, and the remote file count is 14,896. The local copies are then deleted. `artifacts/notes/` and `artifacts/figures/` stay local as notes the catalogue cites. The EXP-002 configs `configs/eval/qwen_05b_probe.json` and `configs/midtrain/qwen_05b_gsm8k_lora.yaml` keep their historical local paths; fetch the data back before rerunning them. Access now goes through the `cpu-angad` SSH alias (private setup note in `.private/infrastructure.md`).
 - 2026-10-15 IST: Manas asks for a detailed TeX diagram of the Lean-in-the-loop architecture. An Opus subagent wrote the standalone TikZ source `docs/tex/figures/lean_loop_architecture.tex` and its PDF (latexmk exit 0, no errors or overfull boxes). It shows the state, the token and step levels of the policy, Lean's REPL, solvers and kernel, every transition branch, the reward, the leave-one-out update and what each part supplies. Root checked the content against `run_tactic_rl.py` and the EXP-023 pipeline settings and labelled the numbers as EXP-023 settings. The main report does not include it yet; that change belongs to the report owner.
 - 2026-10-15 IST: Manas approves the 3 open choices of the [EXP-024 protocol](#exp-024-protocol-undergraduate-number-theory-sft-14-october-2026): held-out topics 6 (quadratic residues) and 7 (arithmetic functions); evaluation with 12 actions, 384 action tokens and a 3,072-token prompt; 2 training seeds per arm. The syllabus stage starts.
@@ -2378,3 +2403,3355 @@ The first attempt fails at export because its filesystem is full; its traces rem
 Full-context DEV compilation fails at the unchanged memory limit. Three portable DEV-a files compile with narrower imports.
 The portable check stops at DEV-b's missing `dvd_add` import; that file fails and the remaining files are unchecked.
 These small training-domain and DEV panels do not establish held-out generalization. No new GPU lease starts.
+
+### EXP-023 saved-question recount registration, 15 October 2026
+
+Manas requests the exact questions, proof lengths, sampled attempts and an explanation of limited RL gains. He selects saved-run analysis before any new model inference.
+
+- Run: `exp023-question-recount-cpu-s20261015-v1`. Owner and sole writer: root. Source: `.private/ops/failure_count_20261014_v1/question_recount.py`. Output: cpu-angad `formal_rl/curriculum_final_failure_count_20261014_v1/question_recount_20261015_v1/`.
+- Inputs: the existing staged final-run held-out rollouts, training step records and resolved task files; the completed extra evaluation's `id_val` rollouts. Reuse `count.py` for first-error categories and `curriculum_metrics.py` for family tests. No checkpoint, inference or Lean replay.
+- Definitions: an attempt is an independent sampled trajectory. An action can contain multiple tactics and failed retries. Count retained proof steps from the final observation plus the accepted closing action; count all applied tactics separately because backtracking can discard them. Failed attempts remain in the denominator. First successful sample position is descriptive, not an expected attempts-to-success estimate.
+- Limits: stream rows; expected memory below 128 MiB; managed cap 1 GiB, one CPU, 300 seconds. Create the output exclusively. Preserve input files and all earlier counts.
+- Verification: the first planted attempt-count control exits 1 before implementation; the implemented positive and all-fail controls pass. The remote recount also validates the reused family test on equal and planted-different outcomes. This establishes counting behavior, not scorer soundness.
+- Interpretation: separate familiar-family reliability, unfamiliar-family coverage, action limits and training reward variation. A few-shot comparison remains a proposal. No training or paid launch is authorized.
+- Literature provenance: [Yue et al., section 3](https://arxiv.org/html/2504.13837v5#S3) reports comparisons of base and RL models across sampling budgets. Its findings motivate checking both single-attempt success and multi-attempt coverage; they do not diagnose this model. [DeepSeek-Prover-V1.5](https://arxiv.org/html/2408.08152v1) motivates proof-assistant feedback and truncate-and-resume; the existing environment already uses these ideas.
+- First execution exits 1 on the familiar-family task file's missing `level` field. The held-out file uses `level`; the familiar-family file uses `stage`. Retry `exp023-question-recount-cpu-s20261015-v1-retry1` records which field supplies the label and keeps every task. It writes `question_recount_20261015_v1_retry1/`; the failed output and service journal remain preserved. Limits and counting criteria do not change.
+
+### EXP-023 saved-question recount outcome, 15 October 2026
+
+Retry service `rl-question-recount-20261015-v1-retry1` exits 0. `recount.json` contains all exact headers, per-question success counts, retained proof lengths, aggregate counts and recomputed family tests. The four `*_episodes.jsonl` files retain source paths, group/sample identifiers, final observations and accepted closing actions for W and C. This recount reads recorded strict-replay verdicts; it does not rerun Lean. The original run pins Lean `v4.10.0-rc1` and mathlib `29dcec074de168ac2bf835a77ef68bbe069194c5`.
+
+| Model | Familiar-family accepted attempts | Familiar-family questions solved | Unfamiliar-family accepted attempts | Unfamiliar-family questions solved |
+| --- | ---: | ---: | ---: | ---: |
+| W, supervised parent | 148/320 | 31/40 | 258/1,136 | 59/142 |
+| A, ordered RL | 208/320 | 32/40 | 283/1,136 | 53/142 |
+| B, shuffled RL | 213/320 | 34/40 | 302/1,136 | 54/142 |
+| C, band-sampled RL | 242/320 | 35/40 | 249/1,136 | 46/142 |
+
+- The secondary familiar-family panel has 20 families. Recomputed family tests, Holm-adjusted within this panel, give p = 0.00118 for A and B, and p = 0.0000300 for C. The primary unfamiliar-family panel has 19 families; all three adjusted p-values equal 1. These are the same saved single-seed model comparisons, not new independent training replications.
+- Retained tactic steps, averaged over accepted unfamiliar-family attempts: W 2.310 (n = 258), A 2.364 (n = 283), B 2.010 (n = 302), C 2.161 (n = 249). Accepted-trajectory action means are 2.488, 2.233, 1.904 and 2.181 respectively. These conditional means exclude failed proofs and compare different successful subsets.
+- W has 878 failed unfamiliar-family attempts; 874 use all 6 actions. C has 887 failures; all use 6 actions. W reaches the 192-token action cap in 533 of 5,892 actions; C in 444 of 5,865. These observations do not establish that a larger budget would finish the proofs.
+- Training has 142 groups per arm. Mixed-success groups: A 91, B 99, C 95. Recorded optimizer updates: A 122, B 126, C 132. All-success groups can still update under discounted returns when completion lengths differ. None of the recorded training groups has stage S4. The latest run therefore has learning signals; the early all-fail diagnosis does not explain it by itself.
+- Exact examples from the full recount: `ho2_crt_01` gives W 8/8 and C 8/8, with 2 to 3 and 2 retained tactic steps respectively; `ho_gcdchar_01` gives W 0/8 and C 1/8, with 3 retained C tactics in 1 action on saved sample 7; `ho2_sqroot_01` gives W 6/8 and C 0/8; `ho_primedvd_01`, `ho2_orderpow_01` and `ho2_cubesum9_01` give 0/8 for both. Examples illustrate methods; the full populations above supply performance estimates.
+- Retained proof length comes from numbered steps in the final observation and `tactics_applied` on its accepted action. Source inspection confirms that these are retained environment tactics. Nested tactic blocks and automation hide internal work; this is not a count of mathematical inference steps. Manual inspection of the CRT, gcd, parity-case and modular-square traces agrees with the counter.
+- Interpretation: familiar-family reliability improves, while unfamiliar-family coverage falls descriptively. Missing hardest-stage practice, limited lemma access and strategy transfer remain candidate explanations. No ablation identifies their causal contributions. Reference length alone does not predict success on the examples above.
+- Proposed next diagnostic, not launched: compare the existing parent and RL checkpoints with and without a fixed small set of train-only verified examples on frozen DEV questions. Match completion limits, report prompt tokens separately, and keep every evaluation proof out of demonstrations. A gain establishes responsiveness to supplied examples; it does not establish permanent acquisition. A failure does not prove missing knowledge. Use EXP-024's existing equal-token SFT comparison to test acquisition before another matched RL stage.
+- Additional method provenance: [COPRA](https://arxiv.org/abs/2310.04353v5) studies in-context theorem proving with feedback and search using a larger model. It does not predict few-shot performance for this model.
+- Source snapshots and outputs are archived in the existing GPU-v2 namespace at `analysis/question_recount_20261015_v1_retry1.tar.gz`; object existence is confirmed. The namespace retains its existing expiry policy. The archive includes the failed first attempt, both source versions and the successful result. No model or Lean job starts.
+
+### Benchmark contract: broader number theory, 16 October 2026
+
+Manas selects the existing broader pool rather than a divisibility-only benchmark. The scope decision is confirmed; the controls below are proposed. Scientific owner: Manas. Documentation owner: root session. No data build, model evaluation or training starts through this entry.
+
+#### Reuse and task specification
+
+Use the existing EXP-024 corpus and [syllabus](../configs/data/undergrad_nt_v1.json) as candidate inputs. Cover divisibility, gcd, Bézout, congruences, modular powers, orders, quadratic residues, arithmetic functions and Diophantine equations. Topic breadth does not require equal training allocation across topics. Corpus membership alone does not establish benchmark eligibility.
+
+Each admitted problem needs a stable source, family and instance ID, exact Lean statement, imports, assumptions and a private accepted reference proof. Record the pinned Lean, mathlib, REPL and verifier identities. Check the intended mathematical meaning, assumption consistency, target absence and allowed axioms. Preserve rejected candidates and their reasons.
+
+Keep EXP-024's single-tactic screen and its exclusions unchanged. Screened problems can form a separate local-skill diagnostic. Failure of the screen does not establish difficulty. The corpus classification and screen records above are historical evidence, not fresh validation of every candidate.
+
+#### Difficulty and expansion
+
+Do not assign one difficulty score from tactic lines. Store these annotations separately:
+
+| Annotation | Operational meaning | Limit |
+| --- | --- | --- |
+| Proof strategy | Methods actually used in the accepted reference, such as witnesses, residue cases or induction | A valid alternative proof may use another strategy |
+| Composition | Constituent skills and intermediate subproofs in an annotated reference | Topic labels and tactic names do not establish composition |
+| Dependency depth | Longest chain of dependent intermediate claims in that reference | This is reference structure, not minimum required proof depth |
+| Reference length | Tactic blocks under a recorded counting rule | Automation can hide internal reasoning |
+| Empirical difficulty | Frozen-parent success under fixed sampling, token, Lean-call and time limits | Difficulty depends on the model and protocol |
+
+For existing problems, annotate verified references before claiming controlled structural levels. For expandable families, specify valid parameter ranges and the proof construction. Separate new constants from new skill combinations and longer dependency chains. Increasing coefficient size does not automatically increase proof difficulty. Do not force these dimensions into a full factorial benchmark.
+
+Freeze family definitions, generation rules and split membership before generating evaluation instances. Keep equivalent templates and near duplicates in the same partition. Preserve the benchmark version when adding problems; expansions get a new version and manifest. Reuse existing builders where they fit. The inspected prefix builder changes supplied proof starts; it does not establish a general generator of harder number-theory problems.
+
+#### Evaluation and the RL question
+
+Preserve EXP-024's familiar-family, held-out-family and held-out-topic splits. Within a future composition panel, distinguish unseen combinations of taught skills from methods absent from training. Audit known SFT and RL exposure, not merely the latest training file. Previously inspected or adaptively selected questions remain exploratory diagnostics. Unknown pretraining exposure remains a limitation.
+
+Use DEV to choose task mixes and settings. Freeze TEST before model sampling and retain its failed questions. Calibrate empirical difficulty on DEV with the frozen parent; report TEST difficulty after settings are frozen. Never discard TEST questions because the parent or RL model fails them.
+
+The primary endpoint is unassisted complete proofs accepted by the pinned verifier. An attempt means one independently sampled trajectory. Count actions, retries, retained tactics, generated tokens, physical Lean calls and wall time separately. Report accepted attempts and questions solved with their full denominators. Report resource use on all attempts; successful-proof length alone can hide failures.
+
+The proposed method comparison uses one frozen SFT parent: unchanged SFT, REINFORCE with a leave-one-out baseline, and GRPO. Hold the curriculum fixed. Match observations, actions, feedback, verifier, terminal reward, inference limits and training budget. Specify advantage calculation, loss normalization, KL penalty and update passes before launch. The inspected interactive REINFORCE and whole-proof GRPO paths do not yet provide that matched comparison. An unchanged SFT control measures added RL; equal-cost continued SFT is a separate comparison.
+
+Ask whether RL changes familiar-family reliability, unfamiliar-family coverage or composition under the stated budget. Analyze local validity, repeated states and recovery from the same trajectories as secondary outcomes. A complete-proof gain does not identify which behavior caused it. Failure within the fixed budget does not establish that RL cannot learn a method. Replication and uncertainty must precede a claim of improvement; training reward alone is insufficient.
+
+#### Next deliverable and unresolved settings
+
+Prepare a bounded candidate manifest from the existing pool, with topic coverage, exposure flags, accepted references and structural annotations. Freeze the candidate cap and resource limits before that build. Then register frozen-parent calibration before any matched RL study. Sample size, method-study run IDs, exact parent identity and matched budgets remain unresolved. This entry does not amend EXP-024's approved evaluation limits or authorize its training.
+
+Method provenance: [Saparov et al.](https://arxiv.org/abs/2305.15269v3), abstract, explicitly studies depth, width and compositional generalization in synthetic deduction. This supports separating structural axes; its results do not validate a Lean difficulty metric. The [Lean Workbook dataset card](https://huggingface.co/datasets/internlm/Lean-Workbook) supplies the existing corpus source. Reuse the source snapshots and licence records in EXP-024 rather than treating a live dataset page as a frozen input.
+
+## EXP-025
+
+### Benchmark and data pipeline registration, 16 October 2026
+
+Question: can the existing broader corpus produce frozen tasks and training inputs through one maintained, reproducible path? This is an exploratory data build, not an RL result. Scientific owner: Manas. Data implementation and sole output writer: root session. The delegated Sol agent owns execution-path repairs and their focused tests. Root reviews those changes before integration.
+
+- Source: existing EXP-024 `exp024_corpus_v0/out/corpus_v0.jsonl` and `excluded_heldout.jsonl` on cpu-angad. Reuse the accepted proof texts and parent-exposure flags. Source acceptance does not substitute for fresh verification.
+- Implementation: `scripts/data/build_nt_benchmark.py`, `configs/data/nt_benchmark_v1.json`, and `tests/test_nt_benchmark.py`. Reuse binder normalization, proof extraction, goal extraction, single-tactic baselines and Lean/axiom checking. Python standard-library documentation confirms streaming hashes; no new dependency is needed.
+- Freeze: deterministic selection before model sampling or fresh screening. Cap each heuristic topic at 6 candidates and the package at 64. Use the registered seed, input digests, source row locators and immutable output directories. Canonical numeric templates and transitive token-Jaccard matches share one split. The threshold remains 0.7.
+- Partition: hash duplicate components into TRAIN, DEV and TEST. Reserve the configured held-out topics and lexical matches to held-out syllabus families for TEST. Exclude a non-TRAIN component when any member has recorded parent exposure. These text controls do not establish semantic family independence. This exploratory partition does not replace EXP-024's approved family comparison.
+- Admission: fresh complete reference replay, target-absence guard, allowed-axiom check, a nonempty initial goal and a complete single-tactic screen. Screened, rejected, timed-out and unavailable-state candidates remain recorded. No replacement candidate is selected after screening. Empty splits fail the build; do not relabel or resample them to obtain a pass.
+- Outputs: private candidates and verification outcomes; truthful `pool.jsonl`; separate TRAIN, DEV and TEST task files; TRAIN-only SFT examples with a separate loss split; private references; an exclusion list; and completion manifests. Keep proof strategy and dependency depth unassigned until the references receive mathematical annotation. No model difficulty is inferred from proof length.
+- Runs: `exp025-select-cpu-v1` writes `formal_rl/nt_benchmark_v1_20261016/selection/`; `exp025-verify-cpu-v1` writes `formal_rl/nt_benchmark_v1_20261016/verification/`. New output paths enforce one writer. Preserve failed builds and incremental verification records.
+- Limits: selection streams at most 100,000 bounded rows, with a 512 MiB serialized-input cap and at most 128 supported candidates. Its managed cap is 1 GiB, one CPU and 300 seconds. Verification uses one Lean process at a time, batches of 6, the unchanged 120-second call timeout, a 6 GiB managed cap, two CPUs and 3,600 seconds. No model is loaded.
+- Verification: focused unit checks exercise duplicate components, deterministic caps, parent exposure, forbidden proofs, truthful split exports and absence of evaluation proofs from SFT. Fresh Lean checks run only on cpu-angad. A completed package remains exploratory until mathematical review and a broader lineage audit establish benchmark suitability.
+- Inference boundary: this work establishes data preparation and verifier behavior. It cannot establish RL improvement, semantic understanding or generalization. Match the interactive protocol before comparing REINFORCE and GRPO.
+
+### EXP-025 selection failure and retry, 16 October 2026
+
+Service `rl-nt-benchmark-select-v1` exits 1 because the source corpus contains binder-renamed copies of a statement. The first builder rejects those canonical duplicates. Preserve its source snapshot, output directory and `logs/select.log`.
+
+The correction merges canonical copies before partitioning and propagates parent exposure and reserved-family flags from every copy. A copy with an unusable reference still contributes its exposure flag. Focused regressions first reproduce duplicate rejection and lost exposure; both pass after the correction. Retry `exp025-select-cpu-v1-retry1` uses a new source snapshot and `selection_retry1/`, with the original selection cap, split rules and duplicate threshold. No model sampling or replacement after screening occurs.
+
+Retry 1 exits 1 while writing hashes because the launcher uses system Python 3.10, which lacks `hashlib.file_digest`. Its partial candidate file and log remain preserved. Retry `exp025-select-cpu-v1-retry2` uses the existing uv-managed Python 3.12 interpreter and a new `selection_retry2/` directory. No resource limit changes.
+
+The independent Sol review also reproduces exposure loss from a filtered numeric relative. The corrected builder propagates exposure across every numeric template before selection. Shared verification now distinguishes process crashes and missing Lean evidence from mathematical rejection. SFT exports use the filenames required by `run_sft.py`. Regressions cover each correction before the retry source freezes. Verification still writes `verification/` and starts only after selection completes.
+
+### EXP-025 implementation checkpoint and selection outcome, 16 October 2026
+
+`rl-nt-benchmark-select-v1-retry2` completes with `Result=success`, `ExecMainStatus=0` and an inactive service. `selection_retry2/manifest.json` records the input digests, source digest, counts, split rules and candidate digest. `private/candidates.jsonl` holds the frozen references and row locators. Its candidate digest is `4fc1cd791c6a550319e0907d683465ab6b171b66fe704bd420702e40c142fd8a`.
+
+The builder reads 40,814 corpus rows. It retains 60 candidates. TRAIN contains 34 candidates. DEV contains 9 candidates. TEST contains 17 candidates. These are preparation counts, not model outcomes. Reference verification and the single-tactic screen may exclude candidates without replacement.
+
+The Sol changes preserve the exact replayed proof body in environment-v2 outcomes, export that body through fresh replay, and censor environment-v1 verifier crashes. Explicit `--assessment-only --assessment-split validation` or `test` admits truthful evaluation labels and requires the names in the training exclusion list. Default training validation remains strict. Historical v2 rollouts without a recorded proof body fail export clearly; this change does not reconstruct them. The whole-proof GRPO path still differs from interactive REINFORCE.
+
+Root reads the delegated source changes and reruns the focused tactic-RL, Lean-scoring, export, external-verifier and benchmark checks. They return exit 0. Optional Torch checks remain skipped locally. The new benchmark checks cover alpha and numeric exposure propagation, duplicate components, deterministic caps, rejected proofs and SFT privacy. These are synthetic/unit results, not a model or Lean integration result.
+
+`rl-nt-benchmark-verify-v1` runs from `code_retry2/` on cpu-angad with the registered caps, using `selection_retry2/` and the existing `mathlib_identity_20261014_v1/identity.json`. Its command is the builder's `verify` subcommand. Outcomes stream to `verification/private/verification.jsonl`; progress is `logs/verify.log`. No completion is claimed at this checkpoint.
+
+Source snapshots, the failed attempts and the frozen selection are archived under the existing GPU-v2 namespace's `analysis/nt_benchmark_v1_20261016/` prefix. Object existence is confirmed by the archive receipts in the run directory. The existing expiry policy applies. Continue by inspecting the managed verification result, reading its completion manifest and testing the exported task admission without a model. Preserve failures. Do not change selection or verifier limits to obtain a pass.
+
+### EXP-025 focused Lean integration registration, 16 October 2026
+
+Run `exp025-proof-body-integration-cpu-v1`, service `rl-nt-benchmark-integration-v1`, output `formal_rl/nt_benchmark_v1_20261016/integration_v1/`. Root remains the registry writer. The Sol agent adds exact-body assertions to existing integration fixtures; root reads the diff. Select the commented closure, first-error truncation and policy-backtracking methods in `tests/test_tactic_rl_integration.py`. The test wraps the actual replay function without replacing its result. Assert that recorded proof content equals submitted replay content and excludes failed or discarded steps.
+
+Use the frozen `code_retry2/` scripts with the updated integration test in a separate source directory. Environment: the existing pinned `lean_env_full`, checker and REPL paths named by that integration group. Peak bound: two Mathlib REPLs at 4 GiB each plus Python below 1 GiB. Managed cap: 12 GiB, two CPUs and 600 seconds. No model, Torch-policy fixture, optimizer or paid lease. Keep costs and raw test output in this run. This checks environment behavior, not benchmark performance.
+
+### EXP-025 focused Lean integration outcome, 16 October 2026
+
+`rl-nt-benchmark-integration-v1` completes with `Result=success`, `ExecMainStatus=0` and an inactive service. All selected integration methods pass against real Lean. The raw output is `logs/integration.log`; verifier costs are `integration_v1/costs.json`. The exact retained bodies equal the arguments submitted to strict replay. Partial chunks omit failed suffixes, and policy backtracking omits discarded tactics. These are synthetic proof fixtures, not model-generated proofs or benchmark scores. The integration source stays separate from the already-frozen benchmark source.
+
+### EXP-025 reference-count correction registration, 16 October 2026
+
+Source inspection finds that a leading block comment leaves a whitespace-only line in `lean_code`. The reused block splitter then takes that line's width as the tactic indentation. A planted proof with a leading comment reproduces an undercount. The corrected profile removes empty code lines before splitting; the regression passes. This changes reference metadata, not mathematical difficulty.
+
+Do not alter the running verification or its frozen selection. After completion, run `exp025-metadata-cpu-v2` into `verification_metadata_v2/` with the corrected exporter. Preserve the original package. Require identical pool and SFT bytes and identical task fields except the reference counts. Record each changed count and the parent manifest digest. Keep all Lean outcomes and the original candidate population. This is a measurement correction, not a new evaluation.
+
+Then run `exp025-consumer-check-cpu-v1` against the corrected package through the maintained training and assessment admission functions. Check truthful splits, training exclusion, SFT filenames/schema and counted rows without loading a model. Each job uses a managed 256 MiB cap, one CPU, 60 seconds and a distinct receipt. Neither changes verifier limits, task selection or model parameters.
+
+### EXP-025 verification and consumer outcome, 16 October 2026
+
+The verification, metadata re-export and consumer services each finish with `Result=success` and `ExecMainStatus=0`. Their logs remain in the registered run directory. The canonical package is cpu-angad `formal_rl/nt_benchmark_v1_20261016/verification_metadata_v2/`. The original `verification/` package and all failed selection attempts remain preserved.
+
+55 problems pass admission, n = 60 frozen candidates, from `verification_metadata_v2/manifest.json` and the raw `private/verification.jsonl`. The fixed-tactic screen excludes 5 candidates. TRAIN contains 30 admitted problems. DEV contains 9 admitted problems. TEST contains 16 admitted problems. These counts come from `build_nt_benchmark.py`; `consumer_check.json` recounts the exported task rows through the actual admission functions. No candidate receives a replacement after screening.
+
+The SFT training file contains 29 rows. Its loss-validation file contains 1 row. Both contain TRAIN theorems only. These are bounded pipeline inputs, not a full SFT corpus or evidence of adequate validation size. Tokenizer lengths, model inference and optimization remain unchecked. The existing larger EXP-024 corpus remains separate.
+
+The corrected profile changes no reference counts in this selected population. Its planted regression still reproduces and fixes the general leading-comment bug. The new manifest records its parent and the re-export source digest. Pool and SFT bytes remain identical. Task membership, proof bodies, split labels and every field except permitted count metadata remain identical. No Lean verdict is rescored.
+
+The consumer command runs `check_exports.py` on cpu-angad against `verification_metadata_v2/` and exits 0. It exercises `training_tasks` and explicit split assessment with the generated pool. Evaluation inputs fail training admission as required. The SFT file names and message schema match `run_sft.py`. Its receipt is `verification_metadata_v2/consumer_check.json`.
+
+| Artifact | Canonical relative path inside the package |
+| --- | --- |
+| Data provenance, counts and limits | `manifest.json` |
+| Pool with truthful split labels | `data/pool.jsonl` |
+| Policy tasks | `data/tasks_train.jsonl`, `data/tasks_dev.jsonl`, `data/tasks_test.jsonl` |
+| Training exclusion list | `data/excluded_from_training.txt` |
+| SFT inputs | `data/sft/sft_train.jsonl`, `data/sft/sft_val.jsonl` |
+| References, outside policy inputs | `data/private/references.jsonl` |
+| All candidate verification outcomes | `private/verification.jsonl` |
+| Consumer admission receipt | `consumer_check.json` |
+
+Final local check: `PYTHONPATH=tests uv run python -m unittest test_nt_benchmark test_external_proofs test_tactic_rl test_lean_scoring test_export_tactic_proofs` exits 0. Optional Torch tests remain skipped. The separately registered real Lean integration passes. File-scoped pre-commit and `git diff --check` pass. No commit, push, model run, training or paid GPU launch occurs.
+
+Remaining work: review mathematical meaning and families, annotate reference strategies and dependency depth, audit broader parent exposure, then register frozen-parent calibration. This package does not settle intrinsic difficulty or establish RL benefit. The matched REINFORCE/GRPO interaction protocol remains a separate requirement. Do not amend EXP-024's approved SFT comparison through these exploratory outputs.
+
+### EXP-025 component refactor registration, 16 October 2026
+
+Manas authorizes a modular object-oriented refactor of benchmark preparation, SFT, tactic RL, whole-proof GRPO and proof export. Root owns data preparation and export. The Sol agent owns training components. Historical experimental runners remain outside this change. Preserve commands, defaults, split checks, rewards, numerical objectives, resource limits and Lean acceptance. This work does not change the approved scientific comparison.
+
+The benchmark package separates selection, artifact export, pinned Lean access and orchestration under `scripts/data/nt_benchmark/`. Proof reconstruction and replay export move under `scripts/eval/proof_export/`. Training components will live under `scripts/train/rl_components/`. Existing scripts remain entrypoints and retain compatibility functions. Prefer composition at these boundaries; keep existing environment classes and numerical algorithms.
+
+Validation run `exp025-refactor-validation-cpu-v1` asks whether the extracted components preserve the frozen selection and exported data. Root owns its registry entry, source snapshot and fresh `refactor_validation_v1/` output inside `formal_rl/nt_benchmark_v1_20261016/`. Compare selection and duplicate-audit bytes with `selection_retry2/`. Compare exported JSONL bytes with `verification_metadata_v2/`. Check the extracted Lean backend against an accepted reference and its saved goal state. Run the existing closure, truncation and backtracking integration fixtures. These are source compatibility checks, not new model outcomes.
+
+Peak bound: selection below 256 MiB; export below 16 MiB; sequential Lean backend calls below 4 GiB each. Integration uses at most two REPLs below 4 GiB each, plus Python below 1 GiB. Managed cap: 12 GiB, two CPUs and 600 seconds. No model, optimizer, paid lease or concurrent output writer. Preserve any failed check without changing its limits. Completion remains pending until the managed service returns and its receipt is inspected.
+
+The existing auxiliary CPU environment supplies Torch and the SFT dependencies under Python 3.10. Use it for the existing tiny-model gradient tests and SFT command help. The core compatibility checks use Python 3.12. Record both runtimes; auxiliary success does not verify a complete Python 3.12 training environment. No package installation or checkpoint training is authorized by this check.
+
+### EXP-025 component validation failure and retry, 16 October 2026
+
+`rl-nt-refactor-validation-v1` exits 1 after selection parity, export parity, the Lean backend check and the selected Lean integration fixtures pass. Its embedded auxiliary launcher has an incorrectly escaped newline and fails with `SyntaxError` before Torch tests start. This is a validation-script failure. Preserve its log, source and partial receipt at `refactor_validation_v1/receipt.json`.
+
+Run `exp025-refactor-torch-cpu-v1` retries the failed auxiliary stage with a direct Python script and a fresh `refactor_torch_v1/` output. Keep the existing model fixtures and assertions. Use the existing CPU environment under a 4 GiB cap, two CPUs and 180 seconds. The source under test remains `code_refactor_v1/`. This retry does not repeat selection, alter the frozen package, install dependencies or train a checkpoint.
+
+### EXP-025 component refactor outcome, 16 October 2026
+
+The refactor separates benchmark policies, pinned verification, data exports, task admission, curriculum schedules, the REINFORCE objective, streamed updates, SFT conversion and proof export. Existing scripts retain their commands and compatibility functions. The existing Lean environment class and TRL GRPO optimizer remain in use. README's component table identifies each modification boundary.
+
+The frozen candidate and duplicate-audit files match the earlier selection byte for byte. Exported JSONL files match the canonical package byte for byte. The extracted Lean backend accepts the saved reference and reproduces its goal state. The selected Lean integration fixtures pass without skips. Their raw receipts and logs remain under `refactor_validation_v1/` and `logs/refactor_validation_v1.log`. That service still records its auxiliary-launcher failure; do not relabel the whole service as successful.
+
+`rl-nt-refactor-torch-v1` returns `Result=success`, `ExecMainStatus=0` and an inactive state. The existing Torch tests pass without skips, including value/gradient equivalence and checkpointed updates. SFT command help also returns exit 0. Read `refactor_torch_v1/receipt.json` and `logs/refactor_torch_v1.log`. These checks use the existing auxiliary Python 3.10 environment. Core data and Lean checks use Python 3.12.
+
+Independent source review finds a missing export-source receipt. The regression first fails because `replay.json` lacks hashes for the extracted replay code. The correction adds `export_source_sha256`, including the shared serializer and loaded training/scoring modules. The regression then passes. Final source `source_refactor_v2.tar.gz` preserves that correction; `source_refactor_v1.tar.gz` remains the source for remote data, Lean and gradient checks. The final change affects export provenance and its test, not data selection or numerical training behavior.
+
+Final command: `PYTHONPATH=tests uv run python -m unittest test_nt_benchmark test_rl_components test_external_proofs test_tactic_rl test_lean_scoring test_export_tactic_proofs`. It returns exit 0 with `OK`. Optional Torch tests skip locally and pass in the registered auxiliary retry. File-scoped pre-commit and `git diff --check` also return exit 0. Component imports work from a repository checkout. Source receipts now include extracted benchmark, training and export modules.
+
+`refactor_summary_v1.json` links the source snapshots, both managed receipts, the failed launcher and the final local command. The run registry preserves the failure and its retry separately. The canonical benchmark package stays unchanged. No checkpoint training, GPU launch, commit or push occurs. A complete Python 3.12 training environment and execution speed remain unverified. This refactor does not establish optimality, mathematical difficulty or RL improvement.
+
+The existing archive command confirms the updated run snapshot in object storage. Receipt `archive_20261016T134852Z.json` remains in the remote run and the private operations directory. It preserves both source snapshots, raw checks and the failed launcher. The existing namespace expiry still applies.
+
+### EXP-025 expanded dataset registration, 16 October 2026
+
+Manas requests dataset preparation and selects expansion from the existing broader corpus. Root owns `exp025-dataset-v2-select-cpu-v1`, `exp025-dataset-v2-verify-cpu-v1` and their outputs under cpu-angad `formal_rl/nt_benchmark_v2_20261016/`. Inputs remain the existing corpus and reserved rows. This is an exploratory data build, not model training or an amendment to EXP-024's approved comparison.
+
+Use `configs/data/nt_benchmark_v2.json`. Freeze at most 24 candidates per heuristic topic before screening. The implementation ceiling is 256 candidates; the configured topics permit at most 240. This requested expansion raises the former population bound before selection; it does not relax a failed evidence gate. Hold the existing statement/proof filters, reference character cap, duplicate threshold, held-out topics, split proportions, axiom check and per-call timeout fixed. Verification batches contain 12 candidates. Do not replace excluded candidates after screening.
+
+Exclude every statement in v1's frozen `selection_retry2/` through `--protect-package`. Reject exact, binder-renamed, numeric-template and direct token-Jaccard matches at the existing threshold. Record the protected manifest and candidate digests. This protects the earlier pilot from reuse across dataset roles. Text similarity still cannot establish semantic family independence or absence of pretraining exposure. Keep proof strategy and dependency depth unassigned.
+
+Selection uses a 1 GiB managed cap, one CPU and 300 seconds. Its bound is 256 candidates at 24 KiB each, the existing capped ID maps, and at most 256 protected token sets. Verification uses one Lean process at a time under a 6 GiB managed cap, two CPUs and 3,600 seconds. The per-call timeout remains 120 seconds. One writer owns each new output. Stream verification JSONL and archive the source, frozen selection and outcomes through the existing object-storage namespace. No paid GPU, dependency installation or model inference.
+
+Before launch, `uv run python -m unittest discover -s tests -p 'test_nt_benchmark.py'` returns exit 0 and `OK`. It covers prior-package exact/numeric/near matches, a nonmatching control, the expanded upper bound and the existing split/verification controls. The existing config remains unchanged. After admission, check tokenizer lengths and actual SFT/RL consumers before calling the package runnable. A failed or empty split remains a failed build.
+
+### EXP-025 expanded selection outcome and verification checkpoint, 16 October 2026
+
+`rl-nt-dataset-v2-select-v1` returns `Result=success`, `ExecMainStatus=0` and an inactive state. Its manifest freezes 234 candidates. TRAIN contains 101 candidates. DEV contains 39 candidates. TEST contains 94 candidates. These are preparation counts, not model outcomes. The counts come from `selection/manifest.json`, written by `BenchmarkPipeline.select`. Quadratic residues contribute fewer candidates after prior-package exclusion; no other topic fills the unused places.
+
+`rl-nt-dataset-v2-verify-v1` uses the frozen selection, existing pinned environment and the registered resource caps. Raw outcomes stream to `verification/private/verification.jsonl`; its progress log is `logs/verify.log`. The run registry records the resolved source snapshot and both jobs. A completed expanded dataset is not claimed at this checkpoint.
+
+The post-build consumer script is `.private/ops/nt_benchmark_v2_20261016/check_dataset.py`, copied into the remote run before use. It checks actual SFT conversion and declared-split admission, then measures saved-tokenizer lengths without loading weights. Its sizing check uses the existing 2,048-token SFT limit and a separately recorded 2,048-token initial-prompt limit. It measures both v2 backtrack renderings and the whole-proof GRPO rendering. These length checks do not make their interaction protocols equivalent. Initial observations use 12 remaining actions and 4 tactics per action for sizing, without registering a training schedule. Oversized inputs remain reported; do not truncate or silently remove evaluation questions.
+
+The consumer job has a 4 GiB cap, two CPUs and 180 seconds. Dataset records occupy below 24 MiB; tokenizer files below 32 MiB; library imports reserve 2 GiB. Use the existing auxiliary CPU environment and record its Python version. The existing archive script now accepts the benchmark run name and keeps separate immutable snapshots for each version. No dataset is copied onto the Mac.
+
+### EXP-025 expanded sizing failure and prepared view, 16 October 2026
+
+Fresh verification completes with `Result=success` and `ExecMainStatus=0`. The first consumer job exits 1 because one SFT training example reaches 2,243 tokens. Its registered cap is 2,048 tokens. Preserve `verification/`, `readiness_v1/consumer_check.json`, all measured lengths and `logs/consumer_v1.log`. Actual task admission and initial RL prompt checks pass. Do not relax the cap or truncate the proof.
+
+Prepare `prepared_v1/` as a derived view through `.private/ops/nt_benchmark_v2_20261016/prepare_sft_view.py`. Reuse the complete measured lengths and the existing data-build pattern of omitting oversized supervised targets. Keep rows strictly below the SFT cap, matching `run_sft.py`. Keep the policy pool, task files, evaluation population, split labels and reference proofs unchanged. Record each SFT omission in `private/sft_length_exclusions.jsonl` and link the parent manifest and sizing receipt. The raw package remains immutable. No replacement question or SFT example is added.
+
+Register `exp025-dataset-v2-sft-fit-cpu-v1` with a new output, a 256 MiB managed cap, one CPU and 60 seconds. The bounded rows and measured lengths occupy below 24 MiB. Then register `exp025-dataset-v2-consumer-cpu-v2` against that view with the original consumer script, token limits and assertions. Its output is `readiness_v2/`; its caps remain 4 GiB, two CPUs and 180 seconds. Root remains the sole registry and output writer. A successful prepared view is not claimed before the retry completes.
+
+### EXP-025 expanded dataset outcome, 16 October 2026
+
+The prepared dataset is cpu-angad `formal_rl/nt_benchmark_v2_20261016/prepared_v1/`. Fresh verification, SFT view preparation and the final consumer check each return `Result=success` and `ExecMainStatus=0`. Their services are inactive. The canonical package carries `consumer_check.json`; the run registry links every stage, including the failed first sizing check. The earlier v1 pilot stays unchanged.
+
+209 problems pass admission, from the frozen selection recorded in `selection/manifest.json`. The frozen population contains 234 candidates. The fixed-tactic screen excludes 22 candidates. Parent-exposure controls exclude 2 candidates. Fresh reference replay rejects 1 candidate. No replacement candidate enters the build. `verification/private/verification.jsonl` retains all outcomes; `verification/manifest.json` records the counts and pinned Lean/mathlib identities. These are dataset admission results, not model scores.
+
+| Input | Rows counted by the consumer | Relative path inside `prepared_v1/` |
+| --- | ---: | --- |
+| RL TRAIN problems | 93 | `data/tasks_train.jsonl` |
+| DEV problems | 34 | `data/tasks_dev.jsonl` |
+| TEST problems | 82 | `data/tasks_test.jsonl` |
+| SFT training examples | 83 | `data/sft/sft_train.jsonl` |
+| SFT loss-validation examples, from TRAIN only | 9 | `data/sft/sft_val.jsonl` |
+
+Use `data/pool.jsonl` with the task files and `data/excluded_from_training.txt`. Private reference proofs remain in `data/private/references.jsonl`. They are not policy inputs. The question omitted from SFT remains in RL TRAIN. Its original proof and overlength record remain preserved. `private/sft_length_exclusions.jsonl` records the omission. Task membership, held-out questions, proof bodies and split labels do not change during SFT preparation.
+
+The unchanged consumer command is `check_dataset.py --code code --package prepared_v1 --tokenizer sft_checkpoints/v2_final --output readiness_v2 --max-sft-tokens 2048 --max-prompt-tokens 2048`, with paths resolved against the registered run and project roots. It returns exit 0 and `consumer_ready_exploratory`. It exercises actual `run_sft.rows`, `training_tasks`, explicit split assessments and GRPO task admission. It checks disjoint names and duplicate groups, SFT train/loss-validation separation, and rejection of evaluation tasks by training admission. It loads the saved tokenizer without model weights.
+
+1,978 tokens is the largest prepared SFT example, from `readiness_v2/consumer_check.json`. The existing SFT limit stays unchanged. The largest measured initial harness prompt contains 776 tokens. The policy-backtrack variant contains at most 801 tokens. The whole-proof GRPO prompt contains at most 706 tokens. `readiness_v2/tokens.jsonl` stores each measured value and identifier. These initial lengths do not bound later interactive observations or establish matched interaction protocols. The consumer environment uses the existing auxiliary Python 3.10 stack; verification uses Python 3.12.
+
+Independent source review finds no important issue against the stated exclusion and bound contract. The focused benchmark tests and file-scoped checks pass. No GPU lease, model inference, checkpoint training, commit or push occurs. Mathematical statement review, semantic families, reference strategies, dependency depth, broader lineage exposure and frozen-parent calibration remain pending. This exploratory dataset does not establish intrinsic difficulty or an RL benefit.
+
+The final archive command returns exit 0 and confirms the object through `head-object`. Receipt `archive_20261016T145057Z.json` is stored in the remote run and private operations directory. The snapshot preserves raw verification, the failed sizing check, the derived SFT view, source scripts and final readiness records. Existing namespace expiry remains in force.
+
+## EXP-026
+
+### Generalization experiment: revised framing, 16 October 2026
+
+This amendment supersedes the initial curriculum-only draft below, following Manas's correction. There are two major scientific experiments: this generalization experiment and [EXP-027, curriculum](#exp-027). Benchmark preparation, model calibration, proof export and optimizer implementation support these experiments; they are not additional major experiments.
+
+Question: on one frozen number-theory benchmark, how does proof performance and generalization change across the existing Qwen model, project SFT, and project SFT followed by RLVR?
+
+| Arm | Model lineage | Project training | Comparison it supports |
+| --- | --- | --- | --- |
+| B | Unchanged `Qwen/Qwen2.5-0.5B-Instruct` | No project SFT or RL | Starting proof capability |
+| S | B followed by the frozen SFT recipe | TRAIN proofs only | S minus B: effect of the project SFT stage |
+| R | Exact S checkpoint followed by the frozen RLVR recipe | TRAIN problems with verifier rewards | R minus S: effect of adding this RLVR stage |
+
+"Without SFT" means without project SFT. The selected Instruct model already has upstream post-training. Do not call B a model that never saw SFT. Do not substitute `Qwen/Qwen2.5-0.5B` without registering a changed model comparison. Likewise, do not splice historically unrelated checkpoints into the B -> S -> R chain. Bind the actual weights, tokenizer and all available exposure records before evaluation.
+
+Use the same TRAIN/DEV/TEST benchmark definition and the same evaluation interface for every arm. Freeze a shuffled, non-curricular RL recipe for R. The curriculum study reuses this R arm only if every resolved setting and seed matches. B, S and R receive the same theorem statements, imports, available lemmas, feedback, generation settings and per-attempt limits at evaluation. No evaluation proof enters SFT, RL, demonstrations or retrieval. An interface warm-up that updates weights counts as training and cannot be silently added to B.
+
+Evaluate performance within represented problem families separately from transfer to held-out families, skill combinations or structural depths. An unseen instance of a familiar construction is not the same claim as an unseen proof strategy. Record which kind of generalization each panel tests. The initial draft's composition-only primary endpoint is superseded: generalization is the overall question, with each audited shift reported separately. Freeze primary panels and multiplicity handling before sampling; do not choose a favorable panel afterward.
+
+Reuse the current EXP-025 package without moving DEV/TEST into TRAIN. Its text duplicate checks do not establish semantic families. Review statement meaning, reference strategy, component skills, dependency structure and all known SFT/RL exposure before making structural claims. If the existing package cannot supply a desired panel, report that limitation and register an expanded version. It remains useful as an explicitly labelled pilot. Unknown upstream exposure remains a limitation. External established tests can provide an additional fixed panel after compatibility and exposure review; this amendment does not adopt or import one.
+
+For each panel, report complete-proof accepted-attempt fraction and questions solved at the same fixed attempt budget. Keep an intended theorem-by-attempt denominator, failure categories and completion coverage. Report B, S and R side by side, with S minus B and R minus S. Fresh complete replay, unchanged statements and the pinned verifier define acceptance. Resource totals include failed attempts. Training compute grows across stages: this is a stage comparison, not a claim that RL beats continued SFT at equal cost. An equal-cost continued-SFT control would be a separate ablation within this experiment if later requested.
+
+Abhinav owns the generalization experiment, including its design, B/S/R execution and analysis. Manas supplies the shared benchmark and semantic/exposure review, and owns the separate curriculum experiment. Anwesha owns the fixed Lean interaction and replay contract. Checkpoints and settings use DEV only; SFT loss-validation remains TRAIN-only. Apply the same predeclared checkpoint rule and freeze TEST before sampling. Paired training seeds and family-aware summaries remain required for an uncertainty claim. The exact panel sizes, checkpoint identities, recipes, budgets, assessment grid and reviewer remain unresolved. No result or launch approval is implied.
+
+The RLVR arm must name its implemented optimizer. REINFORCE and GRPO are possible method arms within this generalization experiment, not new major experiments. Their current interactive and whole-proof paths do not isolate optimizer effects. Start with one fixed, explicitly named RLVR recipe. Add a matched optimizer comparison only after equalizing interaction, feedback, objective conventions and budget.
+
+Primary-source provenance: the [official Qwen model card](https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct#introduction), inspected on 16 October, describes the checkpoint as "instruction-tuned" with "Pretraining & Post-training". [DeepSeek-Prover-V1.5, section 2.4](https://arxiv.org/html/2408.08152v1#S2.SS4) compares capabilities across training stages. This supports using a stage comparison; it does not establish an outcome for our model. No performance number is borrowed here.
+
+### Initial curriculum-only draft, superseded on 16 October 2026
+
+The following original draft and its review record remain historical. Its order comparison now belongs to EXP-027. Its composition-only primary endpoint and experiment framing do not govern the revised study. The later amendment preserves its useful exposure, verifier and resource controls.
+
+### Curriculum and generalization protocol, 16 October 2026
+
+Question: does prerequisite-first task order improve unassisted proof completion on unseen combinations of taught skills, compared with shuffled exposure to the same tasks? This is a prospective, bounded study. It does not claim a new RL algorithm or assume that curriculum helps. Scientific owner: Manas. Abhinav owns optimizer execution, frozen schedules and training records. Anwesha owns the Lean interaction contract. Manas owns mathematical annotations, exposure audits, split decisions and analysis. A reviewer must be named in each run record before launch.
+
+The experiment addresses a different inference from training success: reliable reproduction of familiar constructions need not imply transfer to a new construction. The EXP-023 completion handoff records no ordered-over-shuffled advantage and a failed efficiency gate. Those historical results remain unchanged. EXP-026 tests a narrower, reviewed task distribution; it must preserve another null result. The report's dated section `sec:curriculum-generalization` gives the scientific argument and interpretation rules.
+
+#### Inputs and dependencies
+
+Start with EXP-025 `nt_benchmark_v2_20261016/prepared_v1/` and `configs/data/nt_benchmark_v2.json`. Reuse its pool, task files, exclusions, private references and manifest. Its text-based duplicate groups do not certify semantic families. Do not move current DEV or TEST items into TRAIN. A structural panel that the current package cannot support needs a separately versioned manifest and verified data build, registered before sampling. This documentation does not perform that build or change EXP-024's approved protocol.
+
+Dependency order: review mathematical structure and known exposure -> freeze admissible splits -> calibrate the frozen parent on TRAIN/DEV -> freeze schedules and resolved protocol -> run paired arms -> select checkpoints on DEV -> evaluate frozen TEST -> recount and interpret. A failed dependency produces a labelled pilot or feasibility result; it does not permit a silent replacement endpoint.
+
+Manas records each theorem's semantic family, component skills, reference strategy, intermediate claims and dependency edges. Record dependency depth and tactic-block length separately. They describe the supplied reference, not the minimum possible proof. Record a valid shortcut if review finds one. A lexical topic, tactic name or larger coefficient does not establish increased mathematical difficulty. Keep the existing single-tactic screen and its failures unchanged.
+
+#### Generalization panels
+
+| Panel | What is held out | Admission condition | Permitted conclusion |
+| --- | --- | --- | --- |
+| Familiar-family instances | New statements within a reviewed training family | No exact or near duplicate; disclose shared construction | Reliability within a familiar construction |
+| Composition, primary target | A combination of skills whose components occur in TRAIN | Combination absent from all known SFT, RL, prompts and retrieval; components represented separately | Transfer to the specified unseen combination |
+| Longer reference dependencies | Longer chains using represented components | Freeze the reference graph and depth rule before model assessment | Extrapolation along this reference-structure axis |
+| Held-out families or topics | A reviewed family or method absent from known training | Audit the complete available model lineage and library access | Transfer under the named distribution shift |
+
+Freeze panel membership before new model sampling. Keep any historically inspected or adaptive panel labelled exploratory. Unknown pretraining exposure remains unknown. Shared mathlib lemmas remain available under the fixed verifier imports; success does not establish discovery of a new mathematical method. A model may use a different valid proof from the reference.
+
+Illustrative construction, not an admitted benchmark item: practice multiplication of a divisible quantity and addition of divisible quantities separately. Then reserve a theorem about divisibility of a linear combination. Check the actual statements, library shortcuts and known lineage before calling that combination unseen. Replacing constants in the training construction is an instance split, not evidence of composition.
+
+The composition panel is the target primary endpoint. Its family count and task count remain unresolved. If review finds insufficient independent families or exposed combinations, retain an ordinary held-out pilot and label the composition study unready. Do not promote the pilot into the primary study after viewing scores. Extra samples of the same theorem reduce generation noise; they do not add independent theorem families or training replications.
+
+#### Minimal comparison and schedule contract
+
+| Arm | Initialization and update | Schedule | Role |
+| --- | --- | --- | --- |
+| W | One frozen SFT parent, no update | Assessment only | Measures starting proof capability |
+| R | Same W; interactive REINFORCE with leave-one-out baseline | Frozen random permutation | Controls for added RL exposure |
+| O | Same W; identical optimizer and objective | Frozen prerequisite-first permutation | Tests the total effect of task order |
+
+Freeze one TRAIN task-ID multiset, including repeat counts. Both RL arms receive permutations of that multiset. Use whole-root tasks with no supplied proof prefix in this first comparison. A graph over skill prerequisites determines the ordered stages; freeze tie-breaking within stages and the shuffle procedure. Parent success is a separate empirical difficulty annotation, not a post hoc rewrite of the prerequisite graph. If a common TRAIN admission rule uses parent calibration, apply it once to both arms and preserve excluded tasks and reasons.
+
+Target three paired training seeds if the approved budget permits. Use the same seed within each O/R pair, with independently specified permutation seeds. Record each pair as a training replication. Model trajectories within a seed are repeated measurements, not additional trained models. A smaller completed study remains descriptive. No seed is dropped for an unfavorable outcome.
+
+Hold the parent bytes, tokenizer, train membership, interaction protocol, verifier pins, terminal reward, discount, group size, optimizer settings and per-attempt limits fixed. Set shaping and exploration bonuses to zero. Freeze backtracking ownership, repair rules, loss normalization, regularization, update passes and checkpoint cadence. Do not add SFT between arms. W controls for adding RL; it is not an equal-compute continued-SFT baseline.
+
+Do not cross optimizer and curriculum in this first study. The current interactive REINFORCE and whole-proof GRPO paths expose different actions and feedback. They do not isolate an optimizer effect. A later fixed-curriculum comparison can add GRPO after matching those contracts. Adaptive sampling and reverse-prefix curricula are separate follow-ups, because they change exposure or supplied information.
+
+#### Endpoint, efficiency and interpretation
+
+Before launch, fix the TEST theorem population, assessment seeds, attempts per theorem and all attempt limits. The primary outcome is mean accepted-attempt fraction per theorem on the composition panel. Acceptance requires an unchanged statement and complete proof replay under the pinned verifier. The primary contrast is O minus R; report each RL arm against W as secondary contrasts. Report questions solved within the same fixed attempt budget separately.
+
+Keep the intended theorem-by-attempt grid as the denominator. For the operational endpoint, a planned attempt without an accepted complete proof counts as unsuccessful. Preserve proof rejection, timeout, infrastructure failure, truncation and missing output as separate categories. Also report completion coverage. Material infrastructure failures make the scientific contrast inconclusive; do not describe them as mathematical inability. Do not replace missing attempts with extra favorable samples.
+
+Use the same predeclared DEV rule in every arm: highest complete-proof accepted-attempt rate, with lower cumulative training tokens breaking a tie. Freeze the checkpoint list and DEV sampling seeds before training. The fixed final checkpoint is a sensitivity analysis. Use TEST once after those choices freeze; TEST cannot choose a task mix, stage boundary or checkpoint. SFT loss-validation remains a TRAIN-only loss monitor. DEV is the curriculum-validation split for this bounded study; no extra adaptive holdout is introduced.
+
+Report paired O/R differences by training seed and by semantic family. Give family-macro and theorem-macro summaries with counted denominators. A hierarchical paired bootstrap can resample seed pairs and then families while retaining all within-family rows. Fix its implementation, interval level and seed before evaluation. With few seed pairs or families, intervals are descriptive and unstable; do not claim population-level significance. Do not treat sampled proof trajectories as independent evidence for a curriculum effect.
+
+Plot prescheduled DEV measurements against actual cumulative generated tokens, alongside physical Lean calls and GPU time. Include failed attempts, censored groups and evaluation overhead in separate resource totals. Compare costs at observed checkpoints; do not infer equal token use from equal group counts. A claim about reaching a target score needs a DEV threshold frozen in advance, and an unreached threshold stays unreached.
+
+Both arms must complete the frozen schedule within identical hard token, Lean-call and wall-time caps for the full-exposure order contrast. Compare planned, consumed and uncensored task-ID multisets. Different successful update counts are a possible outcome of RL, not a quantity to equalize with extra training. A cap stop or unequal realized sampling prevents the full-exposure interpretation. Preserve it as a budget-limited outcome, without raising caps or replaying censored entries. An efficiency claim additionally requires the predeclared common-cost comparison; unequal total tokens alone do not establish efficiency.
+
+| Observed pattern | Interpretation | Remaining alternative |
+| --- | --- | --- |
+| TRAIN improves; composition does not | Adaptation without measured compositional transfer | Panel difficulty or uncertainty can mask a smaller effect |
+| O exceeds R on reviewed TEST at matched exposure | Evidence for this schedule's transfer advantage | Topic clustering, recency or difficulty progression may explain it |
+| O reaches the frozen DEV target at lower measured cost | Evidence for efficiency on that target and cost axis | Other resource axes may cost more |
+| More mixed groups without held-out gains | More reward variation, without measured transfer | Reward variation need not mediate generalization |
+| No learning and no positive TRAIN outcomes | Starting-policy or task-support diagnosis | It does not establish that RL cannot learn number theory |
+
+Prerequisite acquisition is a hypothesis. The comparison identifies the total schedule effect. A mechanism claim needs another controlled intervention. A complete Lean proof establishes validity of that proof; it does not by itself establish understanding or novelty.
+
+#### Abhinav's execution guide
+
+1. Receive Manas's reviewed task manifest and exposure audit. Bind one parent checkpoint and tokenizer by digest, including all known earlier SFT/RL inputs. Return unsupported families or missing lineage fields to Manas before freezing the study.
+2. Reuse `scripts/train/rl_components/tasks.py::TaskSchedule.frozen` through `scripts/train/run_tactic_rl.py --task-order`. Supply a JSON list with exactly `max_groups` admitted task IDs. Repeats encode explicit exposure. Check whole-root membership and O/R multiset equality in the study manifest; the scheduler does not check those cross-arm conditions. Keep `task_sampler` fixed.
+3. Register optimizer-disabled parent assessment before training. Reuse `--assessment-only --assessment-split validation` for DEV and the TRAIN default for training-state calibration. Use each declared split's task file. Never assess TEST to decide TRAIN admission. Record correct/incorrect groups, return variation, parser failures and verifier failures. A successful tokenizer check is not model calibration.
+4. Prepare a resolved config per arm and seed from the existing runner's schema. Required settings include `group_size`, `max_groups`, `max_episode_steps`, prompt/action token limits, learning rate, discount and resource caps. For environment v2, record chunk and backtrack settings. Validate the actual schema; do not copy the old native-parity task mix or limits as a new approved protocol.
+5. Stage the usual required runner arguments: `--config`, `--model`, `--checker`, `--environment`, `--mathlib-identity`, `--repl`, `--output`, plus the package's `--pool`, `--tasks`, `--exclude-names` and the arm's `--task-order`. These are inspected interfaces, not a complete launch command. Resolve every path and cost before launch. Use the existing managed remote runner, one writer per output, explicit memory and resource caps, and cost-specific approval for each paid GPU launch.
+6. Preserve `run.json`, `planned_task_order.json`, `rollouts.jsonl`, `steps.jsonl`, checkpoint provenance and failure receipts. Recount planned, consumed, uncensored and optimized groups separately. Keep physical verifier calls distinct from cache reuse. Send Manas the immutable run paths and resolved settings; provide no selected-success-only export.
+7. After the frozen DEV rule selects checkpoints, run `--assessment-only --assessment-split test` with the frozen TEST task file and optimizer disabled. Reuse `scripts/eval/export_tactic_proofs.py` for complete-proof delivery. Manas owns the paired recount and claim review; Anwesha reviews verifier or replay failures.
+
+Proposed run naming is `exp026-<calibration|train|assessment>-<w|o|r>-s<seed>-v<revision>`, with a distinct directory per execution and retry under `formal_rl/exp026/`. These are naming templates, not launched runs. The exact parent identity, structural manifest, theorem and family counts, group budget, assessment attempts, checkpoint list, learning settings, memory/time caps, reviewer and launch costs remain unresolved. Complete the record contract before execution. This entry authorizes documentation, not inference, data generation or paid training.
+
+#### Method provenance and review boundary
+
+| Source inspected on 16 October 2026 | Supported statement | Limit |
+| --- | --- | --- |
+| [DeepSeek-Prover-V1.5, section 2.3](https://arxiv.org/html/2408.08152v1#S2.SS3) | Selects prompts with a "moderate success rate" under the SFT parent | Motivates calibration; supplies no minimum dataset size for this model |
+| [DeepSeek-Prover-V2, section 2.1](https://arxiv.org/html/2504.21801v1#S2.SS1) | Subgoal-derived tasks enter expert iteration: "Both types are integrated into the expert iteration stage" | Combines construction and training; does not isolate order for our setting |
+| [Lake and Baroni, abstract](https://proceedings.mlr.press/v80/lake18a.html) | Distinguishes nearby generalization from cases "when generalization requires systematic compositional skills" | SCAN is not a Lean benchmark or a validated Lean difficulty measure |
+
+These sources motivate the study; they do not predict a positive outcome. No borrowed performance number is needed for this design. The attempted Bengio author-PDF and ACM routes were unavailable; no claim here relies on their unread contents. An independent source audit confirms the scheduler contract and identifies the exposure, semantic-split, recency and replication controls incorporated above. This is a focused protocol review, not certification of historical report results.
+
+The focused follow-up review finds no material issue against those named controls in the actual protocol and TeX section. The historical report measurements and original EXP-023 protocol remain unchanged. Temporal wording now identifies that earlier plan as historical; the new design is explicitly prospective. The report build uses the installed Mac TeX toolchain because the CPU fleet exposes none of `latexmk`, `pdflatex` or `tectonic`. No dataset, analysis or model job runs locally. Document checks and their final outcome are recorded below.
+
+Document verification: `latexmk -pdf -quiet -cd -interaction=nonstopmode -halt-on-error docs/tex/project_report.tex` returns exit 0. The final log contains no unresolved references, duplicate references or box warnings. The updated PDF contains the dated section and the new source citations. Text extraction exposed typographic conversion of command flags; breakable literal formatting corrects the flags and preserves their argument spaces. `uv run pre-commit run --files README.md docs/EXPERIMENTS.md docs/tex/project_report.tex` passes the applicable hooks, exit 0. `git diff --check` returns exit 0. No historical-result recertification, model sampling, training, commit, push or message to Abhinav occurs.
+
+## EXP-027
+
+### Curriculum experiment: revised framing, 16 October 2026
+
+Question: does curriculum improve performance on familiar benchmark constructions, generalization to held-out constructions, or both? This is the second major experiment. It uses the same benchmark and SFT parent as EXP-026, with the same named RLVR implementation. It does not make curriculum synonymous with compositional generalization.
+
+Compare R, the shuffled SFT + RLVR arm, with C, the prerequisite-first SFT + RLVR arm. Both start from the exact S checkpoint. Freeze the SFT recipe and checkpoint; the first curriculum intervention changes RL task order. Both arms receive permutations of the same TRAIN task-ID multiset, including repeat counts. The graph of reviewed component skills determines prerequisite order. Record empirical parent difficulty separately. Freeze within-stage tie-breaking and permutation seeds. Keep supplied proof prefixes absent in both arms. Adaptive selection, changed task allocation and reverse-prefix assistance remain distinct later interventions within this experiment, rather than being mixed into the first order comparison.
+
+R can be shared with EXP-026 when source, checkpoint, training and assessment settings, seeds and budgets match exactly. Reuse its immutable run rather than retraining an unchanged control. A shared R result is not an additional independent replication. B and S can appear in the same outcome table for context; the curriculum contrast is C minus R.
+
+Report C minus R separately on the frozen familiar-family panel and each frozen generalization panel. Include a compatible established-test panel if one is explicitly adopted before sampling. A panel's benchmark name does not establish generalization; its relation to training does. Use the same proof metric, intended denominator, inference limits, failure taxonomy and complete-proof replay for all comparisons. Do not pool the panels into one number that hides a performance/transfer difference.
+
+| Familiar-panel result | Generalization-panel result | Permitted interpretation |
+| --- | --- | --- |
+| Gain detected | Gain detected | Evidence for benefits on both named panels |
+| Gain detected | No gain detected | Evidence for familiar performance improvement; transfer benefit not established |
+| No gain detected | Gain detected | Evidence for a transfer benefit without a detected familiar-panel benefit |
+| No gain detected | No gain detected | No measured curriculum benefit under this protocol |
+
+"No gain detected" is not proof of no effect. Report uncertainty, task and family counts, seed-level differences and incomplete assessment. Freeze primary contrasts and multiplicity handling before launch. Repeated proof samples are not independent training seeds. The proposed paired-seed and family-aware analysis from the initial draft remains applicable, with the revised panel contrasts. Do not claim prerequisite learning as a mechanism; order also changes topic clustering and recency.
+
+Efficiency is a secondary question in this experiment. Plot DEV proof performance against actual cumulative generated tokens, with physical Lean calls and GPU time alongside it. Freeze any target score before training. Equal group counts do not imply equal cost. For a full-exposure order interpretation, compare planned, consumed and uncensored task-ID multisets and require both schedules to finish within the same hard caps. Preserve a cap stop or censored run as a budget-limited outcome; do not relax a cap, replace failed samples or equalize update counts with extra training. EXP-023's earlier null order result and failed efficiency gate remain unchanged.
+
+#### Execution guide: Abhinav for generalization, Manas for curriculum
+
+Use the [task handoff and checklist](#abhinavs-task-handoff-and-checklist) for the work order, dependencies and completion criteria. The detailed interfaces below remain applicable.
+
+1. Obtain Manas's frozen benchmark manifest, panel labels and exposure audit. Bind B, derive S through the registered SFT recipe, and derive R from that exact S through the registered RLVR recipe. If reusing historical checkpoints, verify this lineage rather than assuming it. Preserve all tokenizer and source identities.
+2. Evaluate B, S and R through the same optimizer-disabled interface for EXP-026. Record the familiar and shifted panels separately. Use TRAIN/DEV calibration to resolve training settings; never use TEST to choose a task mix or supply a proof.
+3. Manas constructs the R/C schedules with equal task multiplicities for EXP-027. Abhinav supplies the frozen R schedule and run settings. Reuse `TaskSchedule.frozen` and `run_tactic_rl.py --task-order`; the JSON list length must equal `max_groups`. The study manifest must check whole-root membership and cross-arm multiset equality, which the scheduler does not enforce. Use the fixed sampler. Reuse R only when its complete protocol matches.
+4. Freeze per-arm configs, paired seeds, checkpoint cadence, DEV selection rule, assessment seeds and resource limits. Reuse the earlier source-inspected required arguments and assessment split interfaces. Preserve `run.json`, `planned_task_order.json`, `rollouts.jsonl`, `steps.jsonl`, complete failures and checkpoint provenance. Separate planned, consumed, uncensored and optimized groups. Stage the managed remote command only after resolving every input and cap; each paid GPU launch still needs cost-specific approval.
+5. After DEV selection, assess frozen TEST with updates disabled, and export complete proofs through `scripts/eval/export_tactic_proofs.py`. Abhinav delivers the B/S/R generalization table. Manas delivers the R/C curriculum table. Both include separate panel columns, denominators, resource totals and failure categories. Each owner performs the paired analysis for their experiment; Anwesha reviews interaction and replay failures.
+
+Manas owns curriculum design, schedules, C execution and R/C evaluation. Abhinav owns generalization design, B/S/R execution and its evaluation. They share the benchmark, S parent and matched R control. Anwesha owns Lean verification. No message is sent to any teammate through this documentation change.
+
+Use distinct run/output identities under the experiment record that launches the job. EXP-026 uses B/S/R stage labels; EXP-027 uses R/C schedule labels and links a shared R to its original run. The initial draft's `exp026-...-o/r` naming template is superseded and has not launched a run. Exact model revisions, semantic panel counts, SFT/RL configs, training/assessment budgets, seeds and reviewer remain unresolved. This amendment documents the two experiments; it does not prepare new data or start inference or training.
+
+Revision verification, 16 October: the first report replacement command fails before editing because its JavaScript template contains TeX quotation backticks. A corrected file operation applies the requested framing. The final `latexmk -pdf -quiet -cd -interaction=nonstopmode -halt-on-error docs/tex/project_report.tex` returns exit 0. The final log contains no unresolved references or box warnings; the PDF contains the two-experiment and curriculum-interpretation tables. File-scoped `uv run pre-commit run --files README.md docs/EXPERIMENTS.md docs/tex/project_report.tex` passes, exit 0. `git diff --check` returns exit 0. The updated report replaces prospective narrative only; historical outcomes and the superseded draft remain preserved in this catalogue. No training, benchmark change, commit or push occurs.
+
+#### Abhinav's task handoff and checklist
+
+Abhinav, you own the generalization experiment, EXP-026: compare B, S and R on familiar and unseen problem panels. Manas owns curriculum, EXP-027, including C training and the R/C comparison. Keep the benchmark and evaluation protocol shared. Anwesha owns Lean interaction and replay. Your deliverables are the B/S/R runs, generalization analysis and a reproducible control handoff to Manas.
+
+| Experiment and owner | Model conditions | Question |
+| --- | --- | --- |
+| Generalization, Abhinav, EXP-026 | B: unchanged Qwen; S: project SFT; R: S followed by shuffled RLVR | What do SFT and RLVR add on familiar and unseen problems? |
+| Curriculum, Manas, EXP-027 | R: shuffled RLVR; C: prerequisite-first RLVR, starting from the same S | Does curriculum improve familiar performance, generalization, or both? |
+
+B is `Qwen/Qwen2.5-0.5B-Instruct` without project training. Record your B -> S -> R lineage. Give Manas the exact S checkpoint and R protocol for his S -> C run. Reuse R across experiments when its complete protocol matches. Keep SFT fixed during the curriculum comparison. Name the RLVR optimizer and keep it unchanged between R and C.
+
+Use cpu-angad package `formal_rl/nt_benchmark_v2_20261016/prepared_v1/` as the existing input candidate. Its `data/` directory contains the pool, task splits, exclusions and SFT inputs. Read its manifest and consumer receipt. Keep private reference proofs outside policy inputs. Mathematical panel labels and broader lineage exposure remain pending; do not infer them from the text duplicate groups.
+
+Complete the tasks in this order. Boxes remain unchecked until their evidence exists.
+
+- [ ] Bind the model lineage. Deliver checkpoint and tokenizer identities for B, the proposed S recipe, and the S -> R parent link. Include the immutable S identity for Manas's C run. Mark missing historical provenance explicitly. Done when Manas can identify every starting weight and training input without relying on a checkpoint nickname.
+- [ ] Prepare resolved run configs. Reuse `scripts/train/run_sft.py`, `scripts/train/run_tactic_rl.py` and the current config schema. Specify data paths, optimizer, seeds, limits, checkpoint cadence and unique output paths. Include optimizer-disabled assessment configs. Done when required settings are explicit and the remaining input dependencies are named. Do not present a placeholder command as runnable.
+- [ ] Hand off the frozen shuffled R schedule and its repeat counts to Manas. Manas constructs the prerequisite-first C schedule. Use `TaskSchedule.frozen` through `--task-order`. Agree on identical task multiplicities and whole-root starts across those JSON lists. Done when both contain admitted TRAIN IDs, each length equals `max_groups`, and the multiset comparison passes. Keep TEST outside schedule construction.
+- [ ] Prepare the common SFT parent and calibrate it. After SFT launch approval, produce S from B using the registered recipe. Reuse an existing S only after verifying its lineage and protocol. Then register bounded, optimizer-disabled TRAIN/DEV calibration of S. Record accepted proofs, rejected proofs, parser failures, verifier failures and reward variation. Done when complete raw outcomes establish the starting RL signal, including a zero-success outcome. Use this evidence to finalize the common RL recipe, not to select favorable TEST questions.
+- [ ] Execute the registered R run after launch approval. Produce R from the exact S. Manas executes C separately from that same S. Reuse a historical run only when its lineage and protocol match. Done when each run has resolved settings, terminal status, checkpoints and all failure records. Preserve cap stops; do not raise limits to complete a schedule.
+- [ ] Deliver the paired evaluations and proof artifacts. Apply the frozen DEV checkpoint rule, then assess TEST with updates disabled. Done when your B/S/R table traces to per-attempt records, intended denominators and complete-proof replay. Supply the matched R evidence for Manas's separate R/C table. Hand verifier or replay failures to Anwesha with their raw records.
+
+You can prepare the lineage inventory and config templates while Manas reviews the panels. Final schedules depend on reviewed prerequisite labels. RL training depends on calibration of S. Every training run needs resolved limits and cost-specific approval. The current task is not a new GPU launch approval.
+
+Abhinav delivers the generalization table. Manas delivers the curriculum table using the shared R records. Leave unavailable entries empty and explain why; never fill them with estimates.
+
+| Generalization result | B | S | R |
+| --- | --- | --- | --- |
+| Familiar-family accepted attempts / intended attempts | | | |
+| Held-out-family accepted attempts / intended attempts | | | |
+| Unseen-combination accepted attempts / intended attempts, if admitted | | | |
+| Questions solved / assessed questions, by panel and fixed attempt budget | | | |
+
+| Curriculum result | R, shuffled | C, prerequisite-first |
+| --- | --- | --- |
+| Familiar-family accepted attempts / intended attempts | | |
+| Generalization accepted attempts / intended attempts, by panel | | |
+| Questions solved / assessed questions, by panel | | |
+| Generated tokens, physical Lean calls and wall/GPU time, reported separately | | |
+| Planned, consumed, uncensored and optimized groups, reported separately | | |
+
+For each table, include semantic-family counts, seed-level results and assessment completion coverage. Keep theorem-level success separate from attempt-level success. Retain actions, retries and accepted tactic steps as distinct trajectory fields. Count resources on failed attempts as well as successful attempts. State the counted quantities before claiming a curriculum or generalization gain.
+
+Preserve the manifest, resolved configs, source and verifier identities, schedules, `run.json`, `rollouts.jsonl`, `steps.jsonl`, checkpoints and proof exports. The first reviewable delivery is the lineage inventory and resolved config proposal, with unresolved dependencies listed. Run outcomes remain pending. This handoff is prepared for Abhinav; it does not assert that he received it or completed a task.
+
+Ownership correction, 16 October: the current handoff assigns generalization to Abhinav and curriculum to Manas. Earlier ownership statements in the superseded draft remain historical. The design, split controls, model conditions and launch requirements do not change.
+
+The ownership-only report rebuild returns exit 0 with no unresolved references or box warnings. An initial file-scoped hook invocation overlaps the PDF build and reports modified files. Repeat the unchanged hooks after the build terminates; do not change the hook or scope to bypass that failure.
+
+### EXP-025 evaluation specification and semantic review, 17 October 2026
+
+Manas requests clear evaluation questions and expected answers while the delegated SFT-parent audit runs. Root owns the evaluation export; the independent semantic reviewer inspects DEV/TEST headers without model outcomes. Preserve `prepared_v1` and its split membership. The review pack is not an approved clean benchmark.
+
+- Export run: `exp025-evaluation-spec-cpu-s20261017-v1`, service `rl-nt-evaluation-spec-20261017-v1`, output cpu-angad `formal_rl/nt_benchmark_v2_20261016/evaluation_spec_v1/specification/`. Source: `scripts/data/build_nt_benchmark.py describe` and `BenchmarkExporter.describe`. Limits: 256 MiB, one CPU, 60 seconds. No model or Lean process.
+- Review run: `exp025-evaluation-review-cpu-s20261017-v1`, service `rl-nt-evaluation-review-20261017-v1`, same root-owned output after export. Keep reviewer findings and representative informal questions with the pack. Use the existing pinned verifier for one isolated contradictory-premise check. Limits: 6 GiB, one CPU, 300 seconds; retain the source verifier's per-call timeout. Source: `evaluation_spec_v1/annotate_evaluation.py` in the remote run. No model or optimizer.
+- Questions retain their exact theorem statements, initial states, split and task identities. `answer_contract.json` specifies tactic-block responses, unchanged statements, complete-proof replay and allowed axioms. Any verified proof is admissible; the reference proof is not an exact-match target. Partial steps and readable prose do not count as complete proofs.
+- `private/expected_answers.jsonl` contains the accepted source references. `private/review_findings.jsonl` holds semantic concerns. Neither enters training or model prompts. Saved reference verdicts are not fresh replay. Assessment budgets remain unset until the evaluation protocol freezes.
+- Before model assessment, resolve contradictory assumptions, numeric-domain intent, semantic overlap and actual checkpoint exposure. Repairs require a new version and verification. Do not silently substitute repaired tasks or report unflagged items as semantically certified.
+
+The export and review services both return exit 0. The manifest counts 34 DEV questions and 82 TEST questions. Private answers retain the accepted source reference for every exported task. The reviewer inspects all formal headers and flags 7 contradictory-premise tasks, 6 intent-review tasks and 3 overlap relationships. These are review findings, not a complete inventory of defects. Unflagged tasks remain unreviewed for full source intent and family independence.
+
+The pinned Lean check confirms a concrete contradiction in DEV task `ntb_24495954b801bd41cc09d7a9:whole:0`: its assumption `h1 : ∀ i ≤ n, 0 < i ^ 2` implies `False` by instantiating zero. `private/premise_check.json` records the accepted isolated contradiction, the Lean version, mathlib revision and allowed axioms. This check establishes a premise defect; it does not establish the other flagged defects by Lean replay. The original question remains unchanged and withheld from semantic clearance.
+
+Representative questions in `question_examples.jsonl` cover factorial divisibility, cancellation of congruences under a coprimality assumption, and the prime-power totient identity. They specify complete formal proofs as expected answers. Their informal descriptions preserve the exact quantified domains and hypotheses. These descriptions do not prescribe a proof strategy or establish a minimum proof length.
+
+| Example task | Question | Expected answer |
+| --- | --- | --- |
+| DEV `ntb_26c13028f7860afcbd1b1330` | For natural n and k with k ≤ n, prove that `(n-k)! * k!` divides `n!`. | A complete Lean proof under the quantified natural-number assumptions. |
+| TEST `ntb_1d4a55a1396005c641f975de` | For integers a, b, m, x and y, assume ax and ay are congruent to b modulo m and gcd(a,m) = 1. Prove x and y are congruent modulo m. | A complete Lean proof of the congruence, with every stated hypothesis preserved. |
+| TEST `ntb_45847c8fcf7e4ce252bf9497` | For a natural prime p and a positive natural exponent k, prove `φ(p^k) = p^k - p^(k-1)`. | A complete Lean proof of the totient identity. |
+
+Focused verification: `uv run python -m unittest discover -s tests -p test_nt_benchmark.py` returns `Ran 18 tests ... OK`, exit 0. The new export checks cover private-answer separation, unchanged question identities, missing/mismatched references and split errors. The initial tests fail because `describe` is absent. The first implementation then fails because the module path is a string; converting it to `Path` fixes that failure without changing the assertions. The remote source and receipts remain with the run. No training, inference or curriculum modification occurs.
+
+The existing archive command `uv run python .private/ops/nt_benchmark_v1_20261016/archive.py nt_benchmark_v2_20261016` returns exit 0 and confirms object existence. Receipt: `nt_benchmark_v2_20261016/archive_20261016T230045Z.json`. The snapshot preserves the source, question/answer pack, reviewer findings and Lean contradiction receipt under the existing namespace retention policy.
+
+### SFT-parent audit outcome, 17 October 2026
+
+The delegated checkpoint audit recommends EXP-023 W, the existing supervised v2.1 warmstart, for the next diagnostic assessment. Root checks the saved `id_val/W_s0/run.json` identity/interface receipt and reads the original warmstart run receipt from the existing archive. W's recorded weights digest is `f4474e13ad3f7b74702f7550c0ea6545fa1da678e5ed01d8ea90d68ad2b2eef1`; the audit confirms the weight file exists but does not freshly rehash it. The documented chain is Qwen2.5-0.5B-Instruct, original Lean SFT v2, common additional SFT, then the v2.1 warmstart. No project RL/RLP stage is found in that chain. This is an existing SFT-only diagnostic parent with substantial supervised exposure, not a newly constructed minimal-SFT treatment.
+
+The agent reuses `curriculum_final_failure_count_20261014_v1/count.py` functions `levels()` and `scan()` on saved W rollouts, without calling its output-overwriting `main()`. Service `rl-sft-audit-recount-20261017-v1` returns exit 0 under a 1 GiB memory cap, one CPU and 300 seconds. Most recorded failures end at the action horizon. Failed tactic applications dominate classified action errors; formatting, name resolution and elaboration failures also remain. These are observed endpoints and diagnostic categories, not identified internal causes. The recount does not rerun Lean or measure the new benchmark. The counter's stdout remains in the agent execution transcript; no new durable recount file is claimed.
+
+Exact saved-row sources are `curriculum_final_failure_count_20261014_v1/inputs/eval/heldout/W_s*/rollouts.jsonl` and `curriculum_final_extra_eval_20261013_v1/out/id_val/W_s*/rollouts.jsonl`. The predecessor `monday_recovery_20261011_v2/model/` and original `sft_checkpoints/v2_final/` remain ancestry baselines. Their older assessment protocols cannot isolate warmstart improvement. Terminal GRPO/RLP branches are not SFT-only controls.
+
+Next: resolve semantic defects and selected-question exposure against actual original SFT, `nt_sft_v8` and warmstart-v3b training membership before any bounded TRAIN/DEV assessment of W. Keep TEST out of model selection. The audit does not authorize new inference, training, a paid launch or another SFT stage. Curriculum and reward work remain frozen.
+
+### Full evaluation-question descriptions, 17 October 2026
+
+Manas requests a description of every DEV and TEST question. Independent agents own DEV, TEST rows 1–41 and TEST rows 42–82, respectively. Root compares every description with its exact formal header and initial state before integration. No reference proof or model score enters this translation. Preserve variable domains, implicit parameters, casts, integer/natural/rational division, truncated subtraction, quantifier scope, negation and every conjunct.
+
+Source: cpu-angad `formal_rl/nt_benchmark_v2_20261016/evaluation_spec_v1/specification/questions_{dev,test}.jsonl`. Agent outputs: sibling `descriptions_v1/dev.jsonl`, `test_first.jsonl` and `test_second.jsonl`. Each row includes the stable task ID, source ordinal, question, specific expected proof, LaTeX text and cautions. Unflagged questions do not acquire semantic clearance through translation.
+
+Register root-owned document export `exp025-question-descriptions-cpu-s20261017-v1`, service `rl-nt-question-descriptions-20261017-v1`, output `descriptions_v1/catalogue.tex` and `manifest.json`. The exporter joins the disjoint descriptions, checks exact membership/order and renders an appendix for the existing report. Limits: 256 MiB, one CPU, 60 seconds. No model, Lean process or new assessment. Build the report on the Mac because its TeX toolchain is local; datasets and JSONL artifacts remain on the fleet. Keep historical report sections unchanged.
+
+The description export returns exit 0. Its manifest counts 34 DEV descriptions and 82 TEST descriptions with exact source identities, order and splits. Root reads every formal header, initial state, question description, expected answer and caution. One review-triggered correction replaces an inaccurate TEST9 caution with its actual overlaps, DEV25 and the first conjunct of DEV13. No question or split changes.
+
+The expanded descriptions identify a further possible intent issue in DEV27, `ntb_bea1d7078c9528575e9bf318:whole:0`: its initial state declares `n! : ℕ` as an implicit parameter. The existential variable `n` does not occur in its body. The description renames the parameter N and does not read it as `Nat.factorial n`. This is an interpretation of the displayed formal state, not a repaired problem or fresh Lean result.
+
+Appendix A of `docs/tex/project_report.tex` contains every question, its specific proof obligation, stable task ID and cautions. DEV starts on PDF page 21; TEST starts on page 27. The original report body remains unchanged apart from the dated navigation sentence. The first PDF build succeeds but reports an overfull formula for DEV22. Adding allowed line breaks inside its displayed set fixes the layout without changing any mathematical token.
+
+Final `latexmk -pdf -quiet -cd -interaction=nonstopmode -halt-on-error docs/tex/project_report.tex` returns exit 0. The final log reports 42 pages, with no unresolved references or box warnings. Root visually checks the appendix opening, the corrected long-set formula and the final page. These are layout spot checks, not visual inspection of every page or semantic certification. The per-question source checks, recorded cautions and unresolved benchmark defects remain the evidence boundary. No model inference, training or policy-selection decision occurs.
+
+File-scoped `uv run pre-commit run --files README.md docs/EXPERIMENTS.md docs/tex/project_report.tex` and `git diff --check` return exit 0. The source and final PDF are copied into the remote description directory. The existing archive command returns exit 0 and confirms the updated snapshot; receipt `nt_benchmark_v2_20261016/archive_20261016T231410Z.json`. The namespace's existing retention policy still applies. No commit or push occurs.
+
+### Dataset work decomposition and SFT development assignment, 17 October 2026
+
+Manas prioritizes broad prerequisite coverage and requests a Sol agent to develop the SFT dataset.
+Clean data and frozen evaluation precede curriculum experiments.
+This preparation does not authorize model inference, training, a paid launch, or changes to historical splits.
+Root owns benchmark preparation, shared exclusion rules, documentation and integration.
+The Sol agent owns SFT candidate preparation and its focused source checks.
+
+1. Establish source and checkpoint provenance. Bind each candidate to its source statement, original mathematical meaning and proof record. Reconcile the selected parent's producing run with actual consumed inputs. Preserve unknown base-model exposure as unknown.
+2. Review mathematical meaning and split independence. Check assumptions, domains, quantifiers and non-vacuity. Define mathematical constructions across TRAIN, DEV and TEST, beyond lexical duplicate groups. Reserve evaluation constructions and record exclusions before selecting SFT examples. Keep rejected and unresolved items with their reasons.
+3. Build the benchmark panels. Separate prerequisite diagnostics, new instances of taught constructions, held-out constructions and unseen combinations of taught skills. Keep simple-tactic controls visible in the diagnostic panel. Freeze evaluation membership before model sampling. Broader primitive coverage does not establish unseen-topic transfer; preserve EXP-024's historical topic-held-out design separately. Any revised split needs a new version.
+4. Develop the SFT candidates in parallel. Reuse the existing syllabus, source corpus, syntax examples and SFT builders. Cover assumptions, types and casts, witnesses, rewriting, lemma application, cases, contradiction, induction and combined proofs. Report distinct constructions and missing skills rather than treating repeated examples as added breadth. Labels inferred from text or tactics remain heuristic until reviewed. Never read evaluation reference proofs for SFT synthesis.
+5. Release training inputs after integration. Require reviewed source meaning, checked split and lineage exposure, strict reference replay, matching model-visible formats and measured tokenizer lengths. Keep SFT loss-validation examples within the admitted training partition, separate from benchmark DEV and TEST. Save the final manifest, exclusions, source locators and all failed checks. Coverage is a data property, not evidence of learned capability.
+6. Assess the frozen SFT parent before curriculum. A separately registered, optimizer-disabled TRAIN/DEV assessment measures prerequisite and complete-proof performance. Its inference limits and any paid execution need their own authorization. Curriculum runs depend on this evidence and a shared frozen training population.
+
+Register preparation run `exp025-sft-coverage-cpu-s20261017-v1` under EXP-025.
+The question is whether existing train-eligible inputs can supply a reviewable SFT candidate pack across the prerequisite skills above.
+The existing TRAIN export is the coverage baseline; no training benefit is measured.
+The sole output writer is the delegated Sol agent.
+The proposed output is cpu-angad `formal_rl/nt_sft_coverage_20261017_v1/`, created exclusively after checking for another writer.
+Reuse `scripts/data/build_nt_sft_data.py`, `scripts/data/build_syntax_sft.py` and `scripts/data/build_v21_sft.py` where applicable.
+The agent must name exact source edits and focused verification commands before changing behavior.
+Root retains ownership of the benchmark selector, verifier, training runners, README, report and catalogue.
+
+CPU preparation may read the saved corpus and TRAIN proofs, plus evaluation statements and exclusion identities for leakage checks.
+It must not read private evaluation answers for example construction.
+Stream inputs under a managed cap of 2 GiB, one CPU and 600 seconds; state the actual peak-memory bound before launch.
+No Lean replay, model, optimizer, new corpus download or GPU runs in this preparation.
+Keep inputs immutable and record command, input identities, source, limits, terminal status and durable output receipt with the run.
+Candidate outputs remain unavailable for training until the shared semantic, exposure and strict-replay requirements are satisfied.
+Unknown source eligibility or unavailable inputs produce explicit gaps, not guessed labels or silently substituted data.
+
+The first delivery contains candidate examples, a coverage inventory, exclusions, unresolved review fields and a reproducible build or a precise input blocker.
+This assignment prepares data; it does not change the RL objective, curriculum order, or EXP-026/027 model comparisons.
+Primary references: [Mathematics in Lean, elementary number theory](https://leanprover-community.github.io/mathematics_in_lean/C05_Elementary_Number_Theory.html) illustrates prerequisite proof methods; [LeanDojo](https://leandojo.org/leandojo.html) describes premise-aware evaluation splits. Neither certifies this dataset's coverage or independence.
+
+### Dataset cleanup implementation assignments, 17 October 2026
+
+Manas requests five Luna agents to execute the pending cleanup work.
+The agents work from the existing benchmark and Sol's SFT candidate pack at cpu-angad `formal_rl/nt_sft_coverage_20261017_v1/candidate_pack_v3/`.
+The pack remains `NOT_TRAINING_READY`; its coverage labels are syntactic signals, not reviewed mathematical skills.
+Root owns integration and any final release decision.
+This work does not authorize model generation, training, paid compute, new source downloads or changes to historical packages.
+
+The shared question is whether these candidate datasets can meet their semantic, split, exposure, proof and consumer contracts.
+The existing exploratory packages are the comparison baseline, not clean controls.
+Each workstream preserves rejected, unresolved and uninspected items alongside accepted items.
+Counts must come from its actual output files; no source audit alone establishes learned capability or generalization.
+Existing per-call limits remain unchanged.
+
+| Workstream and sole owner | Run ID | Output relative to cpu-angad `formal_rl/` | Hard job limits | Required delivery |
+| --- | --- | --- | --- | --- |
+| Mathematical semantics, Luna semantic reviewer | `exp025-clean-semantics-cpu-s20261017-v1` | `nt_dataset_cleanup_20261017_v1/semantics/` | 1 GiB, one CPU, 600 seconds; no Lean or model | Per-candidate accept/reject/unresolved decisions, source meaning, exact statement identities and coverage |
+| Mathematical groups and splits, Luna split reviewer | `exp025-clean-splits-cpu-s20261017-v1` | `nt_dataset_cleanup_20261017_v1/splits/` | 1 GiB, one CPU, 600 seconds; no Lean or model | TRAIN/DEV/TEST group definitions, overlap evidence and a new-version split proposal with unresolved boundaries |
+| Producer lineage and exposure, Luna lineage reviewer | `exp025-clean-lineage-cpu-s20261017-v1` | `nt_dataset_cleanup_20261017_v1/lineage/` | 1 GiB, one CPU, 600 seconds; no Lean or model | Producer/consumed-input bindings, parsed-input coverage, exposure matches and explicit unknowns |
+| Strict verification, Luna verifier developer | `exp025-clean-verifier-cpu-s20261017-v1` | `nt_dataset_cleanup_20261017_v1/verifier/` | 6 GiB, one CPU, 600 seconds; at most one Lean/Mathlib process | Minimal verifier correction with focused tests, live environment identity and bounded per-item replay receipts |
+| SFT consumer and tokenizer checks, Luna consumer developer | `exp025-clean-consumer-cpu-s20261017-v1` | `nt_dataset_cleanup_20261017_v1/consumer/` | 2 GiB, one CPU, 600 seconds; tokenizer only, no model or Lean | Source preservation, protocol compatibility, exact tokenizer lengths and untruncated failure records |
+
+The semantic reviewer owns no tracked source files.
+The split reviewer owns no tracked source files and does not alter frozen membership.
+The lineage reviewer owns no tracked source files and does not download checkpoint weights.
+The verifier developer owns changes, when justified, to `scripts/data/nt_benchmark/verification.py`, `scripts/data/verify_external_proofs.py`, `tests/test_external_proofs.py` and `tests/test_nt_benchmark.py`.
+The consumer developer owns changes, when justified, to `scripts/data/build_nt_sft_data.py` and `tests/test_nt_sft_coverage.py`.
+No agent edits README, the report, this catalogue, training runners, agent instructions or another workstream's files.
+Root reviews every source diff and load-bearing artifact before integration.
+
+Start source investigation independently.
+Before a remote job, read this registration, name the peak-memory bound, check output ownership and create the assigned output exclusively.
+Use the established managed runner and save source/input identities, exact commands, resource caps, terminal status, costs and durable receipts with each run.
+Any retry uses a distinct run/output identity and preserves the failed attempt.
+An aggregate deadline produces incomplete results; it does not justify extending a timeout or omitting the unfinished denominator.
+
+The split proposal can proceed independently of source semantic review, but final membership depends on both.
+Lineage checks can identify exposure candidates before mathematical groups are final; unknown family exposure remains unresolved.
+Replay can inspect standalone proof candidates independently of semantic approval, but acceptance does not imply intended mathematical meaning.
+Consumer checks can run on candidate messages, but format compatibility does not establish source eligibility.
+Root joins all decisions by immutable statement and source identities before emitting any admitted new version.
+Historical topic-held-out designs, evaluation outcomes and original packages remain unchanged.
+Benchmark references remain private and cannot supply SFT synthesis examples.
+
+The verifier workstream may perform bounded CPU Lean checks only.
+Other workstreams must not call Lean, load policy weights or run inference.
+No agent may silently merge full-proof, interactive-action and file-context completion protocols.
+Partial proof actions and file-context completions are not standalone complete proofs.
+Unresolved source context, semantic validity, lineage, replay or tokenizer limits keep the affected rows unavailable for training.
+Curriculum and model assessment remain downstream of the frozen dataset and their own execution registration.
+
+### Strict verifier integration and snapshot identity retry, 17 October 2026
+
+The verifier agent's first managed run stops before Lean because the exported Mathlib snapshot has no Git metadata.
+Preserve `nt_dataset_cleanup_20261017_v1/verifier/` and its failed run receipt.
+Its per-item records are unresolved or non-standalone skips, not proof verdicts.
+Root source review finds a subsequent fallback that would trust the old aggregate identity receipt without checking the live files.
+Root rejects that fallback and first reproduces the missing rejection with a focused failing test.
+
+The existing `.private/ops/mathlib_identity_20261014_v1/check.py` already compares source blobs against pinned GitHub trees, including dependencies.
+Extend that checker to preserve the compared blob maps in a new receipt.
+For a snapshot without Git metadata, `LeanVerifier` must match every live source blob and dependency revision against those registered maps.
+An aggregate receipt without the maps remains insufficient.
+The focused snapshot test checks an unchanged fixture and rejects modified, missing and extra source files.
+This is source identity evidence; it does not certify arbitrary compiled-file contents or mathematical meaning.
+
+Register root-owned run `exp025-clean-identity-cpu-s20261017-v1` at cpu-angad `formal_rl/nt_dataset_cleanup_20261017_v1/identity_retry1/`.
+Use the established pinned-tree checker with one file read at a time and expected hash-map storage below 50 MiB.
+Managed limits are 1 GiB, one CPU and 600 seconds; preserve the checker's existing network timeout.
+Read public Git tree metadata only. No model, Lean process, dataset download or environment modification.
+Create the output exclusively, preserve the source, and record terminal status and source/input identities.
+Only a completed clean comparison can supply the new registered maps for a separately recorded replay retry.
+Do not reuse the original failed output or treat unit tests as real Lean replay.
+
+The fresh pinned-tree identity job completes with `status=clean` and exit 0.
+Its new receipt contains per-repository source blob maps for a live comparison at replay initialization.
+Register root-owned replay retry `exp025-clean-verifier-cpu-s20261017-v1-retry1` at `formal_rl/nt_dataset_cleanup_20261017_v1/verifier_retry1/`.
+Reuse the failed run's immutable inputs and runner in a new source snapshot, replacing its verifier modules with the reviewed source and its identity input with the new receipt.
+Keep the original 6 GiB, one CPU, 600-second service cap, 570-second internal deadline, reference batch size and per-call timeout.
+Retain non-standalone skips and all unfinished or rejected candidates in the output denominator.
+Only root writes this retry directory. No model, optimizer or original package changes.
+
+Retry 1 stops during staging before a managed service or Lean starts.
+The old input copy preserves read-only permissions, so replacement of its identity file fails with `PermissionError`.
+Preserve that directory and record the staging failure in its run receipt.
+Register `exp025-clean-verifier-cpu-s20261017-v1-retry2` at `formal_rl/nt_dataset_cleanup_20261017_v1/verifier_retry2/` with the same limits.
+Copy file contents into the new directory, apply the intended identity/source replacements, then mark the new input files read-only before execution.
+The original input files and all prior attempts remain unchanged.
+
+### Strict replay integration outcome and remaining work, 17 October 2026
+
+Root's reviewed verifier now rejects an aggregate-only receipt for a snapshot without Git metadata.
+The existing pinned-tree checker saves the expected source blobs, and replay compares the live Mathlib and dependency sources against them.
+The source check at `nt_dataset_cleanup_20261017_v1/identity_retry1/` returns clean with exit 0.
+This binds source identity under the registered check; it is not a certification of arbitrary compiled artifacts.
+
+Replay retry 2 returns service exit 0 but records `status=incomplete`.
+Root recounts `verifier_retry2/replay.jsonl` and checks the result against `summary.json` and `run.json`.
+The file contains all 315 intended records.
+The standalone SFT proof candidates have 38 accepted results from 38 eligible rows.
+The benchmark references have 202 accepted results from 209 eligible rows.
+The remaining 7 benchmark references have `incomplete_aggregate_deadline`, not rejection or acceptance.
+The runner stops before another batch when it cannot reserve the unchanged full per-call timeout within its internal deadline.
+It skips 68 interactive-action or file-context completion rows as non-standalone; those rows remain unresolved for their actual consumer contexts.
+The receipt records 20 Lean process calls and 462.7265780158341 seconds of Lean wall time.
+Raw rows, batch receipts, input/source hashes and the failed earlier attempts remain under the existing cleanup root.
+Lean acceptance does not overturn semantic exclusions or establish source intent, family independence or eligibility for training.
+
+Root reruns `PYTHONPATH=tests uv run python -m unittest test_nt_benchmark test_external_proofs` after the final verifier edit.
+It returns `Ran 30 tests ... OK`, exit 0.
+The focused regression first demonstrates that the old aggregate-only fallback fails to raise an error.
+The added snapshot control accepts unchanged registered sources and rejects modified, missing and extra source files.
+File-scoped hooks also return exit 0; these source checks are separate from actual Lean replay.
+
+The consumer workstream's successful artifacts are in `nt_dataset_cleanup_20261017_v1/consumer_retry3/`; its prior failed attempts remain preserved.
+Root reads its per-row receipts and recounts 106 complete chats within the frozen SFT limit of 2,048 tokens.
+The largest measured chat has 1,978 tokens.
+All 106 rows pass the recorded role-alignment check.
+These checks do not bind an interactive assessment prompt limit, resolve source admission or certify semantic isolation.
+Historical loss-validation reassignment still needs an explicit protocol decision before a new training split freezes.
+
+Current integration boundary: all SFT candidates remain unavailable for training.
+The split proposal is provisional; its DEV25/TEST9 relationship label needs correction, and the additional TRAIN matches require formula-level review rather than automatic exclusion.
+The producer/consumed-lineage workstream remains pending at this checkpoint.
+Next, join per-item semantic, split, lineage, replay and consumer decisions by immutable source identity.
+Preserve uninspected items and unreplayed references as unresolved.
+No new benchmark version, curriculum run, model assessment or training launch is approved by these results.
+
+The established archive command now admits the cleanup run-directory pattern without changing its upload or existence check.
+`uv run python .private/ops/nt_benchmark_v1_20261016/archive.py nt_dataset_cleanup_20261017_v1` returns exit 0 and confirms the snapshot object.
+Receipt: `nt_dataset_cleanup_20261017_v1/archive_20261017T124524Z.json`.
+This snapshot includes the completed verifier evidence and the other workstreams' state at archive time; it does not certify the still-pending lineage work.
+The existing namespace retention policy remains in force.
+
+
+### Lineage result and GPU producer correction, 17 October 2026
+
+All five cleanup agents returned. Their completion does not approve a dataset for training.
+The lineage agent saves its result in `nt_dataset_cleanup_20261017_v1/lineage/retry6/`.
+Its CPU producer comparison does not identify selected W because the historical W record names the GPU v2 run.
+CPU REINFORCE branches from a different warmstart do not contradict the recorded SFT ancestry of selected W.
+Do not propagate the agent artifact's `contradicting_mounted_evidence` field as a selected-W ancestry verdict.
+Preserve the original artifact and this correction together.
+
+Root retrieves the archived GPU export, warmstart receipt, run record, input hashes, resolved config and SFT manifest.
+Copies and their digests are in `nt_dataset_cleanup_20261017_v1/lineage/gpu_producer_review/`.
+The GPU v2 `exports.json` W digest matches the selected evaluator model digest in the lineage receipt.
+The producer receipt records a completed `run_sft.py` command with exit 0.
+Its input path is the staged `inputs/sft_data` directory.
+The launch input hashes match the currently mounted v3b training file, validation file and manifest.
+Root recounts 1,911 training rows from the matched file.
+Root recounts 85 validation rows from the matched file.
+These counts match the GPU warmstart run record, rather than the different CPU warmstart.
+`review.json` records the binding and the remaining uncertainty.
+`check.py` rechecks the saved archive bytes, producer export, producer receipt, launch hashes and mounted input counts.
+It loads no policy model and runs no training.
+
+This resolves selected W's GPU warmstart producer and its immediate SFT input version.
+Earlier SFT stages still lack complete launch-time consumed-file bindings.
+Base pretraining exposure remains unknown.
+The lineage scan's textual candidates require formula-level adjudication before a leakage verdict.
+Unparsed source rows remain unresolved.
+Do not substitute the CPU v3c source scan for the bound GPU v3b training inputs.
+
+The next integration step remains the per-item join of semantic, family, exposure, replay and consumer decisions.
+Correct the provisional split relationships before applying exclusions or assigning a new version.
+Keep incomplete replay rows unresolved and retain the existing runtime limits.
+No clean benchmark, SFT release, curriculum run or training launch follows from this checkpoint.
+
+Root runs `python3 nt_dataset_cleanup_20261017_v1/lineage/gpu_producer_review/check.py` from the remote project root.
+It returns `status=pass`, matching producer export and launch input hashes, with exit 0.
+The file-scoped Markdown hooks return exit 0.
+Root archives the cleanup directory with the established archive command after integrating lineage.
+It returns `status=archived`, exit 0, and confirms the snapshot object.
+Receipt: `nt_dataset_cleanup_20261017_v1/archive_20261017T131411Z.json`.
+The existing retention policy still applies.
+
+
+### Filtered release integration registration, 17 October 2026
+
+User authorizes completing semantic exclusions, split adjudication, exposure handling and pending verification.
+Outcome: an explicitly filtered, versioned release with retained, excluded and quarantined rows, rather than unresolved candidate inputs.
+Root owns `.private/ops/nt_dataset_cleanup_20261017_v1/build_release.py`, replay resume source, `release_v1/`, README status and this ledger.
+Independent Luna reviews own `integration_review/train.jsonl`, `integration_review/eval.jsonl` and `integration_review/exposure.json` respectively under the existing remote cleanup root.
+Training and evaluation reviewers inspect formal headers for consistency, vacuity, mathematical construction and source alignment.
+The exposure reviewer distinguishes the bound GPU warmstart inputs from unrelated CPU branches and records checkpoint eligibility separately.
+No reviewer writes another reviewer's output or the release directory.
+No model inference, optimizer, corpus download or paid GPU launch is authorized.
+
+Register root replay resume `exp025-clean-verifier-cpu-s20261017-v1-resume` at `nt_dataset_cleanup_20261017_v1/verifier_resume/`.
+Input: the exact unreplayed reference identities from retry 2; preserve prior outcomes and immutable input hashes.
+Use the reviewed verifier and fresh registered identity, preserving the per-call timeout and batch size.
+Use the same 6 GiB, one CPU, 600-second service cap and 570-second internal deadline.
+Process the remaining references once in a new directory, without rewriting successful or incomplete earlier records.
+Expected working memory: one existing reference batch plus Lean, bounded by the unchanged service cap.
+The root is the sole writer; receipts and per-item outcomes remain in this run directory and the established archive.
+
+Admission rule: retain complete proofs only when formal semantics, source TRAIN membership, strict replay, tokenizer limits and evaluation isolation pass.
+Keep original historical SFT loss-validation rows out of weight training.
+Exclude unbound interactive actions and file-context completions from the executable SFT release.
+Keep exposure-unknown historical checkpoints ineligible for unseen-test claims; do not block an independently frozen dataset by calling those checkpoints clean.
+The release must distinguish a formal Lean task benchmark from alignment with an unrecovered original informal problem.
+Do not claim an unseen pretraining corpus or a generalization result from curation.
+
+
+### Release admission policy and review corrections, 17 October 2026
+
+Root preserves reviewed SFT prerequisites before choosing the smaller held-out panels, following the user's broad-coverage priority.
+Final deterministic precedence is protected historical/candidate SFT validation, reviewed SFT training, benchmark TEST, DEV, then benchmark TRAIN.
+A construction overlap excludes a lower-priority evaluation or training item; it does not relabel the pair as mathematically equivalent.
+Apply existing normalized, numeric-template and token-Jaccard exclusions at the unchanged 0.85 threshold.
+Keep distinct examples of a construction within weight training; keep no such construction across training, loss validation and held-out panels.
+This policy uses no model scores, proof success rates or checkpoint selection.
+
+Root reviews the accepted TRAIN headers and the first announced accepted evaluation subset against their actual formulas.
+The evaluation agent later adds promotions and exposes mis-keyed annotations; root does not admit those later promotions without individual inspection.
+Preserve the agent's base review and corrections, and record root exclusions and the individually corrected formulas separately.
+Root rejects TRAIN87's universal divisor-bound premise and TEST64's finite-set prime premise.
+Root corrects TRAIN52 to an inconsistent digit-equality premise rather than a false conclusion.
+Root excludes the unconditional DEV10 divisibility target as a diagnostic, with witness x=2 for its consistent premises.
+Root re-derives the prime product witnesses for TEST20 and the positive-power comparison for TEST36 from their actual headers.
+Other unreviewed or semantically uncertain items remain in the exclusion ledger and cannot enter executable files.
+
+Register root-owned tokenizer/release build `exp025-filtered-release-cpu-s20261017-v1`.
+Output is `nt_dataset_cleanup_20261017_v1/release_v1/`, created exclusively by `.private/ops/nt_dataset_cleanup_20261017_v1/build_release.py`.
+The import environment and complete-theorem response contract replace the mismatched tactic-only instructions in retained full-proof SFT prompts.
+Assistant proof bytes stay unchanged and retain their strict replay binding.
+Normalized chats must pass the existing strict 2,048-token consumer rule; otherwise exclude them.
+Run under the existing consumer cap of 2 GiB, one CPU and 600 seconds, using the saved tokenizer without weights.
+Peak retained JSON storage stays below 10 MiB; tokenizer/library overhead stays under the managed cap.
+The root is the sole writer for the release and its managed receipt/log.
+The completion check will recount admissions and check cross-partition constructions, source binding, unchanged proof bytes, private answers, and tokenizer records.
+This is a formal-task pilot release; it does not claim original English alignment, sufficient curriculum coverage, unknown pretraining independence or model improvement.
+
+
+The first release build fails at the unchanged proof-digest assertion before tokenization or publication.
+Its theorem-name join collapses distinct source rows for a repeated theorem.
+Preserve `release_v1/`, `release_build_run.json` and `release_build.log` as failed staging evidence.
+Root changes the SFT replay join to the full source hash, source path, source row and protocol identity.
+No proof-digest assertion, semantic exclusion, similarity threshold or consumer limit changes.
+Register retry `exp025-filtered-release-cpu-s20261017-v1-retry1` with output `release_v2/`, receipt `release_build_retry1_run.json` and log `release_build_retry1.log`.
+Use the same tokenizer-only managed resource limits and one writer.
+Include the established pool/task fields and benchmark exclusions so consumers can use the filtered bank without the original candidate pool.
+
+
+Release retry 1 passes the corrected source-row join, then fails importing the tokenizer.
+Python resolves an unrelated `/tmp/inspect.py` instead of the standard-library `inspect` module.
+Do not read or modify that unrelated file or its referenced data.
+Preserve `release_v2/` and the retry 1 receipt/log as failed staging evidence.
+Python's documented isolated mode removes the script directory and user site from the implicit import path.
+Reference: https://docs.python.org/3.10/using/cmdline.html#cmdoption-I .
+Register retry 2 `exp025-filtered-release-cpu-s20261017-v1-retry2`, output `release_v3/`, receipt `release_build_retry2_run.json`, log `release_build_retry2.log`.
+Run the same virtual-environment interpreter with `-I`; the script explicitly adds its pinned project helper paths.
+Keep every admission rule and the same resource limits unchanged.
+
+
+### Filtered release outcome, 17 October 2026
+
+The current release is `formal_rl/nt_dataset_cleanup_20261017_v1/release_v3/` on the existing CPU artifact store.
+Its `manifest.json` records `status=ready_full_proof_pilot` after the source-bound completion check.
+This replaces blanket unavailability for the retained subset; original candidate packages are not approved wholesale.
+
+Root recounts the executable files in `check.json` using the saved `source/check_release.py`.
+19 training proofs remain in `sft/sft_train.jsonl`.
+3 loss-validation proofs remain in `sft/sft_val.jsonl`.
+27 benchmark TRAIN tasks remain in `benchmark/tasks_train.jsonl`.
+8 benchmark DEV tasks remain in `benchmark/tasks_dev.jsonl`.
+21 benchmark TEST tasks remain in `benchmark/tasks_test.jsonl`.
+The admission ledger contains all 315 source entries.
+It admits 78 entries across the distinct protocols.
+It excludes 237 entries with per-item source identities and reasons.
+Entry counts are not independent scientific samples; training theorem relationships can cross protocols.
+
+Invalid assumptions, degenerate witness constructions, ambiguous arithmetic and unresolved rows stay outside executable files.
+Interactive actions and file-context completions stay excluded because their original contexts are unbound.
+Historical source validation and candidate loss validation remain protected from weight training.
+The reviewed construction groups and unchanged normalized/template/Jaccard checks exclude overlaps across the retained partitions.
+These are conservative exclusions, not equivalence claims for every related pair.
+Original lexical family labels do not certify mathematical independence.
+
+Retained SFT prompts request complete theorem declarations under the frozen import environment.
+Assistant proof bytes remain equal to accepted source targets.
+2,028 tokens is the largest retained normalized chat.
+The strict consumer limit remains 2,048 tokens.
+No target is truncated.
+The existing `scripts/train/run_sft.py` consumes the release's `sft/` directory under this tokenizer/length contract.
+The benchmark includes pool/task fields and exclusions, with an explicit full-proof contract in `answer_contract.json`.
+Private bodies stay in `private/references.jsonl`; they do not enter SFT exports or public questions.
+
+The fixed-limit resume accepts all 7 previously unreplayed references.
+Combined replay records give 209 accepted references for the complete source benchmark bank.
+The SFT join binds exact source hashes, paths, rows and protocols rather than repeated theorem names.
+The tokenizer-only retry completes under the unchanged 2 GiB, one CPU, 600-second limits.
+Its unit is `rl-nt-clean-release-20261017-v1-retry2`; its receipt/log are `release_build_retry2_run.json` and `release_build_retry2.log`.
+Prior failures remain preserved.
+
+Root runs `python3 -I nt_dataset_cleanup_20261017_v1/check_release.py` from the remote project root.
+It returns `status=pass`, exit 0.
+The check covers input digests, every admission/exclusion, protected validation, unchanged proof targets, accepted replay, consumer records and partition isolation.
+The saved source, output manifest and check receipt remain with the release.
+
+Historical W is ineligible for unseen DEV/TEST claims.
+Its GPU warmstart and immediate inputs are bound; earlier SFT consumption and base pretraining exposure remain incomplete.
+A future run must register its own parent and disclose unknown pretraining exposure.
+The contract covers formal Lean mathematics; original informal-problem alignment is not certified.
+This small pilot does not establish sufficient prerequisite coverage or model improvement.
+No model inference, optimizer, paid launch or curriculum run starts.
+
+
+The established archive command returns `status=archived`, exit 0, after the successful release check.
+Receipt: `nt_dataset_cleanup_20261017_v1/archive_20261017T133912Z.json`.
+The snapshot includes `release_v3/`, its source and check receipts, the per-item exclusion ledger and preserved failed attempts.
+The existing storage expiry policy remains in force; this is not permanent archival storage.
+File-scoped hooks for README and this catalogue return exit 0 after the final status update.
+
+### Full-corpus preparation registration, 17 October 2026
+
+Manas requests a larger shared dataset before the EXP-026 generalization and EXP-027 curriculum studies.
+Root owns run `exp025-full-corpus-map-cpu-s20261017-v1`.
+The output is `formal_rl/nt_dataset_cleanup_20261017_v1/full_scale_v1/` on the existing CPU artifact store.
+This preparation maps every saved corpus record rather than selecting one representative per coverage cell.
+It includes the original held-out exclusions without returning them to TRAIN.
+The source corpus and historical classification are inputs, not fresh semantic or verifier admission.
+The comparison is full inventory versus the prior representative pilot; no model score is produced.
+
+Freeze the existing syllabus family intentions and protect historical benchmark DEV/TEST, pool non-TRAIN identities, and available SFT validation identities.
+Retain exact and numeric-template protection, and the existing lexical similarity threshold.
+Propagate reservations across numeric-template groups.
+Carry prior reviewed benchmark exclusions into quarantine.
+Treat topic, construction and tactic labels as syntactic signals; semantic family independence remains a review requirement.
+All full-scale rows start with `training_admitted=false`.
+Novel skill-combination membership remains pending because the existing protocol gives an illustration rather than a frozen task panel.
+
+Sources are saved under `full_scale_source_v1/` and copied into the immutable output.
+The mapping job uses one writer, streamed input rows, one CPU, a 2 GiB memory cap, and a 600-second service limit.
+The managed unit is `rl-nt-full-corpus-map-20261017-v1`.
+The run receipt and journal remain beside the output.
+The focused output check must recount partitions and confirm that reserved numeric-template groups never enter the candidate export.
+The existing state-to-tactic builders require semantic admission, bound source context and actual Lean states before they can export executable SFT.
+No model inference, optimizer, GPU launch or curriculum run is authorized by this preparation.
+
+### Full-corpus mapping outcome, 17 October 2026
+
+The full-corpus mapping finishes with exit code 0 under the registered limits.
+Its output is `formal_rl/nt_dataset_cleanup_20261017_v1/full_scale_v1/`.
+The primary artifact is `manifest.jsonl`; `summary.json` records source hashes and the saved code snapshot.
+`train_candidates.jsonl` retains all surviving candidates, without reducing them to one representative per coverage cell.
+`coverage.json` records topic and tactic signals, including uncovered syllabus matches.
+`review_queue.jsonl` orders candidates across coverage groups before repeating a group.
+
+The independent streaming check recounts the following from both source files and the exported manifest.
+These are record counts, not mathematically independent theorem families or evidence of learned capability.
+
+| Population | Record count | Evidence |
+| --- | ---: | --- |
+| All source problem records, including original held-out exclusions | 40,814 | `check.json`, `source_records` |
+| Saved proof records across those problems | 49,488 | `check.json`, `proof_records` |
+| Candidate problem records after reservation and target filters | 29,262 | `check.json`, `candidate_records` |
+| Candidate records assigned to weight training after admission | 27,761 | `check.json`, `candidate_loss_splits.candidate_loss_train` |
+| Candidate records reserved for loss validation after admission | 1,501 | `check.json`, `candidate_loss_splits.candidate_loss_validation` |
+| Reserved problem records | 6,651 | `check.json`, `dispositions.reserved` |
+| Quarantined problem records | 4,901 | `check.json`, `dispositions.quarantine` |
+
+Every source record remains visible with its source file, row, statement digest and disposition.
+Every candidate proof reference has an exact source row, proof index and proof digest.
+All rows retain `training_admitted=false`.
+The check confirms complete source mapping, per-row proof counts, candidate export membership, and disjoint candidate/reserved numeric templates.
+It also confirms that reserved rows contain no training proof references.
+The checked command is `python3 -I nt_dataset_cleanup_20261017_v1/full_scale_v1/check_full_scale.py` from the remote project root.
+It returns `status=pass`, exit 0; `check_run.json` and `check_run.log` preserve the managed command and output.
+
+`source/full_scale_reservations.json` freezes the existing syllabus construction intentions.
+`protected_headers.jsonl` materializes the recorded historical evaluation and validation identities.
+The familiar-instance, held-out-family and held-out-topic intentions remain separate.
+These reservations do not constitute a completed, semantically reviewed benchmark.
+Novel skill-combination membership remains pending.
+Historical pool non-TRAIN protection covers exact and numeric-template identities; broader near-family review remains unresolved.
+
+The effective SFT preparation contract is `trace_plan_amendment.json`.
+It corrects the initial source snapshot's claim that every full proof requires its archival file context.
+Standalone full theorem proofs can bind the frozen `verify_external_proofs.py` HEADER through fresh strict replay.
+File-context fragments still require their original context.
+Declaration names are available in `proofs[].text` even though corpus rows have no top-level theorem-name field.
+Actual Lean states remain necessary for state-to-tactic examples.
+Reference: https://leandojo.readthedocs.io/en/stable/traced_data.html .
+
+The full-scale pool remains unavailable to training until semantic construction review and non-vacuity admission finish.
+Then strict replay must bind the declared context and produce real proof states before the existing action builders run.
+Tokenizer lengths and parent calibration remain pending.
+The prior checked pilot remains available under its narrower full-proof contract.
+No model inference, optimizer, paid GPU launch or curriculum run starts.
+
+The existing archive command returns `status=archived`, exit 0.
+Receipt: `nt_dataset_cleanup_20261017_v1/archive_20261017T140626Z.json`.
+The object check confirms the snapshot containing the full manifest, coverage, reservations, source, check receipts and corrected trace contract.
+The existing storage expiry policy remains in force.
+File-scoped Markdown hooks return exit 0 after this outcome update.
+
+### Prerequisite admission and replay registration, 17 October 2026
+
+Manas requests completion of the remaining admission, replay and state export.
+Root owns semantic admission under `exp025-prerequisite-admission-cpu-s20261017-v1`.
+Its output is `formal_rl/nt_dataset_cleanup_20261017_v1/full_scale_admission_v1/`.
+This release admits a conservative prerequisite subset from the full candidate inventory.
+Unresolved records remain deferred; no entry is admitted merely because it occurs in the inventory.
+The admission rule permits explicit inhabited Nat/Int data binders and excludes proposition premises, hidden implication, quantified conclusions and conditional expressions.
+It excludes natural subtraction/division, advanced containers, and conservative relatives of the protected mathematical constructions.
+The policy independently reviews the syllabus held-out constructions and intentionally excludes some training-family examples to protect recorded TEST.
+The formal statement is the training target; original informal alignment and unseen-family independence are not asserted.
+
+One source proof per admitted theorem is selected by reference length and source digest.
+The candidate loss split remains fixed.
+The admission job streams headers under one CPU, 1 GiB and a 60-second service limit.
+It records every admission and deferral.
+The dependent release build uses the established strict LeanVerifier and frozen HEADER.
+Its output is `full_scale_release_v1/`, with one writer, one CPU, 6 GiB and a 600-second service limit.
+The internal deadline remains 570 seconds, the Lean timeout remains 120 seconds, and the replay batch remains 12.
+No timeout, evidence rule or consumer limit changes.
+Actual Lean goals and verified source-prefix actions provide the state-to-tactic examples.
+Consumer chats must remain strictly below 2,048 tokens; targets are never truncated.
+The source/target binding, replay outcome and token checks belong to the release run rather than a separate gate harness.
+Incomplete work remains visible and cannot be labelled training-ready.
+No model inference, optimizer or paid GPU launch starts.
+
+### Concrete consistency certificate extension, 17 October 2026
+
+The conservative assumption-free rule admits a prerequisite subset; it does not resolve the hypothesis-heavy inventory.
+Root registers `exp025-consistency-certificates-cpu-s20261017-v1` with output `full_scale_admission_v2/`.
+The extension permits explicit Nat/Int data binders and elementary proposition binders after parsing every hypothesis.
+It keeps the existing construction exclusions and adds conservative protection for prime divisibility and cancellation in congruences.
+For each candidate, the pinned strict verifier must prove an existential statement containing all original hypotheses jointly.
+A fixed set of numeric witness vectors bounds this search.
+An unsuccessful certificate leaves the item deferred; it does not prove contradictory assumptions.
+Certificates remain private audit evidence and never become SFT targets.
+Original theorem proof replay remains a separate admission requirement.
+The new semantic rule is `concrete_hypothesis_witness_v1`.
+The downstream builder must bind its certificate digest, source statement and accepted verdict before accepting this rule.
+
+The certificate job runs under one CPU, 6 GiB and 600 seconds, with the existing 570-second internal deadline and 120-second Lean timeout.
+Parallel execution with the first release has an explicit combined 12 GiB cap across separate writers.
+The live available-memory check supports this bound on the existing CPU host.
+The source is `certify_consistency.py`; output records retain parsed binders, every hypothesis, witness attempts, exact certificate code and strict verdict.
+The generated proof establishes premise consistency, not informal alignment or unseen-family independence.
+Reference: https://lean-lang.org/doc/reference/latest/Basic-Propositions/Quantifiers/ .
+
+The first prerequisite release run returns exit 1 with `status=incomplete` at the unchanged internal deadline.
+It preserves the verified full-proof and state rows plus every incomplete record in `full_scale_release_v1/`.
+This is not a completed replay of all semantic admissions.
+Root registers `exp025-prerequisite-replay-resume-cpu-s20261017-v1` for only the pending rows and source rows rejected for repeated declaration names.
+Repeated declaration names do not identify source theorems; the downstream verifier already renames declarations within a batch.
+The v2 adapter removes this name-based exclusion while retaining exact source row, statement and proof digests.
+Its new certificate rule requires the saved accepted certificate to match the source statement, problem ID and proof digest.
+The original adapter snapshot and its exclusions remain preserved.
+Resume output is `full_scale_release_resume_v1/`; the same memory, CPU, timeout, batch and deadline limits apply.
+
+### Certified prerequisite proof shards, 17 October 2026
+
+The consistency pass returns exit 0 and records its complete candidate scan in `full_scale_admission_v2/run.json`.
+Root registers `exp025-certified-prerequisite-replay-cpu-s20261017-v2` before the dependent proof replay.
+The output is `full_scale_release_batch_v2/`.
+Every newly certified admission enters exactly one deterministic shard; no replacement sampling occurs.
+At most 32 theorem records enter one shard.
+At most four replay workers run concurrently, with one CPU and 6 GiB each.
+The combined worker cap is 24 GiB; the existing v1 resume can add one bounded worker during overlap.
+The live CPU and memory checks support this bound on the existing CPU host.
+Each shard retains the original 600-second service limit, 570-second internal deadline, 120-second Lean timeout, and batch size 12.
+The manager has a separate 256 MiB cap and writes only the registry and launcher receipts.
+Each replay worker owns its own output and retains failures, rejected rows and incomplete work.
+Certificates are immutable inputs, shared read-only through their exact source identities.
+The v2 adapter verifies certificate references before replaying the original theorem proof.
+No model or optimizer loads.
+
+### Action export continuation, 17 October 2026
+
+The v1 resume returns exit 1 with `status=incomplete` at the unchanged deadline.
+All source proof replay outcomes remain preserved in `full_scale_release_resume_v1/`.
+Two exported full-proof records have neither state rows nor an explicit rejection.
+Their IDs are `3b5dbf83031e5039a90ad43a183a4c39a018adb4d719d24217c0a21728e5ffb1` and `9699423fa82283f94299956a0383bb855541b1a9530be2757fcd02473e1042a4`.
+Root registers `exp025-prerequisite-actions-resume-cpu-s20261017-v2` for those exact source records.
+Its output is `full_scale_release_resume_v2/`; its source selection is `full_scale_resume_admission_v2/admitted.jsonl`.
+The worker keeps one CPU, 6 GiB, the 600-second service limit, the 570-second internal deadline and the 120-second Lean timeout.
+The historical incomplete counters remain visible until an exact source-bound amendment or later outcome resolves them.
+No token, construction, split or verifier check changes.
+
+The header review identifies two parity-of-squares characterizations related to the recorded TEST same-parity construction.
+Root conservatively excludes both source identities from the final consumer projection.
+Root also excludes two reflexive modular-equivalence claims as degenerate content.
+The exclusion manifest preserves the exact identities, source headers and review reasons.
+This review does not certify full semantic independence of the remaining corpus.
+
+### Checked prerequisite projection registration, 17 October 2026
+
+Root registers `exp025-prerequisite-consumer-projection-cpu-s20261017-v1` with output `training_release_v1/`.
+The input set contains the original assumption-free replay, both exact continuations, and every certified replay shard.
+`finalize_admitted_release.py` checks their saved output digests, source proof identities, accepted strict replay and token metadata.
+It preserves loss partitions and excludes protected numeric templates, reviewed source identities and unchanged-state actions.
+Whole-proof chats and interactive observation chats enter separate consumer directories.
+Source failures and exclusions remain visible with their original file and row pointers.
+
+The full saved journal attributes the resume's aggregate deadline counters to its two missing-state records.
+Progress indices map to exact eligible source rows and proof digests.
+`pending_resolution_v1/pending_amendment.json` binds the original receipt, admission, builder, journal and completed continuation.
+The consumer check validates that evidence before marking those historical counters resolved.
+The original failed receipts remain unchanged.
+
+The final check uses one CPU, a 1 GiB memory cap and a 60-second service limit.
+Its source streams JSONL and estimates peak memory from the manifest table and row identities.
+Root owns the output; no other process writes it.
+The release requires a fresh upstream parent for new controlled comparisons.
+Historical W remains ineligible for unseen-test claims; pretraining exposure remains unknown.
+No training, optimizer or paid GPU launch starts.
+
+### Checked prerequisite release outcome, 17 October 2026
+
+The admitted prerequisite subset is ready under its recorded formal-proof contract.
+The current consumer output is `formal_rl/nt_dataset_cleanup_20261017_v1/training_release_v1/` on the existing CPU artifact store.
+Its manifest records `status=READY_PREREQUISITE_SUBSET` and `unfinished_queue=false`.
+The full unadmitted corpus remains deferred.
+This outcome supersedes blanket unavailability for this subset.
+
+The saved `finalize_admitted_release.py` produces the following counts from source-bound consumer rows.
+`training_release_v1_recount.json` independently recounts the emitted files.
+The prior pilot baseline comes from `release_v3/sft/`.
+
+| Protocol | Training rows | Loss-validation rows | Source within `training_release_v1/` |
+| --- | ---: | ---: | --- |
+| Complete theorem proof | 564 | 32 | `full_proof/sft_{train,val}.jsonl` |
+| Verified state-to-tactic action | 1,771 | 93 | `interactive/sft_{train,val}.jsonl` |
+
+The earlier full-proof pilot contains 19 training rows.
+Its separate loss-validation file contains 3 rows.
+The earlier pilot does not provide an admitted interactive export.
+Action rows can share one theorem and are not independent theorem samples.
+Loss validation is separate from research DEV and held-out TEST.
+These exports must retain their separate prompt and target protocols.
+
+The pinned pair remains Lean `v4.10.0-rc1` and mathlib `29dcec074de168ac2bf835a77ef68bbe069194c5`.
+Each retained full proof has accepted strict replay, exact source proof bytes and a bound import environment.
+Each retained action has an actual Lean observation and a checked target endpoint.
+Consumer chats remain below the unchanged token limit without target truncation.
+The projection checks source digests, accepted replay, target binding, protected templates and fixed loss partitions.
+It excludes unchanged-state actions and the reviewed parity-of-squares and reflexive claims.
+`exclusions.jsonl` retains source pointers for historical failures, deferrals and exclusions.
+Its rows are events, not a count of distinct rejected theorems.
+
+Root runs `finalize_admitted_release.py` with every original, continuation and certified-shard directory as `--input`.
+It also passes `--exclude-problems projection_exclusions.json` and `--pending-amendment pending_resolution_v1/pending_amendment.json`.
+`training_release_v1_launcher.json` records the exact managed command and resource caps.
+The command returns exit 0 with `status=READY_PREREQUISITE_SUBSET`.
+`training_release_v1_check.log` preserves the full output.
+The source/log-bound amendment resolves the historical action deadline counters without changing the failed receipts.
+
+The replay manager finishes all workers with exit 0.
+Its original SSH waiter later returns transport status 255; the managed job continues independently.
+`full_scale_release_batch_v2_transport_recovery.json` and the recovered journal preserve this distinction.
+The first projection SSH attempt times out before remote execution.
+Root confirms that no output or launcher receipt exists before retrying the same command.
+The retry passes under the original resource limits.
+The initial recount uses an incorrect pilot path; the recorded recount corrects it to `release_v3/sft/`.
+No verifier, timeout, partition, token or evidence rule is relaxed.
+
+Coverage fields describe source statements and proof syntax.
+They do not demonstrate learned knowledge or sufficient coverage for every proposed experiment.
+Original informal alignment, full mathematical family independence and model difficulty calibration remain unverified.
+New controlled comparisons require a fresh upstream parent with its own registered provenance.
+Historical W remains ineligible for unseen-test claims; base pretraining exposure remains unknown.
+No model inference, optimizer, paid GPU launch or curriculum run starts.
+
+The established archive command returns `status=archived`, exit 0, after the completed projection and recount.
+Receipt: `nt_dataset_cleanup_20261017_v1/archive_20261017T164024Z.json`.
+Its object check confirms the snapshot containing the consumer release, source snapshots, replay records, exclusions and pending-resolution evidence.
+The existing storage expiry policy remains in force.
+The file-scoped command `uv run pre-commit run --files README.md docs/EXPERIMENTS.md` returns exit 0 after the status update.
+
+### Interactive prerequisite SFT pilot registration, 17 October 2026
+
+Manas authorizes preparation of the recommended interactive SFT pilot.
+Root owns execution of `exp026-prerequisite-interactive-sft-s20261017-v1` as shared preparation for EXP-026 and EXP-027.
+Abhinav retains ownership of the full generalization study.
+This pilot compares a fresh upstream parent with its final SFT checkpoint on the retained DEV statements.
+It does not establish held-out generalization or complete either scientific study.
+
+The SFT recipe is `configs/midtrain/qwen_05b_prerequisite_interactive_sft_v1.json`.
+The matched evaluation recipe is `configs/eval/qwen_05b_prerequisite_sft_dev_v1.json`.
+The parent is `Qwen/Qwen2.5-0.5B-Instruct` at revision `7ae557604adf67be50417f59c2c2f167def9a775`.
+The CPU preparation binds its public weight digest and checks the release with its actual tokenizer.
+The input is the checked `training_release_v1/interactive/` export.
+Complete-proof rows remain outside this pilot's SFT input.
+The existing `scripts/train/run_sft.py` supplies completion-only loss and rejects target truncation.
+The recipe reuses the existing learning rate, epoch count and effective batch settings.
+It fixes final-checkpoint selection before the run.
+Intermediate checkpoints preserve partial progress; they cannot replace a failed final checkpoint in the declared comparison.
+
+The existing `run_tactic_rl.py --evaluation-names` path evaluates the fresh parent before SFT and the final checkpoint afterward.
+Both evaluations use the same DEV names, seed, attempt count, unassisted theorem starts, Lean environment and generation limits.
+The optimizer remains disabled in this path.
+The baseline must complete before the optimizer starts.
+The primary pilot readout is complete-proof accepted attempts with the intended denominator and completion coverage.
+Questions solved, tokens, Lean calls and wall time remain separate fields.
+Research DEV and TEST remain outside SFT; TEST is not used in this pilot.
+The final checkpoint is fixed rather than selected on evaluation results.
+
+Remote preparation owns `formal_rl/prerequisite_sft_20261017_v1/`.
+Its managed input check has one CPU, 2 GiB and a 600-second limit; it loads tokenizer files without model weights.
+GPU work remains unlaunched pending approval of the live quote.
+The proposed lease has one L40S, a two-hour hard deadline, one attempt, no renewal and no replacement.
+The existing CPU termination guard and in-instance shutdown bound the lease.
+A single process runs at a time under the managed host-memory and CPU caps.
+The established uploader streams durable results under lower transfer and retention caps.
+The existing object expiry remains unchanged.
+Source snapshots, data identities, public-parent metadata, quote and resolved commands belong to the run artifacts.
+
+The live compute quote makes the initial two-hour proposal exceed its proposed cost ceiling.
+`quote_failure_v1.json` preserves that outcome before any staging or lease begins.
+Root reduces the proposal to a 90-minute lease and an 80-minute managed service limit.
+The training subprocess limit and each matched evaluation limit remain unchanged.
+The lower lease limit preserves the proposed ceiling; no price, evidence or timeout gate is relaxed.
+A stage that misses its limit remains incomplete and cannot feed the next stage.
+
+The first CPU input check returns exit 1 because the adapter incorrectly expects DEV rows to contain `split=dev`.
+The canonical DEV task file contains `split=validation`, whole-theorem tasks and empty supplied prefixes.
+Root corrects the expected source label without changing membership or accepting additional split labels.
+The original source and failed input directory remain preserved.
+`preparation_failed_dev_label_v1.log` preserves the failed unit output.
+The continuation uses `prerequisite_sft_20261017_v1/input_check_retry1/` and a distinct managed unit.
+Its tokenizer, memory, CPU, time and target checks remain unchanged.
+
+### Interactive prerequisite SFT preparation outcome, 17 October 2026
+
+The pilot is prepared, with no GPU lease or optimizer started.
+`prerequisite_sft_20261017_v1/input_check_retry1/preparation.json` records the successful CPU input check.
+Its managed command returns exit 0 under the unchanged resource limits.
+The current `SFTDataset` converter and fresh upstream tokenizer accept every input chat and exact target prefix.
+No target is truncated and no data filter is widened.
+
+The training input contains 1,771 action rows.
+The separate loss-validation input contains 93 action rows.
+The staged public DEV input contains 8 whole-theorem statements with empty supplied proofs.
+Evaluation inputs remain separate from SFT inputs and contain no private reference bodies.
+No TEST input enters this pilot.
+The recipe fixes final-checkpoint selection before generation.
+Before/after evaluation uses distinct run IDs and identical generation and verifier settings.
+The baseline must finish before SFT starts; a capped stage remains incomplete.
+
+The pinned upstream parent revision is `7ae557604adf67be50417f59c2c2f167def9a775`.
+The upstream public weight digest is `fdf756fa7fcbe7404d5c60e26bff1a0c8b8aa1f72ced49e7dd0210fe288fb7fe`.
+The lease bootstrap verifies that digest after downloading the fresh checkpoint.
+The parent remains an upstream instruction-tuned model; it has no project warmstart in this run.
+Unknown pretraining exposure remains a limitation.
+
+`.private/ops/prerequisite_sft_20261017_v1/stage.json` records the staged code, input archive, existing Lean environment and launch-request identity.
+`quote.json` records the live AWS pricing response and the proposed reservation.
+USD 7.87 is the conservative reservation, including the recorded transfer, retention and contingency allowances.
+USD 9.00 is the proposed total ceiling for this launch.
+The proposal allows one on-demand L40S lease with no replacement or renewal.
+Its hard lease limit is 90 minutes.
+The independent CPU guard and in-instance shutdown retain the termination boundary.
+The existing uploader enforces the recorded transfer and retained-output caps.
+The existing storage expiry remains unchanged.
+
+`launch.py` refuses execution without explicit approval bound to this exact quote.
+It also refuses a higher live compute rate, a changed launch request or another launch attempt.
+The prepared request has not been submitted to EC2.
+The next action is approval of this quoted launch, followed by the registered baseline, SFT and matched DEV evaluation.
+
+### Interactive SFT bootstrap failure and path correction, 17 October 2026
+
+Manas approves the staged pilot with its quoted ceiling and no automatic replacement.
+The first lease launches and arms its independent termination guard.
+Bootstrap returns exit 127 before baseline evaluation or SFT starts.
+`runtime/out/run.log` contains `/bin/bash: run.sh: No such file or directory`.
+Root supplied a relative script path to the transient system service.
+The service starts in the root directory rather than inheriting the bootstrap shell's directory.
+The [systemd source documentation](https://github.com/systemd/systemd/blob/main/man/systemd.exec.xml) describes this default.
+The provider subsequently confirms `state=terminated` with instance-initiated shutdown.
+`failure.json`, the bootstrap log, the run log and the original launch request remain preserved under the v1 run record.
+There is no trained checkpoint from this attempt.
+The invoice remains unavailable; the earlier reservation is not an invoiced charge.
+
+The corrected bootstrap passes `/mnt/formal_rl_prerequisite_sft/run.sh` explicitly to the managed service.
+`prerequisite_sft_20261017_v1/bootstrap_path_check.json` records the focused CPU reproduction.
+The relative-path case returns exit 127.
+The absolute-path case returns exit 0 with `ABSOLUTE_SCRIPT_PATH_OK cwd=/`.
+The check keeps the same system-service default directory and changes the script path alone.
+No training, evaluator, tokenizer, data, evidence gate or time limit changes.
+
+The manually proposed retry is `exp026-prerequisite-interactive-sft-bootstrap-retry-s20261017-v2`.
+Its controller, quote and corrected launch request are in `.private/ops/prerequisite_sft_20261017_v2/`.
+It reuses the successful fresh-tokenizer input check and identical staged source, data and Lean environment.
+The v1 failed source and outputs remain immutable.
+The v2 request uses a distinct instance token, artifact prefix and deadline guard.
+Its reservation remains USD 7.87.
+Its proposed additional ceiling is USD 9.00 for the single manual retry.
+This proposal does not relabel the first lease's reserved amount as spend or claim a final invoice.
+No replacement starts without new explicit approval.
+
+### Interactive SFT manual retry launch, 17 October 2026
+
+Manas explicitly approves one manual retry with the proposed additional USD 9 ceiling.
+The approval retains the 90-minute lease limit and forbids automatic renewal or replacement.
+Root records the quote-bound authorization in the existing v2 operations directory.
+The staged launcher returns exit 0 with `status=launched_guard_armed`.
+The provider reports the retry instance running.
+The independent termination deadline is `2026-10-17T19:29:58+00:00`.
+The managed service remains `formal-rl-prerequisite-sft`.
+The durable runtime log location is `prerequisite_sft_20261017_v2/runtime/out/run.log`.
+Runtime logs have not arrived at the first observation.
+Baseline evaluation and optimizer activity remain unobserved; a running instance does not establish either stage.
+The input data, parent, training recipe, evaluation protocol and resource limits remain unchanged.
+The v1 failed attempt remains preserved, and no invoice is available for either lease.
+`approval.json`, `lease.json` and the updated `run_registry.json` are saved in the v2 durable run location.
+
+17 October retry monitor: durable runtime logs confirm that bootstrap reaches the fresh-parent DEV baseline.
+The baseline remains running at this observation.
+No SFT optimizer or loss record is present.
+The latest observation, counted completed attempts and raw status counts are saved in the existing v2 `run_registry.json`.
+Partial baseline outcomes do not establish a completed comparison.
+The approved recipe, limits, checkpoint selection and termination deadline remain unchanged.
+
+17 October retry failure: correction to the preceding monitor note.
+The baseline completes while the monitor reads the live artifacts.
+The final baseline record reports `status=completed`; the counted raw records cover all planned DEV tasks and attempts.
+SFT then returns exit 1 before optimizer startup.
+`runtime/out/sft.log` records `ModuleNotFoundError: No module named 'rl_components'` at the import in `code/scripts/train/run_sft.py`.
+The failure log upload timestamp is `2026-10-17T18:08:52+00:00`.
+No training loss, validation loss, SFT checkpoint or post-SFT capability result exists in this run.
+The provider reports `shutting-down` at the final observation.
+The scheduled monitor is disabled after this failure; no replacement or additional inference starts.
+The final observation and baseline counts remain in the existing v2 run registry, with durable readback confirmed.
+
+### SFT entry-point import correction, 17 October 2026
+
+Manas requests a fix for the failed SFT startup.
+The managed launcher calls `runpy.run_path` on `scripts/train/run_sft.py`.
+Unlike direct script execution, that call does not add the script directory to the module search path.
+The [Python documentation](https://docs.python.org/3.12/library/runpy.html#runpy.run_path) describes this behavior.
+The RL entry point already sets its import paths; the SFT entry point did not.
+Root adds the SFT script directory to `sys.path` before importing the sibling `rl_components` package.
+The data converter, optimizer, tokenizer, training settings and evaluator remain unchanged.
+
+A focused CPU reproduction uses `runpy.run_path(..., run_name="__main__")` with `--help`.
+The original script returns exit 1 with the same missing-module error.
+The corrected script returns exit 0 and prints the argument help.
+The check uses the existing CPU environment under a managed service, without loading weights or starting an optimizer.
+It retains a 2 GiB memory cap, one CPU and a 90-second limit.
+The managed units are `rl-sft-import-repro-20261017` and `rl-sft-import-fixed-20261017`.
+This verifies entry-point startup, not a full GPU training run.
+The failed v2 lease now reports `terminated`.
+
+The corrected stage is `exp026-prerequisite-interactive-sft-import-retry-s20261017-v3`.
+Its existing-style private operations directory is `.private/ops/prerequisite_sft_20261017_v3/`.
+The source archive changes only `scripts/train/run_sft.py` from the original frozen archive.
+The stage reuses identical data, parent, Lean environment, training recipe and evaluation protocol.
+`import_check.json` preserves both CPU outcomes and their managed-service logs.
+The proposed additional ceiling is USD 9.00 for one manual lease.
+The live conservative reservation is USD 7.87, not an invoiced charge.
+The lease limit remains 90 minutes, with no automatic replacement or renewal.
+No launch or optimizer starts during this fix.
+The five-minute monitor remains disabled until an approved run exists.
+Explicit cost-specific approval is required before the staged launch.
+
+### Corrected SFT retry launch, 17 October 2026
+
+Manas explicitly approves the corrected v3 launch with an additional USD 9 ceiling.
+The approval retains the 90-minute limit and forbids automatic renewal or replacement.
+The staged launcher returns exit 0 with `status=launched_guard_armed`.
+The provider reports the owned instance running.
+The independent termination deadline is `2026-10-17T19:54:23+00:00`.
+The managed service remains `formal-rl-prerequisite-sft`.
+The run registry and quote-bound approval are saved in the existing v3 durable run location.
+The existing five-minute monitor is retargeted to this v3 run and enabled in the same thread.
+Baseline and optimizer startup remain unobserved at launch; the monitor reports metrics only when source artifacts arrive.
+The frozen data, parent, recipe, final-checkpoint comparison and limits remain unchanged.
+The v1 and v2 failures remain preserved.
+
+18 October IST monitor: the v3 durable baseline record at `2026-10-17T18:29:54+00:00` reports `status=running`.
+The monitor counts completed attempts from completed groups in raw `steps.jsonl` and `rollouts.jsonl`.
+Its partial readout and action-status counts are saved in the existing private run registry and durable run prefix.
+No SFT log or optimizer record is present at this observation; training and validation loss remain unavailable.
+The five-minute monitor remains active, with no changed settings, additional inference or replacement.
+
+18 October IST monitor: v3 completes the fresh-parent DEV baseline and starts SFT optimizer updates.
+The monitor recounts the completed baseline from raw group and action records.
+SFT loss and optimizer-step observations come from the existing TensorBoard event file, read on CPU without loading model weights.
+The existing run registry stores the source object, event timestamps, scalar tags and current observations.
+The first monitoring reader does not expose scalar values; its corrected filename and explicit event fields return the recorded scalars.
+This affects monitoring alone and does not change training or evaluation.
+The matched final-checkpoint proof evaluation remains pending, so loss changes do not establish a capability gain.
+The fixed checkpoint, recipe, evaluation inputs, limits and independent termination deadline remain unchanged.
+
+18 October IST monitor: the v3 `out/sft/run.json` and nonempty final model artifacts confirm completion of SFT.
+The matched evaluator uses `model_source=out/sft/final`, preserving the fixed-checkpoint comparison.
+The final training record contains the latest training loss, aggregate training loss and final validation loss as separate fields.
+The post-SFT DEV evaluation is running at the inspected snapshot.
+The monitor recounts completed attempts, complete accepted proofs and task coverage from raw records for both arms.
+The existing run registry stores the current losses, counters, timestamps and partial-status flags.
+No inference beyond the registered evaluation is added; the monitor remains active.
+
+### Corrected SFT pilot completion, 18 October 2026 IST
+
+Correction to the preceding monitor note: the live post-SFT evaluation completes while the monitor reads its artifacts.
+The v3 `out/comparison.json` reports `status=complete`, and `out/exit.json` reports exit 0.
+The exit-record upload timestamp is `2026-10-17T18:46:16+00:00`.
+The monitor recounts every completed group and independent attempt from raw records for both arms.
+Both arms cover the full retained DEV panel without censored groups.
+Neither arm contains a Lean-accepted complete proof.
+The final checkpoint and completed training record remain saved under the existing v3 durable run prefix.
+The final training-step loss, aggregate training loss and validation loss remain distinct recorded values.
+The frozen final checkpoint remains the evaluated model; validation results do not select a replacement checkpoint.
+This pilot does not demonstrate complete-proof improvement or held-out generalization.
+The provider reports `shutting-down` at the final observation.
+The five-minute monitor is disabled after completion.
+No renewal, replacement, training change, TEST evaluation or extra inference starts.
+The final run registry preserves both arms' task coverage, attempt counts, generated tokens, Lean calls and action-status counts.
+
+### SFT pilot failure diagnosis, 18 October 2026 IST
+
+Manas requests an audit of the null complete-proof outcome.
+Root reviews the saved run, frozen training examples and evaluator; independent source reviews check the SFT and verifier contracts.
+This audit runs no model inference, training, TEST evaluation or new Lean replay.
+The completed zero-proof counts are preserved and are not replaced by local progress scores.
+The provider now reports the v3 instance `terminated`.
+
+The focused CPU command is `sft_cpu_venv/bin/python3 prerequisite_sft_20261017_v3/diagnostics/audit_contract.py`, run under the managed unit `rl-sft-contract-audit-20261018`.
+It returns exit 0 with a 2 GiB memory cap, one CPU and a 300-second limit.
+The script uses the frozen tokenizer and action parser.
+A planted closed single-tactic response parses, while an unclosed fence is rejected.
+`diagnostics/contract_audit.json` stores the audit, examples and source notes in the existing durable v3 run prefix.
+The durable readback matches the computed training counts.
+The local control source is `.private/ops/prerequisite_sft_20261017_v3/audit_contract.py`.
+
+The SFT training input contains 1,771 action rows from 540 named theorems.
+Its assistant content exceeds the 192-token evaluation action limit in 483 rows.
+All full training targets parse under the declared four-tactic contract.
+Clipping the over-limit targets to the evaluation limit makes all 483 malformed.
+The separate validation input contains 93 action rows, of which 20 exceed the action limit.
+The existing preparation checks total chat length rather than action-generation length.
+This is a confirmed admission gap; it does not establish how much of the zero-proof result the gap causes.
+No existing cap or filter is relaxed in this audit.
+
+The SFT evaluation contains 96 recorded action outputs.
+Of its 50 format errors, 45 hit the action token cap.
+The saved baseline contains 86 format errors across its 96 action outputs.
+Neither arm contains a final replay record, so final proof verification did not reject a completed candidate in this run.
+The remaining SFT failures include actual Lean name/type/tactic errors.
+Five SFT action results contain internal Lean exceptions; their cause remains unresolved.
+These exceptions are recorded as `rejected` by the current handler and must remain distinct from demonstrated mathematical errors.
+
+The local environment has a second confirmed defect.
+SFT rollout group 0, sample 1, step 3 adds hypotheses by referring to the theorem currently being proved.
+The next saved observation contains those target propositions as hypotheses.
+`run_tactic_rl.py` elaborates the root with `sorry` and then reuses its proof state, leaving the target declaration locally accessible.
+The saved transition is `changed`, not a complete accepted proof; the terminal reward remains zero.
+Fresh complete-proof verification checks target absence and permitted axioms, but no candidate reaches that stage here.
+Local progress from this episode is therefore contaminated and cannot support a progress claim.
+
+No confirmed mismatch is found in the user-only chat template or prompt/completion split.
+The [pinned TRL documentation](https://huggingface.co/docs/trl/v0.24.0/en/sft_trainer#train-on-completion-only) specifies completion-only loss for this dataset schema.
+All audited training prompts use the expected action instruction.
+The data uses successful histories with empty failure feedback, so it does not by itself establish error-recovery capability.
+The different action grouping of prior histories is a distribution difference, not a demonstrated failure cause.
+
+Root recommends repairing local target visibility and preparing verified action targets that fit the frozen action budget while retaining prerequisite coverage.
+Then measure basic next-step and whole-proof capability on a separately registered calibration panel before a larger learning study.
+Do not repeat the unchanged SFT recipe or attribute the null result solely to model size.
+These corrections and calibration remain prospective; this audit changes no training, parser, verifier or benchmark code.
+
+
+### SFT action-contract repair, 18 October 2026 IST
+
+Manas requests the repairs and a corrected pilot preparation.
+Root owns the capped action release and launch package; the verifier helper owns the local-root change and its focused tests.
+No new GPU lease is authorized by the preceding single-lease approvals.
+The proposed rerun retains the fresh upstream parent, frozen DEV statements, original decoding and resource caps, and fixed final-checkpoint selection.
+It must rerun the fresh-parent baseline under the repaired environment before SFT.
+The old null comparison remains a recorded outcome; it is not a matched baseline for the repaired evaluator.
+
+The root-cause description in the preceding diagnosis needs a correction.
+The pinned REPL already restores the initial global environment for tactic snapshots.
+Lean creates a recursive auxiliary local declaration during elaboration, which explains the observed local access.
+A plain anonymous `example` is insufficient: the focused regression still obtains the target through `_example`.
+`run_tactic_rl.py` now constructs local roots with `nonrec example`, preserving the original header for observations and fresh named proof replay.
+The conversion preserves binders, universe parameters and scoped bank commands while dropping declaration modifiers from the temporary root.
+The original modifiers and attributes remain in the final replay.
+The final acceptance guard, axiom checks, action parser and caps remain unchanged.
+
+The focused CPU command runs the named target-absence and existing completion controls in `tests/test_tactic_rl.py` and `tests/test_tactic_rl_integration.py`.
+The managed unit `formal-rl-target-contract-nonrec-20261018` returns exit 0.
+Its raw output reports `Ran 6 tests` and `OK`.
+Plain, private, attributed, qualified and universe-polymorphic whole roots reject named-target and `_example` references.
+The scoped bank fixture rejects bare and qualified target references; valid proofs still pass fresh replay.
+The evidence is under `prerequisite_sft_contract_fix_20261018/verifier/` on the CPU host, including failed original/anonymous controls and `nonrec.log`.
+Existing unclosed-pipe `ResourceWarning` messages remain in the bank verifier path; the repair does not suppress them.
+These synthetic checks establish the tested environment boundary, not model proof capability.
+
+`build_v21_sft.row` now accepts an explicit action budget and keeps a whole-tactic prefix that fits it.
+The budget counts the exact tokenized chat suffix, including its terminator, rather than assistant content alone.
+A single tactic that exceeds the budget is excluded with a source pointer; no tactic text is truncated.
+`SFTDataset.validate_token_budget` enforces the same budget before `run_sft.py` loads model weights.
+The revised SFT config declares the action limit explicitly.
+The focused command `uv run python -m unittest tests.test_build_v21_sft tests.test_rl_components tests.test_tactic_rl.TacticRLTest.test_anonymous_header_preserves_signature_and_universe_binders tests.test_tactic_rl.TacticRLTest.test_native_bank_reset_preserves_scoped_prefix_and_replays_bank_unit` returns exit 0.
+Its raw output reports `Ran 19 tests` and `OK`.
+
+The first capped-data projection preserves the prior proof and split provenance.
+After the `_example` regression exposes the insufficient root, a distinct `data_nonrec/` projection rechecks shortened endpoints with the corrected header.
+The original candidate remains preserved and is not the final launch input.
+Final input verification, durable archive and cost quote remain pending at this checkpoint.
+No new model loss or proof capability is available from this repair work.
+
+
+The final projection and launch preparation now complete.
+The source is `.private/ops/prerequisite_sft_contract_fix_20261018/rebuild_actions.py`.
+Its final CPU output is `prerequisite_sft_contract_fix_20261018/data_nonrec/release/`.
+`rl-sft-action-repair-nonrec-20261018` returns exit 0, with the original memory, CPU and wall limits preserved.
+Its `manifest.json`, `traces.jsonl` and `exclusions.jsonl` retain the source proof hashes, original partitions and per-row outcomes.
+The Lean version is `4.10.0-rc1`, commit `3b58e0649156`; mathlib remains `29dcec074de168ac2bf835a77ef68bbe069194c5`.
+
+The final TRAIN file contains 1,503 action rows.
+The source TRAIN file contains 1,771 action rows.
+The final TRAIN file covers 537 named theorems.
+The source TRAIN file covers 540 named theorems.
+The final loss-validation file contains 80 action rows.
+The source loss-validation file contains 93 action rows.
+All source loss-validation theorem names remain represented.
+The TRAIN projection shortens 221 target chunks at whole-tactic boundaries.
+The loss-validation projection shortens seven target chunks.
+Every shortened endpoint receives a fresh nonrecursive anonymous-prefix trace.
+Unchanged rows retain their existing strict full-proof and state-trace provenance.
+The source TRAIN file loses 268 rows because the next single tactic exceeds the action budget.
+The source loss-validation file loses 13 rows for the same reason.
+Those exclusions do not remove any entire recorded topic or method category.
+Three TRAIN theorem names lose all action rows; the manifest lists them explicitly.
+The source full proofs remain preserved, and no theorem changes partition.
+This coverage result does not establish optimal training or complete prerequisite mastery.
+
+The negative `_example` regression and later prefix check remain in the verifier evidence.
+The final helper reuses `split_prefix` and rejects unsupported significant declaration-prefix code rather than silently discarding it.
+The focused follow-up unit `formal-rl-target-contract-scope-green-20261018` returns exit 0.
+Its raw output reports `Ran 4 tests` and `OK` after the unsupported-prefix control fails before repair.
+It rechecks live target and `_example` rejection, successful named replay, and the scoped bank case.
+The plain data headers use the same nonrecursive conversion as the final data projection.
+
+The concrete rerun is `exp026-prerequisite-interactive-sft-contract-fix-s20261018-v4`.
+The recipes are [revised SFT](../configs/midtrain/qwen_05b_prerequisite_interactive_sft_v2.json) and [matched DEV](../configs/eval/qwen_05b_prerequisite_sft_dev_v2.json).
+The private stage is `.private/ops/prerequisite_sft_20261018_v4/`.
+The managed input check `rl-sft-capped-inputs-nonrec-20261018` returns exit 0.
+It validates both action files with the fresh upstream tokenizer and the same SFT data consumer before model loading.
+It preserves the frozen unassisted DEV statements and uses no TEST proofs.
+The source archive uses the frozen prior pilot code plus the scoped repair files and revised configs.
+The durable run prefix stores `repair/repair_evidence.tar`, the source and input archives, preparation receipt, quote and stage record.
+The archived registry readback matches the local record.
+
+The current live provider quote reserves USD 7.87 for the proposed lease and bounded transfers/storage.
+The proposed ceiling is USD 9.
+The lease limit remains 90 minutes, with the existing independent termination control and in-instance shutdown.
+The plan remains one L40S, one attempt, no automatic renewal and no replacement.
+The training and evaluation wall, token, Lean-call and storage caps stay fixed.
+The rerun performs a fresh-parent baseline, SFT, then matched DEV evaluation of the fixed final checkpoint.
+No new approval is recorded and no paid lease starts during preparation.
+The previous v3 instance reports `terminated` at the final read-only provider check.
+The monitor remains disabled until an approved new lease exists.
+The repaired model has no new loss or complete-proof capability result yet.
+
+
+### Corrected SFT pilot launch, 18 October 2026 IST
+
+Manas gives an affirmative reply to the staged single-lease proposal and requests that proof output-size constraints remain fixed.
+The authorization record is `.private/ops/prerequisite_sft_20261018_v4/approval.json`, bound to the existing quote.
+The focused output-size command is `uv run python -m unittest tests.test_build_v21_sft.BuildV21SFTTest.test_action_budget_keeps_whole_tactics_and_counts_chat_terminator tests.test_rl_components.ComponentsTest.test_sft_admission_counts_completion_terminator_before_loading_weights`.
+It returns exit 0 with `Ran 2 tests` and `OK`.
+The SFT and evaluation configs use the same action-token limit.
+The full training suffix includes the Lean closing fence and chat terminator.
+Training rejects targets above the limit before loading weights; data preparation shortens whole tactic chunks or records exclusions.
+Generation retains the existing action cap and episode horizon.
+A generated action that reaches the cap can still be malformed; this remains a measured failure rather than receiving an appended fence or a relaxed parser.
+The complete proof can span multiple actions and must still pass fresh verification.
+
+`python3 .private/ops/prerequisite_sft_20261018_v4/launch.py` returns exit 0 with `launched_guard_armed`.
+The launch uses the approved single L40S lease, unchanged cost ceiling and no renewal or replacement.
+The recorded launch time is `2026-10-17T19:19:35+00:00`.
+The independent hard deadline is `2026-10-17T20:49:35+00:00`.
+The initial provider check reports `running`; durable runtime logs are not yet available at that check.
+Training loss, validation loss, optimizer step and measured proof capability remain unavailable during setup.
+The existing monitor is retargeted to this run and enabled at five-minute intervals in the same thread.
+Its next scheduled trigger is `2026-10-17T19:25:19.306Z`.
+The private run registry and durable run prefix hold the launch, deadline, approval and latest observation.
+
+
+The scheduled read-only observation on 18 October 2026 IST reaches fresh-parent DEV baseline evaluation.
+The saved baseline rollout timestamp is `2026-10-17T19:26:09+00:00`.
+0 complete Lean-accepted proofs are recorded among 10 completed attempts in `runtime/out/baseline/rollouts.jsonl`.
+5 theorems have both attempts recorded, from the fixed population of 8.
+The raw action rows contain 10157 generated tokens.
+The saved baseline run records 15 physical Lean calls.
+The action-status recount is `{"format_error": 55, "rejected": 5}`.
+These are partial baseline observations, not a completed comparison.
+SFT has no recorded training loss, validation loss, optimizer step or proof-capability result at this observation.
+The provider remains `running`; the independent deadline and all caps remain unchanged.
+The monitor updates the existing private registry and uploads it to the existing run prefix; no evaluation, training change or retry is started.
+
+
+### Recovery data preparation, 18 October 2026 IST
+
+Manas requests dataset changes against malformed outputs and rejected actions.
+The motivating snapshot is a partial fresh-parent DEV baseline, not an SFT-model result.
+Root registers `exp024-prerequisite-recovery-data-s20261018-v1` as CPU data preparation for EXP-026 and EXP-027.
+The source is the admitted capped release at `prerequisite_sft_contract_fix_20261018/data_nonrec/release/`.
+The separate output is `nt_sft_recovery_20261018_v1/release/` on the CPU host.
+The recipe is [recovery data configuration](../configs/data/nt_sft_recovery_v1.json).
+The operational builder is `.private/ops/nt_sft_recovery_20261018_v1/build_release.py`.
+Root owns its outputs; the independent source review checks the renderer and episode boundary.
+The active v4 pilot and its immutable inputs remain unchanged.
+No new model inference, optimizer update, GPU lease, DEV reference, or TEST input is used by this preparation.
+
+The builder retains every source clean row and its theorem partition.
+It adds at most one parser-failure recovery observation per theorem.
+The declared malformed categories are an unclosed fence, a wrong fence language, surrounding prose and an extra fence.
+The raw malformed action stays in provenance metadata because the actual v2 observation does not include it as failed tactic history.
+The user prompt contains the actual parser diagnostic, verified goal and reduced action budget.
+The assistant target remains the original correct, closed Lean action.
+The same source theorem assignments keep training and loss-validation examples separate.
+
+A bounded panel also receives actual Lean-rejected actions.
+Selection balances the existing source topic labels and caps the TRAIN panel at 64 theorem names.
+The loss-validation panel cap is 16 theorem names.
+The planted rejection classes are an unknown identifier and a type mismatch.
+The fixed `LeanEpisode` must reject each action with zero applied tactics, unchanged proof state/goals and no harness backtrack.
+The builder captures the actual observation before replaying the original correct reference target.
+The target must change the verified state or close through fresh strict proof replay.
+Timeouts, crashes, oversized feedback and failed reference replays remain exclusions.
+No row can export a recovery target without an action remaining inside the existing horizon.
+The action and full-chat limits remain unchanged.
+
+`build_v21_sft.recovery_row` implements the shared observation and token-budget admission.
+The focused command `uv run python -m unittest tests.test_build_v21_sft` returns exit 0 with `Ran 9 tests` and `OK`.
+The CPU service is `rl-sft-recovery-data-20261018-v1`, with one CPU, a 6 GiB memory cap and a 1,200-second limit.
+Raw recovery events, exclusions and progress receipts stream to the separate output and are archived incrementally in its durable prefix.
+The current build is in progress; its final manifest will report admitted rows, source preservation and exclusions.
+
+The [pinned TRL documentation](https://huggingface.co/docs/trl/v0.24.0/en/sft_trainer#train-on-completion-only) supports the existing prompt/completion representation with completion-only loss.
+Failure text is therefore context or provenance, never an additional incorrect assistant target.
+This preparation tests data and environment contracts.
+Whether the added observations improve format compliance, recovery or complete-proof capability remains unmeasured.
+
+
+The recovery build completes with exit 0 and preserves its raw candidate as `nt_sft_recovery_20261018_v1/release/`.
+A replay result corrects the initial preservation plan: a source chunk rewrites multiplication commutativity twice and reaches the harness cycle guard.
+This does not establish that the mathematical theorem or its full Lean proof is invalid.
+The new training release quarantines that theorem rather than retaining reference histories that conflict with the live action contract.
+The original source and active pilot inputs remain immutable.
+A second withheld augmentation reaches an accepted proof before all source tactics execute; it is an early-closure case, not a rejected proof.
+The raw event is preserved and the final manifest records that distinction.
+The finalizer is `.private/ops/nt_sft_recovery_20261018_v1/finalize_release.py`.
+The service `rl-sft-recovery-finalize-20261018-v1` returns exit 0.
+The final output is `nt_sft_recovery_20261018_v1/release_final/`.
+Retained rows are unchanged byte-for-byte; the finalizer removes the quarantined theorem from both clean and recovery rows.
+The final TRAIN file contains 2095 rows.
+Its original capped source contains 1503 rows.
+1498 original clean TRAIN rows remain after quarantine.
+535 TRAIN rows demonstrate recovery from malformed output.
+62 TRAIN rows demonstrate recovery from real Lean name or type errors.
+536 theorem names remain in TRAIN.
+The original capped source contains 537 theorem names.
+Every recorded source topic and method category remains represented.
+The separate loss-validation file contains 128 rows.
+Its original source contains 80 clean rows, all preserved.
+32 loss-validation rows demonstrate format recovery.
+16 loss-validation rows demonstrate real Lean-rejection recovery.
+The loss-validation theorem assignments remain unchanged and do not enter weight updates.
+Both files pass the existing action and full-chat limits; the final manifest records their maxima.
+The `build_release.py` counts, `recovery_events.jsonl`, exclusions, source proof hashes and finalizer manifest provide the row-level evidence.
+The final durable archive is `recovery_release.tar` under this separate data-run prefix; its manifest readback matches the CPU result.
+`uv run python -m unittest tests.test_build_v21_sft` again returns exit 0 with `Ran 9 tests` and `OK`.
+The active v4 model run does not consume these new examples.
+A later controlled learning run needs its own recipe and approval; this data preparation does not authorize it.
+No model format, recovery or complete-proof gain is measured for this dataset revision.
+
+
+### Corrected SFT pilot completion, 18 October 2026 IST
+
+The read-only monitor observes completion of `exp026-prerequisite-interactive-sft-contract-fix-s20261018-v4`.
+`runtime/out/exit.json` records exit 0.
+`runtime/out/comparison.json` records `complete` and the fixed checkpoint `sft/final`.
+The final evaluation log upload is timestamped `2026-10-17T19:37:38+00:00`.
+The comparison and exit uploads are timestamped `2026-10-17T19:37:39+00:00`.
+The provider reports `terminated` at the live monitor check.
+No retry, replacement, renewal, training change or additional evaluation starts.
+
+72 optimizer steps are recorded in `runtime/out/sft/run.json`.
+0.2774 is the latest logged training loss at the final step.
+0.5985390543937683 is the latest validation loss on the fixed loss-validation partition.
+0.5214852707253562 is the aggregate training loss, a different statistic from the latest logged loss.
+The loss record upload is timestamped `2026-10-17T19:35:09+00:00`.
+Loss does not establish complete-proof capability.
+
+The monitor groups raw actions by `(group, sample)`.
+An attempt completes when its last action is terminal or its action count reaches the configured horizon.
+A complete proof requires an action with both `accepted` and `done`.
+Generated tokens are the sum of `len(action_ids)` across raw actions.
+Physical Lean calls come from each saved `run.json` counter.
+Both raw recounts agree with the saved trajectory and token counters.
+
+| Metric | Fresh parent | Final SFT | Evidence |
+| --- | --- | --- | --- |
+| Complete Lean-accepted proofs / completed attempts | 0/16 | 0/16 | Each arm's `rollouts.jsonl` |
+| Completed attempts / planned attempts | 16/16 | 16/16 | Raw attempt groups and saved config |
+| Theorems with both attempts completed / fixed population | 8/8 | 8/8 | Raw groups and `run.json.population` |
+| Generated action tokens | 16384 | 6619 | Raw `action_ids` |
+| Physical Lean calls | 26 | 104 | Each arm's `run.json.counts` |
+| Format-error actions / all actions | 86/96 | 14/96 | Raw action status |
+| Rejected actions / all actions | 10/96 | 70/96 | Raw action status |
+| Censored groups | 0 | 0 | Saved run counters |
+| Prompt-cap endings | 0 | 0 | Saved run counters |
+
+The SFT action statuses also contain `partial`, `changed` and `no_progress`.
+These statuses do not count as complete proofs.
+4 SFT rejected actions contain `internal exception #4` in the saved error field.
+Those actions remain in the denominator; the monitor does not classify every rejection as a mathematical failure.
+The raw baseline rollout upload is timestamped `2026-10-17T19:29:15+00:00`.
+The raw final-SFT rollout upload is timestamped `2026-10-17T19:37:37+00:00`.
+The run records pin Lean to `4.10.0-rc1`, binary commit `3b58e0649156`.
+They pin mathlib to `29dcec074de168ac2bf835a77ef68bbe069194c5`.
+The comparison covers the fixed DEV panel and does not establish held-out generalization.
+
+The exact existing monitor title is `SFT retry: loss and proof capability every 5 minutes`.
+The scheduler update returns `enabled: false` and `nextRunAt: null`.
+The private registry retains the final observation under the existing run prefix.
+The approved deadline and all recorded caps remain unchanged.
+
+
+### Verified candidate actions and PPO preparation, 18 October 2026 IST
+
+Manas requests prevention of invalid Lean actions and consideration of critic-based PPO.
+Root owns the environment API, reward boundary, tests and integration decision.
+This turn changes local source and operational records; it does not authorize or launch compute.
+The completed v4 outcome and its immutable runtime artifacts remain unchanged.
+
+Correction: the preceding chat diagnosis overstated opaque internal exceptions as infrastructure failures.
+The [pinned REPL source](https://github.com/leanprover-community/repl/blob/v4.10.0-rc1/REPL/Main.lean#L226-L234) catches proof-step exceptions and returns their text without the accumulated diagnostics.
+An [upstream issue](https://github.com/leanprover-community/repl/issues/164) demonstrates that ordinary elaboration failures can produce this opaque output.
+The pilot's `internal exception #4` messages therefore remain unresolved rejections.
+They are not reclassified as proven infrastructure crashes or removed from the original denominator.
+
+`LeanEpisode.candidate_menu` checks a bounded, caller-supplied set of single-tactic candidates from one live proof state.
+It uses separate Python branch histories and the REPL's saved proof states.
+A probe leaves the live proof path, failure history and action count unchanged.
+Its physical Lean calls and replay costs remain in the shared counters.
+The menu excludes malformed, forbidden, rejected, unchanged-goal and partially successful candidates.
+An empty menu stays explicit; it does not invent a fallback action.
+A timeout or censored verifier outcome aborts screening and discards the partial menu.
+Only full-proof replay can admit a closed proof as accepted.
+
+`select_candidate` rejects choices outside the menu and menus from another or changed episode state.
+It rechecks the selected tactic before committing the action.
+Screening reserves the worst-case calls for all probes and the selected action within the caller's existing cap.
+The reservation includes both possible replay setup attempts.
+`VerifierSetupError` retains failed setup costs; the episode merges them before propagating the error.
+The caller must still enforce its wall limit, proposal-token limit and process memory cap.
+No production timeout, cap, parser rule or proof-acceptance condition is relaxed.
+
+The one-action PPO scorer now preserves censored episode status.
+The shared PPO reward boundary refuses a batch containing a censored outcome or a verifier crash.
+Raw affected records use a null reward and are flushed before the exception stops the update.
+Opaque elaboration-error text alone does not trigger this exclusion.
+This repairs censor propagation; it does not establish PPO learning or proof improvement.
+
+The focused command is:
+
+```bash
+uv run python -m unittest tests.test_tactic_rl.EnvironmentV2Test tests.test_tactic_ppo.TacticPPO.test_censored_episode_keeps_its_status_for_the_ppo_reward_boundary tests.test_tactic_ppo.TacticPPO.test_actual_episode_parser_closure_and_no_repair tests.test_rl_components tests.test_lean_scoring
+```
+
+It returns exit 0 with `Ran 90 tests` and `OK`.
+The tests use scripted REPL responses and source-level control paths, not a live Lean process or model inference.
+An independent source review identifies an underestimated retry reservation and missing setup-failure counters.
+Both findings receive focused regressions, fixes and a follow-up review that reports them resolved.
+An earlier broader test command fails because the local environment lacks `datasets` and the invocation cannot resolve `test_lean_ppo`.
+That broader command is not reported as passing; no dependencies are installed and no tests are disabled.
+Live validation on the pinned Lean/mathlib pair remains pending on an authorized AWS host.
+
+The existing `run_tactic_ppo.py` implements one-action PPO over generated text.
+The new menu is an environment API, not an integrated masked actor or a multi-transition PPO trainer.
+The [PPO paper](https://arxiv.org/abs/1707.06347) supplies the optimizer reference.
+[Invalid action masking](https://arxiv.org/abs/2006.14171) supplies the relevant policy-support reference.
+A future selection policy must use the same stored candidate set and mask for sampling and all PPO likelihood calculations.
+The actor observes the current goal and admitted tactic IDs/text, not probe rewards, reference proofs or future outcomes.
+PPO's critic estimates future return; it does not certify a tactic or provide a correctness guarantee.
+
+Next prepare a TRAIN-only candidate catalogue using public tactics, current local hypotheses and permitted library premises.
+Freeze its construction and compare a uniform chooser with a learned chooser using the same candidate checks and total budgets.
+Count proposal generation, every failed probe, selection calls and final replay separately.
+Report empty menus and local applicability separately from complete-proof success.
+Use terminal full-proof reward; local applicability alone must not earn repeated positive credit.
+The menu may omit a necessary tactic, and valid transitions can still lead to unsuccessful proof paths.
+Keep the frozen DEV comparison and all TEST proofs outside training and candidate construction.
+A live Lean check, actor integration and a concrete approved lease remain prerequisites to paid PPO training.
+
+### Candidate PPO and REINFORCE implementation, 18 October 2026 IST
+
+Manas requests both optimizers and delegates PPO to a Sol agent.
+The Sol agent owns `candidate_policy.py`, `run_candidate_ppo.py` and the PPO tests.
+Root owns `run_candidate_reinforce.py`, its tests, integration review and this protocol.
+This preparation remains under EXP-026; no paid run is approved or started.
+The previous one-action EXP-023 recipes remain separate and unchanged.
+
+The shared actor scores each admitted tactic with the causal language model, including EOS.
+It normalizes these scores over the frozen candidate menu.
+The critic reads the current observation without the candidate probe outcomes.
+Both losses can update the language-model backbone; PPO also updates the scalar value head.
+REINFORCE retains the same policy representation and applies no critic loss.
+The initial catalogue consists of fixed caller-supplied tactic strings, without generated proposals.
+The menu can omit a necessary tactic; this implementation does not establish sufficient tactic coverage.
+
+PPO uses clipped policy ratios and return-to-go targets minus the stored rollout values.
+Each optimizer epoch reuses the stored candidate text and mask without another Lean probe.
+The sampled approximate KL can stop subsequent optimizer steps; it does not guarantee bounded policy divergence.
+REINFORCE reuses `LeaveOneOutObjective` with complete rollouts from the same TRAIN root.
+Complete empty-menu failures remain in its baseline denominator.
+It rejects critic bootstrapping and stale policy probabilities.
+The mathematical references are the [PPO paper](https://arxiv.org/abs/1707.06347),
+[REINFORCE paper](https://doi.org/10.1007/BF00992696),
+and [invalid action masking study](https://arxiv.org/abs/2006.14171).
+
+The shared loop collects a complete rollout group before optimization.
+It writes screening outcomes, selected outcomes, frozen supports and episode boundaries before updating.
+Incomplete or censored groups stop training without a new optimizer step.
+The declared action horizon ends a failed proof with zero terminal reward.
+External resource interruptions remain incomplete; they do not receive a critic bootstrap.
+An accepted complete proof is the sole positive reward.
+Local tactic applicability and subgoal reduction receive no positive reward.
+
+The CLI admits TRAIN tasks through the existing pool checks and excluded-name list.
+It requires local model files, explicit scoring-token and physical Lean-call caps, and a wall limit.
+All teacher-forced scoring calls count, including optimizer epochs and critic forwards.
+The fixed catalogue generates no proposal tokens; scoring tokens remain a separate cost.
+The approved managed runner must still enforce process memory, GPU limits and the independent hard deadline.
+No candidate recipe, live Lean run, final checkpoint comparison or measured learning result is produced here.
+
+Before a paid comparison, calibrate catalogue coverage on TRAIN roots and permitted prefixes.
+Compare a uniform chooser and the frozen language-model chooser to expose the benefit of screening alone.
+Then compare REINFORCE and PPO from the same immutable parent and initial value head.
+Freeze the task order, catalogue, reward, horizon, sampling rule and resource ceilings across arms.
+Menus may differ after policies reach different proof states; each update must retain its own rollout support.
+Keep DEV and TEST proofs outside catalogue construction and training.
+Measure complete accepted proofs per attempted theorem alongside completed-attempt coverage and censor categories.
+Report empty menus, failed probes, generated tokens, scoring tokens, physical Lean calls and elapsed resources separately.
+Any learning claim requires matched raw outcomes and a fresh full-proof replay on the pinned Lean/mathlib pair.
+
+The focused command is:
+
+```bash
+python3 -m unittest tests.test_candidate_ppo tests.test_candidate_reinforce
+```
+
+It returns exit 0 with `Ran 17 tests` and `OK`.
+These checks cover frozen supports, masked sampling, actor/critic gradients, complete-return boundaries and interrupted groups.
+A randomly initialized tiny Qwen model checks backbone gradients and forward-token accounting without downloaded weights.
+The REINFORCE integration check covers shared-loop dispatch and repeated rollouts from the same root.
+Review finds and repairs a mismatched update-count field and acceptance of known interruption statuses with contradictory completion flags.
+CLI help returns exit 0 without loading a model or Lean.
+The local unit results do not establish live Lean validity, candidate coverage or improved proof capability.
+
+### Candidate menu live validation registration, 18 October 2026 IST
+
+Manas authorizes cpu-angad for the live check and TRAIN calibration in the current conversation.
+This instruction permits this CPU job despite the older AWS-only routing rule.
+Root owns execution and the output; no GPU lease or optimizer starts.
+The paired prospective recipes are `configs/rl/qwen_05b_candidate_{ppo,reinforce}_v1.json`.
+Their `launch_approved` fields remain false; configuration does not enforce cloud launch approval.
+`configs/rl/lean_candidate_catalogue_v1.json` freezes generic tactics from the existing Lean/mathlib environment.
+The [Lean tactic reference](https://lean-lang.org/doc/reference/latest/Tactic-Proofs/Tactic-Reference/) guides the catalogue.
+Live screening determines which tactics work in the pinned environment; newer documentation does not establish compatibility.
+
+First run the marked authored-fixture case `TacticIntegration.test_candidate_menu_preserves_live_state_and_selected_path_replays`.
+It checks unchanged live state after probing, excluded invalid candidates and final strict replay of the selected path.
+It requires the trainer's mathlib source receipt and records both Lean and mathlib identity.
+Then sample TRAIN theorem names by the seeded hash order from the checked recovery release.
+Use a whole root and the shortest available supplied prefix for each selected theorem.
+Do not retain assistant targets in the task records or expose them to the chooser.
+A uniform chooser samples from each admitted menu without model weights or optimization.
+This diagnoses the catalogue and screening contribution; it cannot establish learned proof capability.
+
+The source limits the sample to eight TRAIN theorems and six selected actions per task.
+The collection caps physical Lean calls and elapsed time without extending incomplete episodes.
+The managed service enforces its memory, CPU and wall limits.
+Raw menus and selections stream to the private run's durable prefix.
+Report accepted complete proofs, completed attempts, unattempted tasks, empty menus and interruption categories separately.
+Keep root and supplied-prefix outcomes separate.
+The evaluation proves no claim about held-out generalization and does not use DEV or TEST examples.
+
+The first CPU attempt, `exp026-candidate-menu-calibration-s20261018-v1`, fails before proof execution.
+It selects an audit receipt whose schema differs from `mathlib_identity`'s required trainer receipt.
+The service exits with status 1 and no TRAIN calibration starts.
+Its raw failure, source snapshot and private registry remain preserved.
+The corrected attempt, `exp026-candidate-menu-calibration-s20261018-v2`, changes the receipt path and uses a separate output and service.
+It keeps the original resource and evidence limits.
+Both attempts use `.private/ops/candidate_calibration_20261018_v*/run.py` as the entrypoint.
+
+The corrected authored-fixture case returns exit 0 and `OK` against live Lean.
+The corrected root calibration finishes with service exit 0.
+Its selection produces whole-root tasks; the selected records do not contain `mode=supplied` prefixes.
+The separate `exp026-candidate-menu-prefix-calibration-s20261018-v1` contrast therefore converts earlier `done` history with the existing `supplied_text` helper.
+It uses the same theorem panel, shortest nonempty earlier history, catalogue, chooser and resource limits.
+Only earlier TRAIN steps become supplied context; assistant targets remain excluded.
+It reuses the successful live-fixture receipt without another fixture run.
+Its output distinguishes supplied-prefix evidence from whole-root evidence.
+The root calibration remains immutable, including every unsuccessful completed attempt.
+
+### Candidate menu calibration outcome and comparison controls, 18 October 2026 IST
+
+The live authored-fixture command is:
+
+```bash
+TACTIC_RL_ROOT=<remote-root> TACTIC_RL_OUTPUT=<new-output> TACTIC_RL_IDENTITY=<trainer-source-receipt> python -m unittest tests.test_tactic_rl_integration.TacticIntegration.test_candidate_menu_preserves_live_state_and_selected_path_replays -v
+```
+
+The corrected CPU job returns `Ran 1 test`, `OK`, exit 0.
+Its `out/live/candidate_menu.json` records the actual pinned Lean/mathlib identity and strict replay results.
+The source pins remain Lean `v4.10.0-rc1` and mathlib `29dcec074de168ac2bf835a77ef68bbe069194c5`.
+Both calibration services finish inactive with `ExecMainStatus=0`.
+
+The root diagnostic accepts 0/8 complete proof attempts.
+The supplied-prefix diagnostic accepts 5/6 complete proof attempts.
+The root diagnostic completes 8/8 planned attempts.
+The supplied-prefix diagnostic completes 6/6 planned attempts.
+The earlier-history sample supplies nonempty prefixes for six of the eight selected TRAIN theorems.
+This is not an equal-population estimate of an assistance effect.
+All root trajectories end at empty menus, despite nonempty menus at their initial states.
+One supplied-prefix trajectory ends at an empty menu.
+These are uniform-chooser outcomes without a language model or optimizer.
+The selected proof must pass strict full replay; admitted unfinished tactics do not count as proofs.
+
+The root diagnostic records 307 physical Lean calls in `candidate_calibration_20261018_v2/out/run.json`.
+The prefix diagnostic records 168 physical Lean calls in `candidate_prefix_calibration_20261018_v1/out/run.json`.
+The authored fixture records 16 separate calls; the prefix run reuses that receipt without repeating the fixture.
+Both diagnostics record zero generated model tokens and load no model weights.
+The diagnostic chooser uses Python's seeded uniform sampling, without tokenizer admission or language-model scoring.
+It is not an execution of the new matched baseline CLI.
+
+The source for these counts is `.private/ops/candidate_calibration_20261018_v2/recount.py`.
+On cpu-angad, it reads each run's `out/run.json` and `out/rollouts.jsonl`, checks terminal acceptance against raw replay verdicts, and writes `out/recount.json`.
+The recount command is `python3 <root-run>/recount.py <run>/out`.
+Its final invocations return exit 0.
+Each existing durable run prefix retains `run.json`, `rollouts.jsonl`, `recount.json`, `recount.py`, its source archive and private registry.
+The first failed attempt remains separate.
+
+The Sol agent also adds `--baseline uniform` and `--baseline frozen_lm` to the existing candidate CLI.
+Uniform sampling loads the immutable tokenizer files but no model weights or optimizer.
+Frozen-model sampling uses the same scorer with frozen parameters and no optimizer.
+Both modes use the same encoding, EOS handling and untruncated token admission as the learned policies.
+Both preserve rollout groups, masks, physical call accounting and failure records without exporting checkpoints.
+The prospective baseline recipes are `configs/rl/qwen_05b_candidate_{uniform,frozen_lm}_v1.json`.
+Their run IDs differ from the PPO and REINFORCE recipes.
+All four recipes pass `validate_candidate_config`; none authorizes a paid launch.
+
+Root reviews the baseline source and runs:
+
+```bash
+python3 -m unittest tests.test_candidate_ppo tests.test_candidate_reinforce
+```
+
+It returns `Ran 20 tests`, `OK`, exit 0.
+The unit checks include the corrected common token boundary and refusal to update or export baseline checkpoints.
+They do not validate a research checkpoint on a GPU.
+
+The CPU result establishes that the candidate API works on the authored live fixture.
+It also establishes that this fixed catalogue supplies terminal rewards on some assisted TRAIN states.
+It does not establish sufficient whole-root coverage, useful within-root return variance, learning, or held-out generalization.
+The matched optimizer comparison remains prospective.
+Before a paid pilot, freeze the assisted TRAIN task bank, parent checkpoint receipts, resolved commands and resource reservation.
+Keep root and supplied-prefix evaluation separate, and retain the no-update controls.
+
+### SFT necessity and candidate-policy preparation, 18 October 2026 IST
+
+Manas asks whether another SFT stage is necessary and requests a correction to the training path.
+Root owns this protocol amendment; it starts no training, inference or new lease.
+The corrected SFT pilot above reduces format errors without producing a complete proof on its fixed DEV panel.
+That outcome does not identify a unique cause or establish that SFT cannot improve proof capability.
+The later uniform candidate diagnostics load no model weights and therefore cannot diagnose the parent's tactic preferences.
+Their whole-root and supplied-prefix populations also differ; they are not a matched estimate of assistance.
+
+Additional SFT is optional for the candidate-selection experiment, rather than an automatic prerequisite.
+The actor samples from Lean-admitted tactics, so it does not generate an action that needs fence parsing.
+Validity screening does not establish that the catalogue contains a successful continuation or that the actor chooses one.
+The next comparison must distinguish missing candidate coverage from poor selection among available candidates.
+The existing recipes retain the fresh upstream parent and separate uniform and frozen-model controls.
+Freeze the assisted TRAIN task bank and run these controls with the same task population and resource caps before choosing another training stage.
+Do not count the earlier Python uniform diagnostic as the matched tokenizer-aware baseline.
+
+For TRAIN coverage diagnosis, check whether verified successful continuations are representable by the fixed catalogue and horizon.
+Keep reference continuations outside actor inputs and report uncovered steps separately.
+A missing reference tactic does not prove that every alternative continuation fails.
+When a required move is unavailable, diagnose candidate construction before choosing an optimizer or increasing SFT exposure.
+When successful actions are available but poorly ranked, compare a focused supervised warmstart with direct candidate RL.
+Keep the no-SFT arm, and include supervised training in the warmstart arm's resource accounting.
+Any SFT-based PPO versus REINFORCE comparison must give both optimizers the same supervised parent.
+
+The existing interactive SFT builder emits fenced tactic chunks; the candidate actor scores individual raw tactics with EOS.
+These are different supervised targets, although the live parser permits raw tactics.
+This difference is not a demonstrated defect in the completed SFT pilot.
+Do not reuse its rows as if they were matched candidate-selection supervision.
+A candidate warmstart should use the same observation, admitted support, token encoding and categorical normalization as the deployed actor.
+Its targets must come from TRAIN trajectories with complete accepted replay, rather than local tactic admission alone.
+Other admitted tactics remain of unknown strategic quality unless their continuations are measured.
+Preserve theorem-level separation for supervision and loss validation, and keep DEV and TEST outside these targets.
+
+The proposed usefulness score remains a value estimate, not a proof certificate or a new external reward.
+Fit it to complete-proof outcomes under recorded continuation policies and remaining budgets.
+Keep interrupted attempts separate from completed unsuccessful attempts.
+Check its predictions on separate TRAIN theorem groups before using it to rank candidates.
+PPO can learn this critic from terminal returns; a separate supervised critic stage is optional.
+The [HTPS paper](https://arxiv.org/abs/2205.11491) provides a precedent for proof-state critics.
+The [DeepSeek-Prover-V1.5 paper](https://arxiv.org/abs/2408.08152) uses SFT before RL, but does not establish its necessity for this candidate actor.
+Keep complete Lean-accepted proof as the positive external reward while the value estimate is unvalidated.
+The immediate next work is the frozen TRAIN bank and matched controls, not another unchanged SFT run.
+Model calibration, candidate learning gain and any benefit from an additional warmstart remain unmeasured.
+
+### Candidate training input preparation registration, 18 October 2026 IST
+
+Manas selects preparation of the next training path rather than immediate implementation of a learned usefulness critic.
+Root owns `exp026-candidate-training-preparation-s20261018-v1`; this is a CPU preparation job, not a training launch.
+The entrypoint is `.private/ops/candidate_training_preparation_20261018_v1/prepare_inputs.py`.
+It projects the checked recovery TRAIN release and its accepted full-proof sources into the existing candidate driver format.
+Select the earliest available nonempty prefix within the existing remaining-step and tokenizer limits for each eligible theorem.
+Select the panel by topic round-robin and seeded theorem hash, without using rollout success.
+The same ordered panel feeds the uniform, frozen-model, PPO and REINFORCE recipes.
+Keep full reference continuations in a separate audit directory, outside the actor input archive.
+Record exact catalogue coverage of these references without calling missing reference syntax a proof-search failure.
+Preserve source split assignments, exclusions, parent identity, candidate catalogue and all existing resource caps.
+Use a managed CPU service with a memory cap and an independent wall limit; load no model weights and make no Lean calls.
+Preparation must pass the existing task-admission, config and tokenizer checks before reporting usable inputs.
+The package includes parent receipts and arm arguments; runtime bindings, weight staging and GPU approval remain separate.
+
+### Candidate training input preparation outcome, 18 October 2026 IST
+
+The managed command is `sft_cpu_venv/bin/python candidate_training_preparation_20261018_v1/prepare_inputs.py` on the existing CPU host.
+Service `rl-candidate-training-prepare-20261018-v1` returns `ExecMainStatus=0`, `Result=success`, then becomes inactive.
+Its `out/manifest.json` records `prepared_not_executed`.
+The existing `training_tasks` admission, `validate_candidate_config` and shared tokenizer limits accept the package.
+This is a preparation check, not new Lean replay or model calibration.
+
+8 distinct TRAIN theorems enter the fixed assisted panel.
+Each recorded topic contributes 2 tasks: Bezout and coprimality, Congruences, Divisibility, and Primes and factorization.
+The source projection finds 294 eligible theorems before panel selection.
+Selection uses topic round-robin, seeded theorem hash and the earliest eligible nonempty prefix; it does not use prior rollout successes.
+The actor archive contains supplied prefixes and current states, but no reference suffixes or outcome labels.
+The companion root file uses the same theorem population and remains separate from the assisted bank.
+The panel is an exploratory preparation sample, not a generalization benchmark or evidence that these topics cover all prerequisites.
+
+0/8 selected reference continuations are fully represented by the generic catalogue's exact tactic strings.
+1/16 reference steps matches a catalogue entry exactly.
+These counts come from `out/reference_audit/catalogue_reference_coverage.json`, generated by the preparation script.
+They measure reference syntax coverage, not the probability of finding an alternative proof.
+The generic catalogue may still solve a task through automation or another path.
+Do not interpret a later optimizer failure as evidence about PPO, REINFORCE or SFT without first measuring candidate coverage.
+Run the uniform and frozen-model controls before deciding whether bounded candidate construction or supervised selection needs improvement.
+Any candidate-construction amendment must keep the existing candidate and physical-call caps and use a distinct recipe and run ID.
+
+`out/inputs.tar.gz` freezes the shared task order, derived TRAIN pool, exclusions, catalogue, tokenizer files, parent receipt and arm configs.
+The pool's TRAIN labels inherit the checked source partition; they are not independently reassigned benchmark splits.
+`out/commands.json` records argument arrays for the existing uniform, frozen-model, PPO and REINFORCE runners.
+It identifies runtime bindings explicitly and does not execute an arm or authorize a lease.
+The private audit directory retains source-row links, proof hashes and reference suffixes outside the actor archive.
+The existing durable preparation prefix retains the source snapshot, input archive, manifest, commands, reference audit, log and private run registry.
+The archived manifest and reference audit are read back before closeout.
+
+The local staging interpreter first lacks `boto3`, before any remote job starts.
+The controller then uses the installed AWS CLI with the existing private client settings; it installs no dependency or credential.
+No parent weights, model inference, optimizer step, new Lean call or TEST proof enters this preparation.
+Parent-weight staging, GPU memory and timing measurements, matched controls and a quoted GPU approval remain pending.
+SFT remains optional; the prepared package does not establish a need for another warmstart or a learned usefulness reward.
+
+### Matched uniform candidate control registration, 18 October 2026 IST
+
+Manas authorizes the next control run with "okay do it".
+Root runs the prepared uniform arm `exp026-candidate-uniform-prepared-s20261018-v2` on the existing authorized CPU host.
+It uses the frozen assisted TRAIN bank and exact uniform arguments from the preparation package.
+No candidate construction, reward, parser, token cap or task selection changes.
+The control samples among Lean-admitted tactics with the shared tokenizer admission and no model weights or optimizer.
+Complete proofs require the existing full replay and axiom checks on the pinned Lean/mathlib pair.
+Count complete proofs, completed and interrupted attempts, empty menus, generated tokens and physical Lean calls from raw records.
+The command retains the prepared run's episode, horizon, physical-call, token and wall caps.
+The managed service caps memory and CPU and imposes an independent deadline for cleanup.
+Archive partial raw outputs under the control's existing private run registry and durable prefix.
+This run neither authorizes a GPU lease nor starts SFT, PPO or REINFORCE.
+
+### Frozen-model CPU control continuation registration, 18 October 2026 IST
+
+The same user instruction authorizes the unchanged-model control after the uniform control.
+Root stages the pinned public parent with `huggingface_hub.snapshot_download`, using the recorded revision and weight receipt.
+The [official download guide](https://huggingface.co/docs/huggingface_hub/guides/download) documents the revision and file-selection arguments.
+The staging service uses bounded buffers and a managed deadline; it loads no model and starts no optimizer.
+The frozen-model arm uses the same prepared tasks, catalogue, seed and run caps as uniform sampling.
+Its actual argument vector selects CPU rather than the prospective command's CUDA device.
+This is a CPU control comparison, not a measured GPU configuration or a paid launch.
+Freeze all model parameters and retain the original model-scoring and physical Lean-call accounting.
+The unchanged prepared recipe has its own run ID `exp026-candidate-frozen_lm-prepared-s20261018-v2` and a separate output directory.
+Use the same managed memory, CPU and run deadline as the uniform control; stage public assets separately before timing the control.
+Both inference and Lean execution remain on the existing CPU host.
+Preserve partial results if either control reaches a binding cap; do not extend its deadline or replace unfinished outcomes.
+
+### Matched uniform candidate control outcome, 18 October 2026 IST
+
+The frozen uniform command finishes with `Result=success` and `ExecMainStatus=0`; its service becomes inactive.
+16/32 complete proof attempts pass the existing fresh replay and axiom checks.
+32/32 planned attempts complete, without interruption.
+All 8 planned TRAIN tasks receive their configured attempts.
+The remaining 16 attempts end at empty menus.
+The control records 1,028 physical Lean calls in its saved `run.json`.
+Generated and model-scoring token counters are both zero; the policy loads no model weights and makes no optimizer update.
+These are supplied-prefix TRAIN completions, not whole-root results or evidence of learning.
+
+The command `sft_cpu_venv/bin/python candidate_uniform_control_20261018_v1/recount.py candidate_uniform_control_20261018_v1/results/exp026-candidate-uniform-prepared-s20261018-v2` returns exit 0.
+The counter checks episode rewards against raw selected outcomes with `accepted`, `done` and an accepted full replay.
+It agrees with the saved episode and acceptance counters and preserves empty-menu failures in the denominator.
+The raw outputs, resolved arguments, recount source and final registry are archived under the existing control prefix.
+The earlier live snapshot remains distinct from `final.tar.gz`.
+
+Every sampled outcome within a task is constant, although outcomes differ between tasks.
+This observed batch supplies no leave-one-out return contrast for the existing REINFORCE objective at the registered discount.
+It does not establish that a task has no alternative outcome under other choices.
+The live successes also show that exact reference syntax coverage understates alternative proof coverage on part of this panel.
+Do not use the preceding exact-reference audit as a proof that the catalogue cannot solve these assisted tasks.
+Keep SFT and optimizer training unstarted while the matched frozen-model control tests whether different choices recover failures.
+
+### Frozen-model CPU control outcome and training decision, 18 October 2026 IST
+
+The public parent staging service returns exit 0, and its weight digest matches the prepared upstream receipt.
+The unchanged-model control stops at the original wall cap with `status=stopped` and `stop_reason=wall_cap`.
+Its managed service returns `Result=success` and `ExecMainStatus=0`, then becomes inactive.
+A normal process exit does not make this a completed full-panel comparison.
+No deadline, token limit, candidate limit or verifier filter changes.
+
+23/32 planned frozen-model attempts complete.
+1 additional attempt is interrupted by the wall cap.
+8 planned attempts remain unstarted.
+16 completed attempts contain a complete accepted replay.
+The other 7 completed attempts end at empty menus.
+The run records 630 physical Lean calls.
+The model-scoring counter records 75,924 input tokens across its started scoring forwards.
+Generated-token and optimizer-update counters remain zero.
+These are frozen-model CPU outcomes, not SFT or RL results.
+
+23 completed attempt pairs have the same task identities and order.
+The frozen model accepts 16/23 paired attempts.
+Uniform sampling also accepts 16/23 on those exact completed pairs.
+No paired outcome differs in the observed comparison.
+The matched portion spans 6 TRAIN tasks, with incomplete coverage of the last task.
+Do not compare the frozen model's completed-attempt rate directly with uniform's full-panel rate.
+The omitted work can differ in difficulty; this result does not establish full-population equivalence or an absent model effect.
+
+The commands are `recount.py <frozen-output> <prepared-inputs>/frozen_lm.json` and `compare.py` in the private control directories.
+Both return exit 0.
+The paired counter checks input hashes and pinned verifier identity before matching completed episodes.
+It records the comparison in `candidate_frozen_control_20261018_v1/comparison.json`.
+The comparison is read back from durable storage before closeout.
+The existing control prefixes retain raw outcomes, argument vectors, source counters, parent receipts, logs and final registries.
+No SFT, PPO, REINFORCE update, GPU instance or replacement run starts.
+
+The offline command `diagnose.py <uniform-run-root>` also returns exit 0 without new inference or Lean calls.
+Its `failure_diagnostics.json` records valid changed transitions followed by empty menus on failed sampled paths.
+It finds no accepted terminal probe at those visited states, while preserving unvisited alternatives as unknown.
+This supports investigation of candidate construction and proof search rather than another formatting-only SFT run.
+It does not prove that the catalogue lacks every successful continuation.
+Next examine alternative admitted branches and grounded candidates within the existing caps on TRAIN states.
+Establish a task panel with observed within-task success variation before interpreting a REINFORCE or PPO learning comparison.
+SFT remains an optional supervised comparison; its need is not established by these controls.
+
+### Number theory RL delivery amendment, 18 October 2026 IST
+
+Manas asks for parallel execution toward the Wednesday delivery and restates the objective: teach number theory proofs.
+The working deadline is before Wednesday, 21 October 2026 IST.
+This exploratory delivery supports the existing generalization and curriculum studies; it does not replace their registered questions or ownership.
+It must report where RL helps, leaves performance unchanged, or reduces performance without requiring a positive result.
+
+The main endpoint is complete Lean-accepted proofs from initial theorem goals on a frozen DEV population.
+Report solved theorems with the counted theorem denominator and accepted attempts with the counted attempt denominator.
+Supplied-prefix completions, local valid actions, format errors and training loss remain separate diagnostics.
+Do not present completion of a supplied mathematical argument as independent construction of that argument.
+Keep final replay, target absence and axiom checks unchanged.
+Match the parent checkpoint, task exposure, action interface, prompts, decoding and evaluation budgets across optimizer arms.
+Record generation, menu-scoring tokens and physical Lean calls separately.
+Do not pool constrained candidate selection with free proof generation as one matched endpoint.
+Use fixed final checkpoints; do not choose the winner from evaluation outcomes or extend a stopped arm.
+Keep TEST outside preparation and adaptive decisions.
+
+Root owns integration into this catalogue, README status and the existing report.
+The `number_theory_training_signal` agent owns the TRAIN task audit and the smallest usable proof-learning path.
+Its assigned artifact location is `.private/ops/nt_wednesday_signal_20261018_v1/`.
+The `prepare_matched_rl_execution` agent owns concrete shared commands, the evaluation contract and a current AWS quote.
+Its assigned artifact location is `.private/ops/nt_wednesday_rl_20261018_v1/`.
+The `audit_rl_help_and_harm` agent owns raw recounts of earlier positive, null and retention results.
+Its assigned artifact location is `.private/ops/nt_wednesday_evidence_20261018_v1/`.
+The assignments run independently; artifact locations are planned outputs until inspected.
+Helpers do not write shared status or create additional Markdown reports.
+
+Task diagnosis, execution preparation and historical recounts proceed in parallel.
+The optimizer comparison depends on a frozen shared training package and a compatible evaluation contract.
+A paid launch also depends on explicit approval of its concrete costed lease.
+Historical SFT approvals do not authorize this lease.
+Preserve existing caps and independent termination controls; no launch, renewal or replacement follows from this amendment.
+Aim to finish new training and matched evaluation before Tuesday close, leaving time to inspect evidence before Wednesday.
+The presentation separates measured contrasts from explanations that remain hypotheses.
+Historical exposure limitations remain attached to any reused result.
+
+### Number theory pipeline repairs, 18 October 2026 IST
+
+Manas requests closure of the known issues in the number theory training pipeline.
+These repairs cover the staged generative pilot; they do not revise historical outcomes or certify the full source corpus.
+The same fresh parent, frozen theorem population, single-block action contract and final-checkpoint comparison remain fixed.
+No model training, paid instance, renewal or replacement starts during repair.
+
+- Generation: PPO and REINFORCE retain the end-of-sequence token in action likelihoods. A padding token before that boundary stops the arm before an update can use the incompatible trajectory. Raw generated tokens remain recorded. No token is suppressed to obtain a pass.
+- Accounting: PPO records physical generation slots before batch padding and retained action tokens separately. The runner reserves physical token capacity before each generation microbatch. Existing token limits remain unchanged.
+- Data separation: the exact staged headers inherit the checked TRAIN admission, exclusions and protected DEV source. The bounded audit finds no overlap after declaration-name removal and whitespace collapse. DEV actor rows contain statements without solutions. This does not establish mathematical-family independence or unknown pretraining exposure.
+- Observation metadata: live reconstruction finds a namespace display difference between `Nat.fib` and `fib`. `panel_v3/` supersedes the pilot's observation projection while preserving theorem headers, assumptions, supplied prefixes, order, split labels and proof hashes. The original source and failed input revision remain immutable. Exact state equality is not weakened.
+- Consumer setup: the corrected archive passes the actual `check_runtime_states.py` entry point on the pinned Lean/mathlib pair. The same check remains required before either optimizer in the GPU lease. Preparation calls and wall time remain separately recorded inside the lease accounting.
+- Failure handling: malformed per-arm result JSON remains a recorded failure and does not prevent the independent optimizer arm from running. A missing REINFORCE checkpoint after no optimizer update remains distinct from bootstrap failure. Process exit alone does not establish complete coverage or proof gain.
+- Source freshness: launch rejects changed public source, runtime files or the rendered request after staging. The request stays bound to its current source and input receipts.
+- Termination: the existing owned termination authorization now covers its retry window after the hard deadline. The compute deadline does not change. The launcher also checks for active owned research leases across recorded regions before allocation.
+- Durable evidence: raw PPO generation records join the existing promptly uploaded evidence files. Transfer and retention caps remain unchanged.
+
+The [pinned TRL source](https://raw.githubusercontent.com/huggingface/trl/v0.24.0/trl/trainer/ppo_trainer.py) supplies the EOS and padding-mask behavior used in the repair.
+The changed adapter wraps the existing library generation utility; it does not replace PPO or change its objective.
+
+The focused remote command is `sft_cpu_venv/bin/python -m unittest tests.test_lean_ppo tests.test_tactic_rl.TacticRLTest.test_generation_record_preserves_terminal_probability_and_physical_tokens`.
+Its output reports `Ran 10 tests`, `OK`, and exit 0.
+The source regression fails before repair; the passing tensor checks use tiny models and prescribed trajectories, not measured number theory learning.
+Remote evidence is `generation_contract_fix_20261019_v1/verification.log` and `verification.json`.
+The bounded data audit source is `nt_wednesday_signal_20261018_v1/separation_audit.py`.
+The corrected projection and audit bridge are in `nt_wednesday_signal_20261018_v1/panel_v3/`.
+Private execution receipts, the corrected-archive consumer outcome and the staged request stay in `.private/ops/nt_wednesday_rl_20261018_v1/` and its existing durable prefix.
+
+The package now awaits approval of the concrete USD 18 ceiling for one L40S lease of at most four hours.
+Its approval remains false. No automatic renewal, replacement or retry is authorized.
+GPU peak memory, fresh-parent reward variation and proof improvement remain unmeasured.
+A padding-boundary violation can still stop an arm; the repair prevents an invalid update rather than teaching the model to avoid that token.
+The small TRAIN panel remains a feasibility pilot and cannot establish broad number theory acquisition.
+
+### Common data and curriculum execution plan, 18 October 2026 IST
+
+Manas requests a complete dataset and curriculum plan for showing where RL helps or fails before Wednesday.
+This amendment implements preparation for EXP-025, EXP-026 and EXP-027; it does not launch training or supersede historical results.
+Broad TRAIN-eligible prerequisite coverage takes priority over selecting short or currently solvable tasks.
+The scientific plan is in the report subsection `Execution plan for the number theory study`.
+
+#### Common data outcome
+
+The bounded CPU build `nt_curriculum_data_20261018_v1/prepare_common.py` returns exit 0.
+The common projection is `formal_rl/nt_curriculum_data_20261018_v1/release/` on the existing remote artifact store.
+Its manifest binds the checked prerequisite release, recovery revision, source admissions, exclusions and source digests.
+This build inherits recorded strict proof verdicts; it makes no new Lean calls and does not establish model capability.
+No model loads, optimizer starts, evaluation solution enters training, or TEST inference runs.
+
+| Consumer | Counted population | Interpretation |
+| --- | --- | --- |
+| Action SFT TRAIN | 2,095 rows | Checked clean, format-recovery and Lean-error-recovery observations; targets remain accepted actions |
+| Canonical whole-root RL | 536 tasks | Every task starts at the initial goal without a supplied proof prefix |
+| TRAIN proof provenance | 548 source identities | Alternative source proofs remain in `aliases.jsonl`; they do not inflate the RL theorem denominator |
+| SFT loss validation | 128 action rows across 32 names | TRAIN-only loss monitor, distinct from research DEV |
+
+The canonicalization uses the existing binder normalization and deterministic source identity.
+It does not select by proof length, model success or curriculum stage.
+Within-TRAIN alpha-renamed statement variants are preserved in the alias ledger rather than exported as ambiguous name-keyed roots.
+The action SFT bytes remain identical to the checked recovery producer.
+Complete-proof targets remain a separate alternative under `sft_full_proof/`; no mixed-format SFT recipe is implied.
+
+The source topic counter gives the following labels, with a denominator of 536 canonical roots.
+These labels are lexical metadata, not reviewed mathematical prerequisites or learned knowledge.
+
+| Source label | Canonical roots |
+| --- | --- |
+| Divisibility | 235 |
+| Primes and factorization | 184 |
+| Congruences | 82 |
+| Bezout and coprimality | 35 |
+
+`task_metadata.jsonl`, `coverage.json`, `missing_skills.json`, `evaluation_reservations.json` and `source_admission_inventory.json` separate coverage, review gaps and inherited exclusions.
+Reserved quadratic residues and arithmetic functions stay outside TRAIN; they are not gaps to fill using evaluation material.
+Existing DEV and TEST membership stays fixed.
+Unknown semantic-family independence and upstream pretraining exposure remain unknown.
+A separate curriculum-validation set is not materialized or consumed by the fixed order comparison.
+An adaptive extension must reserve its own curriculum-validation set before promotion or sampling decisions.
+
+#### Dependency order and owners
+
+| Output | Owner | Depends on | Completion condition |
+| --- | --- | --- | --- |
+| Common admitted source projection | Data helper; root integrates | Checked TRAIN releases and exclusions | Source-bound SFT, canonical roots, aliases, coverage and reservation records |
+| Component skills and prerequisite graph | Manas, supported by source review | Actual TRAIN statements and checked proof context | Each curriculum assignment has a reviewer, evidence and explicit uncertainty; no proof-length proxy |
+| Common S checkpoint | Abhinav | Consumed-input lineage and matching action contract | Exact final weights and tokenizer bound once for S, R and C |
+| Matched R/C schedules | Manas | Common root bank and reviewed graph | Identical task-ID multiset and repeats; frozen seed and tie rule; no supplied prefixes or omitted hardest stage |
+| Runtime admission and fixed evaluation | Anwesha | Frozen actor inputs and pinned Lean/mathlib | Exact root states, unchanged statements, matching token limits and complete replay contract |
+| Costed managed execution | Execution helper; root integrates | Resolved source, data, parent, schedules and evaluation | Hard per-stage caps, durable outputs, independent termination and exact launch approval |
+| Wednesday interpretation | Root and scientific owners | Raw final outcomes and resource records | B/S/R/C contrasts, counted failures, exposure coverage and uncertainty boundaries |
+
+The old proof-length order and reverse-prefix order do not instantiate the primary prerequisite-first whole-root comparison.
+Review the mathematical statement and checked proof to identify component skills, required lemmas, argument grounding and composition.
+AI annotations retain their reviewer identity and uncertainty; they are not human-reviewed prerequisites.
+Keep unreviewed roots visible instead of dropping them or padding missing stages with duplicate tasks.
+An exploratory order can run under a separate label after approval, but it cannot establish the registered prerequisite-first effect.
+
+#### Minimal execution matrix
+
+| Arm | Start | Intervention | Primary comparison |
+| --- | --- | --- | --- |
+| B | Pinned public Qwen parent | No project training | Reference for S |
+| S | B | One frozen project SFT recipe | S minus B measures the project SFT stage |
+| R | Exact S | Fixed interactive REINFORCE, shuffled common tasks | R minus S measures added RL under this protocol |
+| C | Exact S | Same recipe and exposures, reviewed prerequisite order | C minus R measures order under matched planned exposure |
+
+First audit the corrected v4 SFT final checkpoint for reuse as S.
+Its observed zero complete-proof DEV result does not itself invalidate the checkpoint or justify retraining.
+If consumed-data or action-contract compatibility fails, register a new fixed-recipe SFT run from B and derive both branches from its final checkpoint.
+The recovery data revision has not trained that historical S checkpoint.
+Do not compare S from one lineage with R/C from another.
+
+Use the existing environment-version-2 REINFORCE path for the main comparison.
+It supports multi-action proofs and lemma arguments.
+Its legacy `reward_mode=goal_change_v1` requires zero exploration bonus and zero extra repair attempts in this environment.
+The implementation gives intermediate goal changes and errors zero reward; terminal reward requires accepted complete replay.
+Discount changes credit assignment, not whether a local step counts as a proof.
+The separate staged PPO/REINFORCE pilot remains an optimizer feasibility study with a different parent and interface.
+It cannot supply R here, and no full optimizer-by-curriculum factorial is planned for this delivery.
+
+Before optimization, run bounded optimizer-disabled TRAIN/DEV calibration under the approved lease.
+Freeze the common action/context limits, optimizer, reward, discount, task repetitions, evaluation attempts and checkpoint rule before outcomes select settings.
+Reconstruct all selected roots in the actual consumer environment before model loading.
+Do not present recorded source states as newly checked runtime states.
+All additional calibration and Lean work count toward the lease and stage caps.
+
+The primary endpoints are complete accepted proofs and solved theorems at the same fixed attempt budget.
+Report familiar and genuinely reviewed transfer panels separately; unreviewed panels remain development diagnostics.
+Report loss, format, type/name errors, local validity and supplied-prefix success separately from complete-proof capability.
+Keep every planned attempt, failure and cap stop in the operational denominator.
+Equal planned task repetitions do not establish equal generated tokens, Lean calls, GPU time or realized exposure.
+Compare consumed and uncensored multisets before claiming a full-exposure order effect.
+Topic clustering and recency remain alternative mechanisms; order alone does not establish prerequisite acquisition.
+
+#### Delivery boundary
+
+Finish source review, exact common-parent binding and the costed managed package before asking for a launch.
+Target completion of training and matched final evaluation before Tuesday close, 20 October 2026 IST.
+Use Wednesday for counted results, including null outcomes, retention losses and uninformative constant-reward runs.
+An incomplete review supports an exploratory result, not a confirmatory prerequisite claim.
+A resource stop remains a resource stop; no deadline extension, selected replacement tasks or automatic retries follow.
+The existing USD 18 optimizer pilot remains unapproved and separate from the broader program.
+This amendment approves neither lease.
+
+#### Prepared schedules and execution artifacts
+
+The managed schedule build returns exit 0 in `nt_curriculum_schedule_20261018_v1/out/`.
+Each paired schedule contains 1,072 groups.
+Every canonical root appears twice in each schedule.
+The independent recount checks exact task-ID multiplicities and whole-root starts and returns exit 0.
+`order_R.json` is the seeded shuffled schedule.
+`order_C_provisional.json` sorts identifiers for transport validation; it is not a prerequisite curriculum and is not wired into the registered C command.
+
+The separate `review/` output contains source-bound AI annotations and `order_C_exploratory.json`.
+12 TRAIN statements and their checked reference proofs receive tentative AI annotations.
+524 roots remain explicitly unreviewed in this annotation pass.
+No annotation receives human confirmation in this preparation.
+The exploratory order places the annotated sample first and retains unknown roots in a seeded tail.
+Unknown does not mean difficult, and this placement cannot establish the prerequisite mechanism.
+Its task multiset matches R exactly, as checked by the independent recount.
+The enriched review queue records source evidence, required skills, uncertainty and the remaining review work.
+
+Private preparation sources and receipts are in `.private/ops/nt_curriculum_data_20261018_v1/` and `.private/ops/nt_curriculum_schedule_20261018_v1/`.
+The common data archive is uploaded to the existing durable research prefix and its recorded read-back digest matches.
+The execution package is `.private/ops/nt_curriculum_execution_20261018_v1/`.
+It contains `plan.json`, `commands.json`, per-stage configs, `cost_envelopes.json`, source observations and a registry.
+Its status remains `planned_not_launch_ready`; unresolved parent, semantic, runtime and managed-run bindings remain explicit.
+It does not mutate the frozen optimizer pilot.
+
+The broad-bank planning envelope uses one sequential L40S lease with a proposed USD 110 ceiling.
+Its maximum duration is 36 hours.
+The separate bounded fallback proposes a USD 35 ceiling.
+Its maximum duration is 10 hours.
+That fallback uses an admitted existing S checkpoint and a prospectively selected TRAIN subset; it has no new SFT stage.
+If a new S is required, the fallback is unavailable under that envelope.
+These are planning reservations, not final launch quotes, approved spend or predictions of completion.
+Live pricing, storage/transfer allowances and runtime assumptions remain in the private cost artifacts.
+Capacity, peak GPU memory and new-bank runtime remain unmeasured.
+
+GPU calibration is a capped stage inside the separately approved lease.
+It is not a prerequisite that must somehow run on an unapproved GPU before approval.
+R/C execution depends on its result; no automatic parameter change, task replacement or cap extension follows.
+An arm with no optimizer updates can lack a final checkpoint under the existing export rule.
+Keep that outcome; bind any subsequent evaluation to the explicitly unchanged S parent or mark it unavailable.
+Do not report a missing checkpoint as a trained model or silently change the parent of the comparison.
+
+The optimizer-disabled calibration input is frozen separately under `nt_curriculum_data_20261018_v1/calibration_v1/`.
+It contains 32 whole-root TRAIN tasks.
+The selection takes eight canonical task IDs per lexical topic in deterministic order, before model outcomes.
+It is a calibration sample, not a prerequisite graph or a held-out capability panel.
+Its preparation checks whole-root membership and exclusions without loading a model or calling Lean.
+The source receipt and durable archive remain separate from the immutable common release.
+
+The final documentation checks are `uv run pre-commit run --files README.md docs/EXPERIMENTS.md` and `latexmk -pdf -quiet -cd -interaction=nonstopmode -halt-on-error docs/tex/project_report.tex`.
+Both return exit 0, and the report log contains no unresolved-reference or box warnings.
+The focused schedule command `python3 .private/ops/nt_curriculum_schedule_20261018_v1/test_prepare.py` reports `Ran 1 test`, `OK`, and exit 0.
+These checks verify documentation and schedule behavior, not learned proof capability or launch readiness.
+
+### Current data and model contract closure, 18 October 2026 IST
+
+This amendment supersedes the consumer admission and incomplete semantic review in the earlier common-data plan.
+It does not change historical proof outcomes or authorize a paid launch.
+Root owns the integrated release and execution recipe.
+
+The initial projection copied action examples whose full source proofs had accepted verdicts.
+Fresh action replay finds examples that start after proof closure, continue after closure, fail Lean, or fail the required progress/cycle checks.
+A full-proof verdict does not certify an extracted action at a recorded prefix.
+The original projection and every failed record remain preserved.
+New consumers use `nt_curriculum_data_20261018_v1/validated_v2/`.
+
+| Population | Source records | Retained records | Quarantined records | Pending records |
+| --- | ---: | ---: | ---: | ---: |
+| TRAIN actions | 2,095 | 1,880 | 215 | 0 |
+| TRAIN-only loss-validation actions | 128 | 125 | 3 | 0 |
+| Source proof variants, both partitions | 580 | 548 | 32 | 0 |
+| Canonical TRAIN roots | 536 | 506 | 30 | 0 |
+
+`finalize_current.py` counts these values from source indices, disjoint phase records, the semantic policy and the emitted files.
+`validated_v2/data_consumer_receipt.json` and `validated_v2/manifest.json` store the counts and exact artifact hashes.
+The retained proof variants comprise 516 TRAIN proofs and 32 separate loss-validation proofs.
+All 580 source proofs pass fresh target-absent, axiom-checked replay before the primary semantic exclusions.
+All 536 canonical source roots reconstruct through the actual v2 environment.
+The source admission bridge binds each actual header and selected proof hash to its unchanged premise-satisfiability certificate or admitted assumption-free binder form.
+It does not claim informal source alignment.
+
+The full AI review reads every canonical TRAIN statement and every TRAIN proof variant.
+The primary policy removes 19 valid foundational controls into a separate source pack.
+It removes ten AI-reviewed redundancy cases without certifying exact equivalence.
+It removes one task whose reference invokes a reserved DEV target lemma.
+These exclusions apply to both action SFT and the RL bank.
+Valid controls are not labelled mathematically invalid.
+The semantic review has no human confirmation.
+
+The original validation pass stops at its fixed global deadline with actions pending.
+Separate registered continuations process disjoint pending worklists; no failed row is retried.
+All continuation shards finish before their own recorded deadlines with exit 0.
+The original timeout and failed records remain unchanged.
+The finalizer returns exit 0 with `pending_records=0` and `source_coverage=complete`.
+The source validation phases record 11,442 physical Lean calls.
+No model generation or optimizer runs in these phases.
+
+The final tokenizer check uses both actual saved tokenizers and the current SFT consumer.
+It passes every retained TRAIN and loss-validation message, including its completion terminator, target parser, recovery diagnostics and exact fresh v2 rendering.
+It passes every retained whole-root prompt.
+No target is truncated.
+The context cap remains 2,048 tokens.
+The action completion cap remains 192 tokens.
+`model_contract_v2/validated_v2_fit.json` binds the data manifest, consumer source and runtime renderer.
+Its largest retained SFT row contains 2,037 tokens.
+Its largest root prompt contains 425 tokens.
+These checks establish input compatibility, not learned proof capability.
+
+The new main setup checker replaces the pilot's v1 STEP wrapper and 1,024-token assumption with the actual v2 observation path.
+It verifies exact actor, pool, exclusion, runtime and verifier hashes against the completed TRAIN replay receipts.
+It reconstructs the fixed DEV statement headers and roots live without reading DEV solutions.
+The first CPU invocation fails before Lean because `hashlib.file_digest` is unavailable in its Python version.
+A bounded streaming hash replaces that call; `consumer_v2/failure.json` preserves the failure.
+The corrected `consumer_v3/out/run.json` reports `complete`, and the managed command returns exit 0.
+It binds all 506 retained TRAIN roots through the exact replay evidence.
+It reconstructs all eight fixed DEV roots with 16 physical Lean calls.
+No weights, inference or optimizer are used.
+
+The historical SFT model is not admitted as the clean common parent.
+Its consumed source examples invoke `Nat.factorial_mul_factorial_dvd_factorial`, which matches a reserved DEV target up to product order.
+The source task is excluded from the new primary data.
+Removing rows cannot remove their earlier effect on the historical weights.
+Use fresh SFT from pinned B, then derive both R and C from that exact final S checkpoint.
+The earlier historical-S-only fallback is ineligible for the clean study.
+The historical model remains available for a labelled familiar diagnostic.
+
+The direct exposure scan checks all TRAIN proof identities and action targets/histories against the reserved actor names and exact statement forms.
+All detected uses of the known factorial alias belong to the excluded source task.
+The scan does not enumerate every semantic alias in mathlib.
+Complete semantic independence and upstream pretraining exposure remain unresolved.
+The future SFT worker now records exact read-byte hashes, selected row hashes and counts, config and tokenizer metadata before loading weights.
+Historical consumed-input lineage remains reconstructed rather than retroactively attested by that worker.
+
+`full_review_v2/runtime_order_manifest.json` binds both order files to the final data manifest and actor hash.
+Each order contains 1,012 groups over the same 506 roots, with two repetitions per root.
+All 54 proposed pedagogical edges retain their providers.
+No provider is missing after runtime admission.
+The order remains an AI pedagogical proposal, not measured mastery or evidence of prerequisite necessity.
+Recency and topic clustering remain alternative explanations for any future order effect.
+
+The main execution package is separate from the frozen optimizer pilot.
+`run_program.py` dispatches SFT with its own wall-cap key, retains real child exits, rejects output reuse and binds the exact approved lease identity and existing deadline schema.
+A completed zero-update arm can explicitly evaluate its unchanged S parent; a failed or partial update cannot fabricate a final checkpoint.
+RL starts only after complete fixed TRAIN calibration with mixed complete-proof returns.
+The new shell templates preserve the baseline EOS configuration and derive service limits from the original deadline after the independent provider guard is armed.
+The uploader sends immutable complete JSONL chunks and an explicit final fragment instead of repeatedly sending the growing raw file.
+`materialize_logs.py` checks offsets and hashes before recreating the original bytes.
+The transfer, retention, credential and optimizer-state filters remain unchanged.
+
+Focused checks return exit 0: the SFT selection reports `Ran 3 tests ... OK`; the dispatcher reports `Ran 5 tests ... OK`; the uploader reports `Ran 2 tests ... OK`.
+The dispatcher fixture checks the SFT timeout key, real failure exit, output collision, zero-update binding, calibration rejection and exact lease identity.
+The uploader fixture checks appended suffixes, partial fragments, corruption rejection and uncertain transport accounting.
+`bash -n` accepts the new `run.sh` and `userdata.sh` with no output.
+`prepare_plan.py` returns exit 0 and binds the final data, model metadata and runtime schedules.
+Its approval remains false.
+
+The remaining execution boundary is explicit: fresh S weights, GPU resource behavior, calibration returns and matched B/S/R/C proof capability are unmeasured.
+The GPU runtime stack differs from the bounded CPU checks.
+No TEST inference, paid allocation, training, renewal or replacement occurs in this closure.
+The prepared shell templates still require a separately staged exact-cost launch package and an approved owned lease.
+
+### Main package staging outcome, 18 October 2026 IST
+
+The clean main package is staged and awaits separate paid-launch approval.
+This resolves the package-staging item in the preceding closure; it does not resolve GPU or proof-capability uncertainty.
+The run is `exp026-027-nt-clean-main-s20261018-v2` under EXP-026 and EXP-027.
+`python3 .private/ops/nt_curriculum_execution_20261018_v1/stage_package.py` returns exit 0 with `prepared_awaiting_cost_approval`.
+The current quote reserves USD 102.31 from the live AWS Price List response and declared allowances.
+The proposed total ceiling is USD 110.
+The maximum lease duration is 36 hours on one L40S.
+No renewal or replacement is allowed.
+
+The package binds the filtered data, runtime order files, current public source, fixed DEV statement-only inputs and pinned B.
+Historical S is excluded.
+The staged parent archive and its individual files match the recorded byte hashes.
+The environment archive reuses its existing ETag and size identity; its whole-archive SHA256 remains unrecorded.
+The actual-package check confirms false approval blocks launch before AWS client creation.
+The source, quote, assets and rendered request remain recorded in the existing private execution directory and durable prefix.
+`approval.json` remains false.
+Neither `lease.json` nor `launch_attempt.json` exists.
+
+Source review finds a cleanup defect after staging: the first durable lease write sat outside the post-allocation termination handler.
+An injected failure reproduces the missing termination call.
+The correction moves that write inside the handler, preserves the original failure if status persistence also fails, and propagates a provider termination failure.
+`python3 .private/ops/nt_curriculum_execution_20261018_v1/test_launch.py` returns `Ran 1 test ... OK`, exit 0.
+Every provider call in that fixture is mocked.
+The unlaunched stage refresh changes the launcher identity and its receipts; it does not change the quote, approval, data or model inputs.
+`launch_review_fix_receipt.json` preserves both stage identities and the correction evidence.
+
+The file-scoped pre-commit check passes.
+The report build returns exit 0 with no unresolved references or box warnings after the long lemma name uses the existing breakable path macro.
+The affected PDF pages render without clipping or overlap.
+No paid allocation, model training, TEST inference or new learning result follows from this staging outcome.
+
+### Operator handoff: staged clean number-theory study, 18 October 2026 IST
+
+#### Resume boundary and authorization
+
+Continue EXP-026 and EXP-027 from the existing staged package.
+README's status table remains the current project status record.
+Read the preceding data-closure and package-staging entries before changing a source or input.
+This handoff records preparation; it does not authorize compute.
+The latest user request is to make this handoff, not to approve the launch.
+
+The run ID is `exp026-027-nt-clean-main-s20261018-v2`.
+The package directory is `.private/ops/nt_curriculum_execution_20261018_v1/`.
+Its `approval.json` remains false when this handoff is written.
+No local lease record or launch-attempt record exists for this run.
+The recorded quote reserves USD 102.31.
+The proposed ceiling is USD 110.
+The maximum duration is 36 hours on one L40S.
+The quote permits one launch attempt, without renewal or replacement.
+Earlier SFT and optimizer-pilot approvals do not authorize this lease.
+
+Use `AGENTS.md`, `.private/infrastructure.md` and the package's existing client settings for access and operations.
+Use AWS for the new lease.
+Do not infer credentials, addresses or resource identifiers from chat history.
+Keep private infrastructure identifiers out of tracked documents and user-facing messages.
+
+#### Goal and frozen comparison
+
+The goal is to measure independent number-theory proof completion and identify gains, failures and retention losses.
+Generalization remains EXP-026; curriculum remains EXP-027.
+Abhinav owns generalization, Manas owns curriculum, and Anwesha owns the Lean interaction contract.
+Root owns the integrated package and operational continuation.
+
+| Arm | Starting point and intervention | Contrast |
+| --- | --- | --- |
+| B | Unchanged pinned Qwen base | Baseline |
+| S | Fresh action SFT from B | S minus B measures the SFT contrast |
+| R | REINFORCE from S with shuffled fixed TRAIN order | R minus S measures the additional RL contrast |
+| C | The same REINFORCE recipe from S with the proposed prerequisite order | C minus R measures the order contrast |
+
+The exact staged sequence is `setup → S_new → dev_B → dev_S → calibration_S → R → dev_R → C → dev_C`.
+Both RL branches start from the exact same fresh S final checkpoint.
+Their data multiplicities, seed, optimizer, interaction contract and resource caps match.
+PPO remains a separate feasibility comparison and cannot substitute for R in this study.
+Use fixed final checkpoints; do not select another checkpoint after inspecting DEV.
+TEST remains untouched.
+
+Before R or C starts, the fixed TRAIN calibration must finish without censored groups or infrastructure failures.
+A completed calibration group must contain both accepted complete proofs and failed attempts.
+The recorded completion projection must fit the remaining original deadline.
+If calibration fails, preserve B/S DEV and the calibration records, then report why RL did not start.
+Do not change thresholds, replace tasks, retrain S automatically, extend caps or allocate a replacement lease.
+
+#### Inputs and evidence to reuse
+
+The following counts are recorded release counts, not a new replay performed for this handoff.
+They come from the final manifest and consumer receipts linked in the preceding closure.
+
+| Input | Recorded retained population | Location under the remote artifact root |
+| --- | ---: | --- |
+| Action SFT TRAIN | 1,880 rows | `nt_curriculum_data_20261018_v1/validated_v2/sft_action/sft_train.jsonl` |
+| TRAIN-only loss validation | 125 rows | `nt_curriculum_data_20261018_v1/validated_v2/sft_action/sft_val.jsonl` |
+| Whole-root RL | 506 tasks | `nt_curriculum_data_20261018_v1/validated_v2/actor/train_tasks.jsonl` |
+| Paired task orders | 1,012 groups per arm | `nt_curriculum_schedule_20261018_v1/full_review_v2/order_{R,C_AI}_runtime.json` |
+
+Do not use the earlier unfiltered `release/` projection for new training.
+Do not re-admit quarantined records or silently mix the separate foundational controls into primary TRAIN.
+Full-proof files use a different target protocol and are not action SFT inputs.
+The source validation preserves its original deadline failures and separate pending-only continuations.
+There are no pending source records in the final release.
+
+The data manifest SHA256 is `bc5c8edcbb12cd444bfc04c54361aa0f3dca5996d03313282d7629750274f08e`.
+The current stage SHA256 is `4a666b72d14db4f0b453703aa5ad40aae1ff764f8d2576907f303eb9e86f42c9`.
+The quote SHA256 is `ee386c180c8525097875b52843d74b8e8344d03215d160f40b7cdeafb68a2d08`.
+These identify this snapshot; the run records remain authoritative if an explicitly approved amendment supersedes it.
+
+Use these existing records rather than reconstructing results from chat:
+
+- `.private/ops/nt_curriculum_data_20261018_v1/run_registry.json` and `validated_v2_archive_receipt.json` bind the final data and durable archive.
+- The main package's `model_contract_v2/validated_v2_fit.json` records the final tokenizer, parser and rendering checks.
+- Remote main execution files `model_contract_v2/historical_target_exposure.json` and `train_target_exposure.json` record the known exposure and scan boundary. They are not local mirrors; this documentation-only handoff does not recheck remote file existence.
+- Remote `consumer_v3/out/run.json` records the passing actual consumer check. `consumer_v2/failure.json` preserves the earlier Python compatibility failure.
+- `full_review_v2/runtime_order_manifest.json` binds both schedules to the admitted population. Its annotations remain AI pedagogical proposals.
+- The main package's `stage.json`, `assets.json`, `staging_receipt.json` and `launch_review_fix_receipt.json` bind the staged package and launcher correction.
+- Its `program.template.json`, `bindings.template.json`, `configs/`, `source_manifest.json` and `launch_request.json` define execution.
+- Its `final_archive_receipt.json` records read-back verification of the final preparation metadata archive.
+
+#### Model and runtime contract
+
+Use `Qwen/Qwen2.5-0.5B-Instruct` at revision `7ae557604adf67be50417f59c2c2f167def9a775` for B.
+Historical S trained on examples that invoke a reserved DEV target lemma.
+It is ineligible as the clean common S, even though its files and tokenizer pass compatibility checks.
+Fresh S weights do not yet exist.
+Do not describe historical S as trained on the new filtered recovery dataset.
+
+Keep the pinned Lean toolchain `leanprover/lean4:v4.10.0-rc1`.
+Keep mathlib revision `29dcec074de168ac2bf835a77ef68bbe069194c5`.
+Use the exact v2 observation renderer, not the old STEP wrapper.
+The context cap remains 2,048 tokens.
+The action completion cap remains 192 tokens, including its chat terminator.
+The episode horizon remains six actions.
+An action contains at most four top-level tactics.
+Preserve the parent's stop IDs `[151645,151643]` and PAD ID `151643`.
+Do not copy the older optimizer pilot's scalar EOS override into this package.
+Terminal reward requires complete accepted replay and the axiom check.
+Intermediate goal changes and diagnostics receive zero reward in this environment version.
+
+#### Next authorized action and operating rules
+
+The next decision is explicit approval of this exact quoted lease.
+If approval remains absent, leave the staged package unchanged and do not launch.
+After approval, record it in the existing `approval.json` while preserving the run ID and quote binding.
+Use the existing `launch.py`; do not replace it with a manual allocator.
+Its current code refuses false approval, prevents duplicate project leases and arms an independent owned termination guard.
+The repaired handler terminates the owned instance when the first durable lease write or later guard setup fails.
+The in-instance runner derives its limits from the original lease deadline.
+
+Do not regenerate data, schedules, source archives or the quote as a default resume step.
+Changing a bound input invalidates the staged identity and needs an explicit amendment.
+Do not repeat the completed validation jobs or create another preflight suite.
+Use the existing launcher's focused checks and preserve all caps.
+Do not commit or push without a direct request.
+
+After a launch, report the actual stage, log timestamp, loss and optimizer step when recorded.
+Keep loss separate from complete-proof capability.
+Count accepted complete proofs against planned attempts, including failures and incomplete coverage.
+Retain generated tokens, physical Lean calls, wall time and GPU usage.
+Read existing outcomes; do not add evaluations or use TEST while monitoring.
+Keep one monitor and one writer per output.
+The uploader stores JSONL append chunks and a final fragment; use `materialize_logs.py` for verified reconstruction.
+On a failure or deadline, inspect the actual state and preserve it without retry, renewal or replacement.
+Confirm provider termination at the end of an approved run.
+
+GPU resource behavior, calibration support and matched proof capability remain unmeasured.
+AI annotations have no human confirmation or measured prerequisite necessity.
+Complete semantic alias independence and public pretraining exposure remain unresolved.
+An order gain cannot by itself isolate prerequisite learning from recency or topic clustering.
+
+### Spot-first amendment and launch, 18 October 2026 IST
+
+Manas approves the staged main lease and amends its allocation rule.
+The approval allows one L40S on AWS, spot first, then on-demand if spot fails, inside a USD 110 ceiling.
+Manas also allows the existing termination guard on cpu-angad for this lease.
+This is an explicit exception to the AWS-only rule and applies to this lease only.
+
+The amendment reads "spot fails" as a failed spot allocation call.
+The program has no resume path: each stage output must be new, and the program allows no retry.
+A mid-run spot interruption therefore ends this run without replacement.
+An on-demand restart after an interruption could exceed the ceiling, because the on-demand path alone reserves USD 102.31.
+
+The quote keeps its USD 102.31 reservation.
+The spot maximum price equals the quoted on-demand rate, and at most one instance runs.
+Before launch, the spot placement score was 1 of 10 in all three zones of the quoted region.
+The public Spot Instance Advisor listed a 5-10% interruption frequency for this instance type.
+The amended quote records these observations and the latest seven-day spot prices.
+
+`launch.py` now sends one spot request in the lowest-priced zone.
+It sends one on-demand request only after a spot capacity, price or quota error.
+Any other spot error stops without an on-demand request.
+`python3 .private/ops/nt_curriculum_execution_20261018_v1/test_launch.py` returns `Ran 3 tests ... OK`, exit 0, before approval.
+The tests mock every provider call.
+They cover spot success with the existing failure handler, the on-demand fallback and a non-fallback error.
+EC2 dry runs of the spot and on-demand requests both return `DryRunOperation`.
+`spot_amendment_receipt.json` records the previous and new stage, quote and launcher hashes.
+The new stage SHA256 is `42c3f78b3b1767d1a98c1406c868b2f6639a8c77e080f8259b1ddc90b8df0ca3`.
+The new quote SHA256 is `f11f59ab9e914f5217ad33e6999b9485c3b5ce99b1c9a09a90b6237bd1d98995`.
+The launch request is unchanged.
+
+The spot request returned `InsufficientInstanceCapacity` at 10:38:59 UTC.
+The on-demand fallback started at 10:39:01 UTC, which is 16:09 IST.
+The lease deadline is 22:39:01 UTC on 19 October 2026.
+`lease.json` records `launched_guard_armed`, the on-demand market, no renewal and no replacement.
+The guard session runs on cpu-angad.
+The first bootstrap log upload is at 10:40:33 UTC.
+It shows that the in-instance lease check passed and moved the instance shutdown to 22:37:19 UTC on 19 October.
+The log then shows completed input downloads and the uv installation.
+The first uploader receipt reports `synced` with three objects.
+No SFT, DEV, calibration or RL result exists yet.
+The handoff's monitoring and termination rules apply unchanged.
+
+#### Stage tracking and the R/C coverage risk
+
+The running instance has no SSH key and no SSM registration, and it synced its code once at bootstrap.
+The only available intervention is termination; training, caps and evaluations cannot change in flight.
+`track_status.py` in the package directory reads the S3 run records and never touches the instance.
+It recounts accepted complete proofs from per-group returns in `steps.jsonl` and checks them against `run.json`.
+It appends one line per finished stage to `stage_tracking.jsonl` and mirrors that file to the durable prefix.
+
+The first results are:
+
+- `setup` completes with exit 0 and 16 Lean calls.
+- `S_new` completes 90 optimizer steps over 3 epochs on 1,880 rows; train loss is 0.429 and the final TRAIN-only validation loss is 0.634 on 125 rows.
+- `dev_B` accepts 0 of 32 attempts and solves 0 of 8 DEV roots; the recount matches `run.json`.
+- In `dev_B`, 177 of 192 actions are format errors and 15 are Lean rejections.
+
+The plan requires a projected R/C completion check before RL starts (`plan.json`, `rl_go`).
+`run_program.py` does not implement it; `calibration_ready` checks only completion and mixed-return support.
+Full coverage of 1,012 groups inside the 43,200 s arm cap needs at most 42.7 s per group.
+`dev_B` used 88.0 s per group with the base model.
+At that rate an arm would stop after about 49% of its groups.
+The C order places all 506 distinct tasks in its first 506 groups.
+At a 49% stop, C would have seen 495 distinct tasks and R 375.
+A cap stop would therefore confound the C minus R order contrast with the breadth of task exposure.
+The plan's cap-stop rule keeps planned attempts in the denominator and records the consumed multiset differences.
+S's measured seconds per group in `dev_S` and `calibration_S` will decide whether this risk applies.
+
+`dev_S` accepts 0 of 32 attempts and solves 0 of 8 DEV roots; the recount matches `run.json`.
+B and S therefore have the same DEV complete-proof result, and DEV gives no SFT contrast at this floor.
+S changes action behavior: of 192 actions, 37 are format errors against 177 for B.
+S's other actions are 134 Lean rejections, 14 partial chunks, 4 goal changes and 3 no-progress steps.
+These intermediate statuses are not proofs.
+`dev_S` uses 49.4 s per group, 185 Lean calls and 17,983 generated tokens.
+At that rate, an arm would reach 874 of 1,012 groups inside its cap, excluding optimizer time.
+The 874-group prefixes contain 500 distinct tasks for R and 506 for C.
+`calibration_S` on TRAIN roots gives the closer rate estimate for R and C.
+
+`calibration_S` completes with exit 0 in 1,254 s, with no censored groups.
+It accepts 4 of 128 attempts on 32 TRAIN roots; the recount matches `run.json`.
+Three groups are mixed, with 1, 1 and 2 accepted attempts of 4.
+The calibration gate therefore passes, and R starts at 11:29:06 UTC, when `calibration_S` finishes in `pipeline.json`.
+Calibration uses 39.2 s per group, 852 Lean calls and 56,282 generated tokens.
+At that rate, R would reach 1,102 groups inside its cap, excluding optimizer time.
+Full coverage of 1,012 groups therefore has about 3.5 s per group of margin for optimizer updates.
+Projected R use is 1.78 million tokens against a 4.66 million cap and 26,944 Lean calls against a 125,488 cap.
+The leave-one-out baseline gives zero advantage to groups with equal returns.
+At the calibration mixed-group share of 3 in 32, about 9% of R groups would produce an update.
+
+#### Diagnosis of low acceptance in the main lease
+
+The sample is 944 S actions from `calibration_S` and `dev_S`, read from the uploaded `rollouts.jsonl` records.
+Each action receives its earliest failing gate.
+Of 944 actions, 826 have a valid action format.
+Of those 826, 683 parse in Lean and use only existing tactics.
+Of those 683, 452 use only names that exist in scope or in the library.
+Of those 452, 41 apply every tactic without error.
+Of those 41, 4 close the proof.
+The largest loss is at the semantic gate: 9.1% of well-formed, name-valid actions apply without error.
+Of 160 attempts, 83 apply at least one tactic and 4 are accepted.
+
+Four harness hypotheses were tested and rejected:
+
+- The parser strips one complete fence; the 49 "unknown tactic" actions use invented tactic names.
+- The 11 candidate state-loss cases are scope errors or renamed bound variables; the shown tactic state is correct.
+- The sampler sets temperature 1.0, `top_p` 1.0, `top_k` 0 and repetition penalty 1.0 (`run_tactic_rl.py:999-1001` and `1071-1072`).
+- Of 181 unknown library-name occurrences, 179 never appear in the 1,880 SFT targets; the model invents them.
+
+DEV and calibration therefore measure acceptance within 4 untruncated temperature-1.0 samples.
+Of the SFT targets, 881 contain a nested `have ... := by` block and 594 contain `<;>`.
+One error anywhere in such a block rejects the whole top-level tactic.
+The diagnosis attributes low acceptance to policy capability, not to a harness fault.
+It does not separate base-model size, SFT quantity, decoding temperature and action granularity.
+
+## EXP-028
+
+Registered 18 October 2026 IST, before any EXP-028 run.
+Question: do the four literature remedies raise held-out complete-proof acceptance over the fresh S of the main lease?
+Mode: exploratory screen; a promoted arm motivates a confirmatory run and is not itself a final claim.
+Manas owns the question and approvals; root owns the data builds, packages and run records.
+The remedies are the `run_tactic_rl.py` options in the decision log entry of the same date.
+
+#### Inputs and the held-out selection set
+
+- Parent: the S final weights of `exp026-027-nt-clean-main-s20261018-v2`, `runtime/out/S/final/` under the main lease prefix. B is the pinned Qwen revision of the main study.
+- Lean and mathlib: the pinned `leanprover/lean4:v4.10.0-rc1` and mathlib `29dcec074de168ac2bf835a77ef68bbe069194c5`.
+- Selection set: a new set of about 100 admitted theorems from the existing corpus. It must exclude the 536 canonical TRAIN roots and their aliases, every SFT source identity, the fixed DEV and TEST of the main study, and EXP-025 DEV and TEST. Selection is deterministic and precedes model outcomes. Admission requires a fresh reference replay, target absence and the allowed-axiom check. Near-duplicate exclusion reuses the configured text threshold.
+- Premise corpus: public non-internal Mathlib theorems dumped by `scripts/data/build_premise_corpus.py` from the pinned environment.
+- Manas allows cpu-angad for these CPU and Lean builds on 18 October 2026, an explicit exception to the AWS-only rule. Each job runs under the managed runner with memory, CPU and time caps.
+
+#### Arms, metric and decision rule
+
+Lease 1 measures, on the selection set with fixed seeds and paired by theorem:
+
+- E0: S, one sample per step, model-only. This is the baseline.
+- E1: S with `step_candidates` 4.
+- E2: S with `step_candidates` 4 and `automation_fallback`; the root automation baseline is recorded in the same run.
+- E3: SFT from B on the current action rows with the lemma section (`add_premises_sft.py`), evaluated with retrieval.
+- E4: SFT from B on the current rows plus rows mined by `build_search_sft.py` from a TRAIN search assessment.
+- E5: SFT from B on the current rows with a second seed, as the SFT noise control for E3 and E4.
+
+Lease 1 also records S's TRAIN pass rates over all canonical roots, for Lease 2's task filter.
+Lease 2 compares REINFORCE from S on pass-rate-filtered tasks against unfiltered tasks at a matched budget; it is planned from Lease 1 results.
+The primary metric is the model-only accepted-attempt fraction per theorem on the selection set.
+Search and automation outcomes are separate metrics, always reported beside E0.
+An arm is promoted only if its paired gain over E0 (or E5 for E3 and E4) is at least 5 percentage points and its paired bootstrap 95% interval excludes zero.
+The bootstrap resamples theorems with 10,000 replicates and seed 20261018.
+TEST stays untouched.
+Manas allows the second lease to run in parallel with the main lease; each paid lease still needs approval of its exact quote.
+
+#### Preparation record and program amendments, 18 October 2026 IST
+
+Run records live in `.private/ops/exp028_remedies_20261018_v1/run_registry.json`; failed and stopped attempts stay recorded.
+
+- Premise corpus: `exp028-premise-corpus-cpu-s20261018-v1` returns exit 0 in about 7 minutes. It dumps 206,923 public Mathlib theorems; corpus SHA256 `28a53e9b1185595e1639775c494a5a8fc23fdbdadcac0725a4bfe72dc2bc7f19`. On 200 real TRAIN states, the index builds in 10.1 s and answers in 0.146 s per query at 0.55 GiB peak memory.
+- Source identity: the curriculum `problem_id` equals the SHA256 of the raw corpus statement for all 580 source records.
+- Selection: `configs/data/nt_validation_v1.json` reads 40,814 rows, excludes 580 source identities exactly and 14,205 near-duplicate or numeric relatives of 1,409 protected statements, and freezes 216 candidates: 175 validation, 33 test and 8 train. Only the validation split is consumed; the test and train labels of this build are unused.
+- Admission: the first attempt fails because the registered identity lacks source hashes. The second stops because the uncommitted working-tree `verify_external_proofs.py` labels `exact?` forbidden before Lean runs, which leaves every screen incomplete. The third uses the frozen EXP-025 code and the clean identity `nt_dataset_cleanup_20261017_v1/identity_retry1/identity.json`.
+
+Program amendments before any paid run:
+
+- E1 is dropped. Automation runs only after a failed policy attempt and sampling is seeded per trajectory, so the model-only outcome of E2 equals E1 up to Lean timing.
+- E0 also records the automation fallback; its model-only outcome remains the baseline.
+- Manas allows RL in parallel. Lease 2 measures S's TRAIN pass rates, then runs REINFORCE from S on tasks with pass rate in (0, 0.75], with the rl_R caps of the main study.
+- The unfiltered comparison reuses the main study's R. Lease 1 evaluates R on the selection set (E7) after R finishes; Lease 2 evaluates the filtered arm (E6) with the identical configuration. R follows its frozen shuffled order while the filtered arm cycles its smaller set; this order difference is not controlled.
+
+#### Selection set and staged leases, 18 October 2026 IST
+
+The third admission attempt returns `Result=success` and exit 0.
+Of 216 candidates, 201 are admitted, 14 are screened out because a single fixed tactic solves them, and 1 has known parent exposure.
+The validation split holds 164 theorems in 8 topics: 79 in the four TRAIN topics and 85 in others.
+The median reference proof has 29 lines; a near-zero E0 is possible, so only gains of several points can pass the decision rule.
+Only `pool.jsonl`, `tasks_dev.jsonl` and `excluded_from_training.txt` leave cpu-angad; private references stay there.
+
+Both leases are staged in their own durable prefixes; neither is approved and no instance exists.
+
+| Lease | Run ID | Stages | Maximum | Reserved | Ceiling |
+| --- | --- | ---: | ---: | ---: | ---: |
+| 1, inference and SFT | `exp028-lease1-s20261018-v1` | 15 | 22 h | USD 63.94 | USD 70 |
+| 2, RL | `exp028-lease2-s20261018-v1` | 3 | 23 h | USD 66.68 | USD 70 |
+
+Each reservation is the live on-demand rate of USD 2.24208 per hour for the maximum, plus the main-lease allowance rules, plus 20%.
+Spot is tried first at a maximum price equal to that rate; a mid-run interruption ends the lease without replacement.
+The instance checks 14 (Lease 1) or 12 (Lease 2) input hashes before any stage starts.
+
+Both leases launched after approval; see the decision log entry of 18 October 2026 IST. The bootstrap logs show passed lease checks, downloaded inputs and installed uv on both instances. No stage result exists yet.
+
+#### Root automation timeout defect, 18 October 2026 IST
+
+In the running Lease 1 code, a root automation probe that hits the 20 s Lean timeout censors the whole group.
+E0 group 143 is censored for this reason (`automation_root_timeout`), which also removes S's two policy attempts on that theorem.
+A timeout is a failed automation outcome, not an infrastructure fault.
+Analysis treats censored theorems as missing in that arm and pairs each comparison only over theorems present in both arms; E2 may lose theorems the same way.
+`run_tactic_rl.py` now records such a timeout in `automation_root_status`, rebuilds the root and continues; a crashed REPL still censors.
+The running leases keep their bootstrap code, so the fix applies only to later runs.
+
+#### E0 result, 18 October 2026 IST
+
+E0 (S, one sample per step, automation fallback) completes with exit 0 in 5,545 s.
+It covers 163 of 164 theorems; group 143 is censored by the root automation timeout defect.
+S accepts 1 of 326 attempts, model-only, and solves 1 of 163 theorems; the recount from `steps.jsonl` matches `run.json`.
+The automation fallback completes 0 attempts, and automation alone solves 0 roots, as the admission screen implies.
+This baseline is near the floor, so later arms can pass the predeclared rule only with a gain of several points.
+
+#### Interim learning diagnostic, 18 October 2026 IST
+
+This is an exploratory read of running stages, recounted from `steps.jsonl`; it is not a final result.
+R has 546 complete groups. Of 151 TRAIN tasks visited twice, R accepts 31 of 604 attempts on the first visit and 37 of 604 on the second.
+10 tasks improve, 11 worsen and 130 are unchanged; a paired sign-flip test gives p = 0.483, so no learning on revisited tasks is detected yet.
+On 173 tasks measured by both, Lease 2's S accepts 17 of 692 attempts and R's first visit 8 of 692; these counts are too small to separate.
+Of 218 TRAIN tasks measured so far, 16 have 1 to 3 accepted attempts out of 4 and none has 4, so the filtered arm will cycle a small task set.
+
+#### Lease 3 amendment: capability probe and rollout checks, 18 October 2026 IST
+
+Manas asks for the Kimina-Prover-Distill-0.6B probe after the interim diagnostic.
+It asks whether near-zero held-out acceptance comes from S's capability or from the selection set's difficulty.
+Model: `AI-MO/Kimina-Prover-Distill-0.6B`, revision `332e8a5259d1bdfda19d7c7f339f30804813cd3a`, Apache-2.0, base Qwen3-0.6B.
+`probe_nt_pool.py --prompt-format kimina` uses the model card's prompt and sampling (temperature 0.6, top-p 0.95, 8,096 new tokens) through vLLM.
+It takes the proof body from the last closed Lean fence that restates the unchanged theorem and checks it with the same `verify_group` path.
+It draws 8 samples per theorem on all 164 selection theorems; an unclosed fence or a changed statement counts as a failed attempt.
+
+Two biases act in opposite directions and both are recorded with the result.
+Of 164 selection theorems, 123 carry the `goedel_v2_sft` source label and 46 the `stp` label; a public prover may have trained on these statements.
+The checker uses the pinned Lean v4.10.0-rc1 and mid-2024 Mathlib, which is probably older than the model's training environment; some lemma names may not exist.
+The selection theorems have no informal problem text, so the prompt's problem field is empty.
+The Kimina result is a whole-proof capability probe, not an arm matched to S's action format.
+
+Lease 3 also runs `check_rollout_backends.py` on 48 selection first steps and times sequential, lockstep HF and lockstep vLLM evaluation on the same 48 theorems.
+Lease 3 is staged with a 5 h maximum and USD 17.35 reserved against a USD 20 ceiling; it is not approved and no instance exists.
+
+#### E2 result and lemma data, 18 October 2026 IST
+
+E2 (S with 4 step candidates and the automation fallback) completes with exit 0 in 8,135 s; group 143 is censored by the same root automation timeout defect.
+`analyze_screen.py E2_S_search E0_S` pairs 163 theorems.
+E2 accepts 2 of 326 attempts and E0 1 of 326; the mean per-theorem accepted fraction is 0.61% against 0.31%.
+The paired gain is +0.31 percentage points with a bootstrap 95% interval of [-0.92, +1.84]; E2 is not promoted.
+Each arm solves 1 theorem, and they are different theorems: E0 solves `…b465` (1 of 2 attempts) and E2 solves `…ccb3` (2 of 2).
+The automation fallback completes 0 attempts in either arm.
+The lemma augmentation omits 32 of 1,880 TRAIN rows and 2 of 125 validation rows for exceeding the SFT length limit, so S_prem trains on 1,848 rows against S's 1,880.
+
+#### Kimina cap risk and staged rerun, 18 October 2026 IST
+
+Lease 3's probe sends all 164 theorems in one vLLM call (the default `--vllm-chunk` of 500), so it writes candidates only after every sample finishes.
+At 55 minutes, 672 of 1,312 samples are done at about 1,270 output tokens per second; finished samples average about 6,300 tokens.
+vLLM then projects about 75 more minutes, beyond the stage's 2-hour cap at about 19:18 UTC; a cap during generation would lose every Kimina sample.
+Lease 4 is staged as a rerun of only the Kimina stage, with `--vllm-chunk 16` and a 4-hour stage cap, so each finished chunk is kept.
+It reserves USD 17.35 for at most 5 h against a USD 20 ceiling; it is not approved and no instance exists.
+
+#### Kimina capability probe result, 19 October 2026 IST
+
+Lease 3's `kimina_eval` completes with exit 0 in 6,488 s, inside its 2-hour cap; all 1,312 Kimina samples and 1,476 single-tactic candidates are checked.
+Kimina-Prover-Distill-0.6B solves 47 of 164 selection theorems within 8 samples, accepting 86 of 1,312 samples.
+The unbiased estimates from 8 samples per theorem are 6.55% at pass@1, 11.35% at pass@2 and 28.66% at pass@8.
+S in E0 accepts 1 of 326 attempts (0.31%) and solves 1 of 163 theorems within 2 attempts (0.61%).
+Of 1,312 Kimina samples, 853 reach the 8,096-token limit without a closed final proof and count as failures; 328 are rejected by Lean, 33 use a forbidden construct and 6 time out.
+The single-tactic arm accepts 0 of 1,476 candidates, as the admission screen implies.
+Spot-checked accepted proofs are ordinary multi-step tactic proofs checked by the same `verify_group` path.
+
+| Stratum | Theorems | Solved within 8 | Accepted samples |
+| --- | ---: | ---: | ---: |
+| `goedel_v2_sft` source | 123 | 34 (27.6%) | 66 of 984 |
+| `stp` source | 39 | 11 (28.2%) | 17 of 312 |
+| TRAIN topics | 79 | 25 (31.6%) | 47 of 632 |
+| Other topics | 85 | 22 (25.9%) | 39 of 680 |
+| Reference proof of at most 20 lines | 62 | 28 (45.2%) | 42 of 496 |
+| Reference proof of 21 to 40 lines | 42 | 13 (31.0%) | 27 of 336 |
+| Reference proof over 40 lines | 60 | 6 (10.0%) | 17 of 480 |
+
+The selection set is therefore not beyond a 0.6B model: a prover-specialized model of similar size solves 28.7% within 8 samples where S solves almost none.
+This supports base-model capability and training data, not set difficulty, as the main limit on S. It does not identify which of the two matters more.
+The similar rates on `goedel_v2_sft` and `stp` statements give no sign that one public source is favored; they cannot rule out training exposure to both.
+The 65% truncation and the older pinned Lean and Mathlib bias Kimina's score down; possible exposure biases it up.
+Kimina uses whole-proof generation with long reasoning, so this is a capability probe, not an arm matched to S's action format.
+
+#### Rollout backend check result, 19 October 2026 IST
+
+Lease 3's `backend_check` exits 1: the check runs to completion and fails its greedy criterion.
+On 48 selection first steps with 4 samples each, every sampled comparison against single-prompt HF passes.
+For batched HF the p-values are 0.76 (log-probability), 0.58 (length) and 0.67 (stop rate); for vLLM they are 0.64, 0.10 and 1.0.
+Greedy exact action match is 0% for batched HF and 39.6% for vLLM, against the predeclared 80% threshold.
+The batched-HF greedy call in the check script omitted explicit sampling settings and inherited the checkpoint's repetition penalty of 1.1, while the single-prompt baseline used 1.0; this is a defect of the check, not of `HFGenerator`, which sets 1.0 explicitly.
+The script now passes explicit settings and also reports the mean first-divergence position as a diagnostic; the pass criterion is unchanged.
+Until a corrected check passes on a GPU, lockstep and vLLM outcomes do not count as evaluation results; Lease 3's bench stages measure time only.
+
+#### R result and E3 result, 19 October 2026 IST
+
+Main lease R completes with exit 0 in 8.01 h, inside its 12 h cap, so it covers all 1,012 planned groups; the earlier cap-stop risk did not occur.
+R accepts 164 of 4,048 attempts (4.05%) with 92 optimizer updates and 0 censored groups; the recount matches `run.json`.
+Across all 506 tasks visited twice, R accepts 81 of 2,024 attempts on the first visit and 83 of 2,024 on the second; 22 tasks improve and 28 worsen; a paired sign-flip test gives p = 0.933.
+The first half of training accepts 87 of 2,024 attempts and the second half 77 of 2,024.
+No learning on TRAIN tasks is detected within R's budget. R's final weights are uploaded for E7.
+
+E3 (SFT from B with the lemma section, evaluated with retrieval) completes with exit 0 and no censored group.
+It accepts 1 of 328 attempts and solves 1 of 164 theorems, the same theorem `…ccb3` that E2 solves.
+Against E0 over 163 paired theorems, the paired gain is 0.00 points with a bootstrap 95% interval of [-0.92, +0.92]; E3 is not promoted. The predeclared comparison against E5 follows when E5 finishes.
+Lease 3's sequential bench covers 48 theorems in 1,325 s (27.6 s per theorem with 2 attempts) and accepts 0 of 96 attempts.
+
+#### dev_R result: RL shifts S toward repeated short actions, 19 October 2026 IST
+
+`dev_R` evaluates R's final weights and completes in 161 s; it accepts 0 of 32 attempts and solves 0 of 8 DEV roots, the same as B and S.
+R's DEV behaviour differs from S's. Of 192 actions, 113 are format errors against 37 for S, and 56 are Lean rejections against 134.
+Mean generated tokens per action fall from 93.7 to 33.3.
+Inspected format errors repeat one tactic beyond the 4-tactic limit, for example seven consecutive `simp` lines.
+R's 92 updates therefore move the policy, but toward a narrow short-action pattern rather than toward more accepted proofs; TRAIN acceptance does not change (p = 0.933).
+This is an exploratory observation on 8 DEV roots; it is not a measured cause. A likely contributor is REINFORCE with sparse terminal reward and no KL or entropy term, so a few rewarded short proofs dominate the updates.
+C uses the same recipe and may show the same shift. Future RL runs should add a KL penalty to the starting policy or an entropy term, and should track the format-error rate.
+
+#### Rollout speed result and pass-rate map, 19 October 2026 IST
+
+Lease 3 runs the same 48 selection theorems with 2 attempts each under three rollout settings; all three exit 0 and accept 0 of 96 attempts.
+Sequential HF rollout takes 1,325 s (27.6 s per theorem).
+Lockstep HF rollout with 2 Lean workers takes 1,116 s (23.3 s per theorem), 1.19 times faster than sequential.
+Lockstep vLLM rollout with 2 Lean workers takes 326 s (6.8 s per theorem), 4.06 times faster than sequential.
+Generated tokens are similar across settings (57,751, 57,049 and 59,277), so the comparison measures speed at matched work.
+Summed Lean time is 286 s in the vLLM run, about 143 s of wall time with 2 workers; Lean is now the next limit, and more Lean workers are the next speed step.
+These are timing results only. The corrected backend check has not yet passed on a GPU, so lockstep and vLLM outcomes still do not count as evaluation or training results.
+
+Lease 2's `pass_rates` stage completes with exit 0 in 20,940 s: S accepts 84 of 2,024 TRAIN attempts and solves 63 of 506 TRAIN tasks within 4 attempts.
+By accepted attempts per task, 443 tasks have 0 of 4, 48 have 1, 10 have 2, 4 have 3 and 1 has 4.
+The registered filter (0, 0.75] keeps 62 of 506 tasks for `RL_filtered`.
+
+Lease 3's program ends after `bench_vllm` with pipeline exit 1, because `backend_check` failed; every other stage exits 0.
+The provider reports the Lease 3 instance terminated after about 2.9 h; the tracker's compute estimate is USD 6.59 against USD 17.35 reserved. This is an estimate, not an invoice.
+
+#### Kimina second draw (Lease 4), 19 October 2026 IST
+
+Lease 4's chunked `kimina_eval` (`--vllm-chunk 16`, otherwise the same arguments and seed as Lease 3) exits 0 in 6,481 s; all 1,312 samples are checked.
+It solves 40 of 164 selection theorems within 8 samples, against 47 of 164 in Lease 3, and accepts 94 of 1,312 samples, against 86.
+Its unbiased estimates are 7.16% at pass@1 and 24.39% at pass@8, against 6.55% and 28.66% in Lease 3.
+The two draws share no non-empty proof text and no output tail, so the different batching gives different samples; their statistical independence is not checked.
+31 theorems are solved in both draws, 16 only in Lease 3 and 9 only in Lease 4; 56 of 164 are solved in at least one.
+Pooled over 16 samples per theorem, the estimates are 6.86% at pass@1, 25.77% at pass@8 and 34.15% at pass@16.
+An exact McNemar test on the 25 theorems solved in only one draw (16 against 9) gives p = 0.23, so the draws do not differ detectably; the conclusion that Kimina solves far more selection theorems than S (1 of 163) does not change.
+The provider reports the Lease 4 instance terminated after about 2 h, at program end.
+
+#### E5 result and the E3 comparison, 19 October 2026 IST
+
+E5 (SFT from B on the current rows with a second seed) completes with exit 0 in 4,106 s and no censored group.
+It accepts 0 of 328 attempts and solves 0 of 164 selection theorems; E0 solves 1 of 163.
+Against E5 over 164 paired theorems, E3's paired gain is +0.30 points with a bootstrap 95% interval of [0.00, +0.91]; E3 is not promoted under the registered rule.
+Against E0 over 163 paired theorems, E5's paired gain is -0.31 points with an interval of [-0.92, 0.00].
+The SFT seed changes the result by at most one theorem, so the lemma section and the SFT seed both stay inside the measurement floor at this acceptance level.
+
+#### search_train, mined data and the S_mined failure, 19 October 2026 IST
+
+Lease 1's `search_train` (step search on 128 TRAIN tasks, 2 attempts each) completes with exit 0 in 4,830 s and no censored group.
+The policy accepts 24 of 256 attempts and solves 19 of 128 tasks; automation accepts 17 more and solves 11 roots, and these never enter the mined data.
+`mined` writes 64 rows from accepted trajectories: 37 proof steps and 27 repairs, with 2 duplicate repairs removed.
+`data_mined` adds them to the 1,880 base training rows (3.3% of 1,944) and omits none for length.
+`S_mined` fails with exit 1 after 4 s: `SFTDataset.from_jsonl` raises `KeyError: 'format'` on the first mined row. This is a defect in `build_search_sft.py`, which wrote rows without the `format` field the trainer requires; its tests did not load rows through the trainer.
+`E4_S_mined` is therefore `unavailable_dependency`; Lease 1 continues with `R_main` and `E7_R_main`.
+The fix labels mined rows `v21_observation`, because they are rendered by the same `render_observation` as the base rows; a new test loads mined rows through `SFTDataset.from_jsonl` and fails before the fix.
+The frozen Lease 1 program cannot rerun the stage, so E4 needs a later approved lease. With 64 mined rows, E4 tests a small data change.
+
+#### E7 result: R on the selection set, 19 October 2026 IST
+
+E7 (R's final weights on the selection set) completes with exit 0 in 1,929 s and no censored group.
+It accepts 1 of 328 attempts and solves 1 of 164 theorems; E0 also solves 1, but a different theorem.
+Against E0 over 163 paired theorems, the paired gain is 0.00 points with a bootstrap 95% interval of [-0.92, +0.92]; R is not promoted.
+E0, E2, E3 and E7 each solve 1 theorem, and E7's theorem differs from E0's and from E2's and E3's shared theorem; this pattern fits sampling noise at the floor.
+E7 reproduces the dev_R shift on a larger set: 1,288 of 1,963 model actions are format errors, against 373 of 1,953 for E0.
+Mean action length falls from 95.8 to 34.6 tokens, and Lean rejections fall from 1,411 to 468.
+This action-status comparison is exploratory, not a registered metric.
+Lease 1's program ends with exit 1 because `S_mined` failed; every other stage exits 0. The instance is shutting down at 8.6 h.
+
+#### RL_filtered result: learning on the 62 filtered TRAIN tasks, 19 October 2026 IST
+
+Lease 2's `RL_filtered` completes all 1,012 groups with exit 0 in 11,585 s, with 337 optimizer updates and no censored group.
+It accepts 2,082 of 4,048 attempts (51.4%) and solves 51 of its 62 tasks; the recount matches `run.json`.
+Acceptance rises by quarter of training: 404, 500, 576 and 602 of 1,012 attempts.
+Each task is visited 16 or 17 times. The first-visit acceptance mean is 0.306 and the last-visit mean is 0.597; 33 tasks improve and 7 worsen; a paired sign-flip test gives p = 0.0001 (10,000 replicates, the smallest reportable value).
+The first-visit mean of 0.306 is close to the 0.323 that `pass_rates` measured on the same tasks, so the rise is not explained by regression to the mean after selection.
+This is the first EXP-028 arm with a detected training effect. It measures fit to the 62 trained tasks, which may be memorization; E6 measures transfer to the held-out selection set.
+
+#### E6 result: filtered RL on the selection set, 19 October 2026 IST
+
+E6 (`RL_filtered` final weights on the selection set) completes with exit 0 in 2,975 s and no censored group.
+It accepts 4 of 328 attempts and solves 2 of 164 theorems, each in both of its attempts.
+Its 2 theorems are the one E2 and E3 solve (`…ccb3`) and the one E7 solves (`…ffb5`).
+Against E0 over 163 paired theorems, the paired gain is +0.92 points with a bootstrap 95% interval of [-0.61, +3.07]; E6 is not promoted.
+Against E7 (unfiltered R) over 164 paired theorems, the paired gain is +0.91 points with an interval of [0.00, +2.44]; the filtered arm does not detectably beat the unfiltered arm.
+The training gain on the 62 filtered tasks therefore does not transfer measurably to held-out theorems at this set size.
+E6's actions differ from E7's: 18 of 1,948 model actions are format errors, against 1,288 of 1,963 for E7 and 373 of 1,953 for E0.
+Mean action length is 30.8 tokens, near E7's 34.6 and below E0's 95.8; most of E6's actions (1,636) are well-formed tactics that Lean rejects.
+This action-status comparison is exploratory, not a registered metric.
+Lease 2's program ends with exit 0 at 10.0 h, and the provider reports the instance terminated. All four EXP-028 leases have now ended.
+Estimated EXP-028 instance compute at the quoted on-demand rate is USD 52.28 (Leases 1 to 4: 19.19, 22.38, 6.23 and 4.48) against USD 165.32 reserved. Hours come from the first tracker poll that saw each instance stop; storage and transfer are excluded. This is an estimate, not an invoice.
+
+#### C result: curriculum order raises TRAIN acceptance and narrows the policy, 19 October 2026 IST
+
+Main lease C completes with exit 0 in 5.57 h, covering all 1,012 groups with 0 censored groups; the recount matches `run.json`.
+C accepts 255 of 4,048 attempts (6.3%) and solves 93 of 506 TRAIN tasks; R accepts 164 of 4,048 and solves 63.
+The R and C configs differ only in experiment and run identifiers, and the commands differ only in `--task-order`; both start from the same S.
+On the same 506 tasks, per-task C minus R is positive for 73 tasks and negative for 32; a paired sign-flip test gives p = 0.0002 (10,000 replicates).
+C runs its prerequisite-first order twice: it accepts 130 of 2,024 attempts in the first pass and 125 of 2,024 in the second (37 tasks improve, 42 worsen, p = 0.79).
+Against S's `pass_rates` measurement on the same tasks (Lease 2, 84 of 2,024), C's first visits accept 130 (p = 0.0016) and R's first visits accept 81 (p = 0.86).
+By quarter of C's first-pass order, C against S is 56 against 42, 35 against 27, 33 against 12 and 6 against 3 accepted attempts.
+C's gain therefore appears within its first pass and does not grow in the second.
+
+C's actions narrow over training. Its format-error rate falls from 4.7% of actions in the first quarter to 0.3% in the last, against a rise from 18.1% to 47.9% for R.
+C's mean action length falls from 56.3 to 10.4 tokens. In C's last quarter, `omega`, `simp` and `simp_all` alone account for 4,597 of 5,845 actions.
+Over the whole run, 7,517 of C's 23,381 actions are one automation tactic, against 463 of R's 23,740.
+Of C's 255 accepted episodes, 50 use one automation tactic at every step, against 1 of R's 164. Without those, C still accepts 205 against R's 163.
+These are training-time measurements on TRAIN tasks; the action analyses are exploratory, not registered metrics.
+They do not show transfer: the EXP-028 selection set excludes theorems that one tactic proves, and R gave no held-out gain (E7).
+The registered R/C contrast needs held-out evaluation; `dev_C` on 8 DEV roots is at the floor for every earlier arm.
+
+#### dev_C result and main lease end, 19 October 2026 IST
+
+`dev_C` evaluates C's final weights in 89 s; it accepts 0 of 32 attempts and solves 0 of 8 DEV roots, the same as B, S and R.
+Of its 192 actions, 156 are Lean rejections and 1 is a format error; it generates 2,375 tokens in total, about 12 per action, against 93.7 for S.
+The main lease program ends with exit 0, and the provider reports the instance terminated at 01:42 UTC on 19 October, 15.06 h after launch.
+Estimated instance compute at the quoted on-demand rate is USD 33.77 against USD 102.31 reserved; storage and transfer are excluded, and this is not an invoice.
+
+#### Report recount of the 18 and 19 October results, 19 October 2026 IST
+
+Manas asks to add the 18 and 19 October results to the report, with recounted numbers and figures.
+A read-only recount checks 126 values against the raw S3 run records before the report uses them.
+It writes nothing to S3 and makes no Lean or model call. The pass that streams C's 23,381 actions peaks at 87 MB.
+The scripts, outputs and value ledger are in `.private/ops/report_recount_20261019_v1/`; `scripts/build_ledger.py` gives the rerun order.
+107 values match the entries above, 11 values are new, 6 values are document-only (costs, durations and the `stp` label count), and 2 values differ.
+The registered decision script `analyze_screen.py E6_RL_filtered E0_S`, rerun separately, gives the same E6 result: +0.92 points over 163 paired theorems, interval [-0.61, +3.07].
+
+Corrections to the entries above:
+
+- The 2 differences are Monte Carlo sign-flip p-values; the counts behind them match. The exact test gives p = 0.0019 for C's first visits against S, against the entry's 0.0016. It gives p = 0.867 for R's first visits against S, against the entry's 0.86. Use the exact values.
+- RL_filtered's p = 0.0001 is the floor of 10,000 replicates. The exact p is 2.4 × 10⁻⁶; report it as p < 0.001.
+- R's format-error rate by quarter of training actions is 18.1%, 6.7%, 18.6% and 47.9%. It is not a steady rise.
+- "Lean rejections" above counts only the `rejected` status, where Lean rejects the first tactic of an action. A `partial` action applies at least one tactic and then fails. E0, E7 and E6 have 123, 191 and 283 `partial` actions.
+- The automation counts above (7,517 against 463 actions; 50 against 1 accepted episodes) use a rule that was not recorded. The recount reproduces them only when an action is exactly one automation tactic name without arguments. If arguments count, for example `simp [h]`, C has 105 automation-only accepted episodes and R has 2.
+- The Lease 3 cost is USD 6.59 in the rollout-speed entry and USD 6.23 in the E6 entry. The EXP-028 total of USD 52.28 uses 6.23.
+- The `stp` label count is 46 in the Lease 3 amendment and 39 in the Kimina table. No readable record carries the source labels, so the count stays unresolved. Do not use either value.
+- With its 86 accepted samples, the Lease 3 Kimina status counts sum to 1,306 of 1,312. The other 6 samples end below the token limit with status `empty_or_top_level_line`, the status of the capped samples.
+
+New values:
+
+- E0 and E2 each assess 163 theorems; E0's missing root is censored by `automation_root_timeout`. E3, E5, E6 and E7 assess 164.
+- Action status on the selection set, for E0, E7 and E6 in that order:
+  - `rejected`: 1,411, 468 and 1,636.
+  - `format_error`: 373, 1,288 and 18.
+  - `partial`: 123, 191 and 283.
+  - `changed`: 32, 13 and 5.
+  - `no_progress`: 12, 2 and 2.
+  - `forbidden_construct`: 1, 0 and 0.
+  - `accepted`: 1, 1 and 4.
+  - Totals: 1,953, 1,963 and 1,948 actions.
+- The four quarters of C's first-pass order hold 126, 126, 126 and 128 tasks, that is 504, 504, 504 and 512 attempts. The quarter values 56, 35, 33 and 6 (C) and 42, 27, 12 and 3 (S) use these denominators.
+- By quarter of training actions (four equal blocks of actions in group order):
+  - C has 274, 272, 95 and 18 format errors in blocks of 5,845 actions. Its 23,381st action, a `rejected` action, falls outside the four blocks, as in the "4,597 of 5,845" entry above.
+  - R has 1,077, 396, 1,105 and 2,842 format errors in 5,935 actions per quarter.
+  - Mean tokens per action are 56.3, 46.1, 22.4 and 10.4 for C, and 93.7, 44.1, 38.7 and 38.5 for R.
+- Exploratory and unregistered: in quarter 3 of C's first pass, 3 of C's 33 accepted first-visit episodes are automation-only under the strict rule. If arguments count, 15 of 33 are. S has 0 of 12 under both rules. In quarter 4, C has 0 of 6 (strict) or 4 of 6, and S has 0 of 3. C's quarter-3 excess over S is therefore not only automation-only proofs.
+- Over the 62 RL_filtered tasks, last-visit acceptance is higher than first-visit acceptance for 33 tasks, lower for 7, and equal for 22. Before RL, S accepts 80 of 248 attempts on the same tasks.
+- Kimina Lease 4 has an unbiased pass@2 of 11.67%, against 11.35% for Lease 3.
+- By reference-proof length, Lease 4 solves 20 of 62 (20 lines or fewer), 12 of 42 (21 to 40 lines) and 8 of 60 (more than 40 lines) within 8 samples.
+- In Lease 4, 859 of 1,312 samples reach the token limit.
+
+The report section `sec:oct19-results` and the `fig_oct19_*` functions in `scripts/report/make_report_figures.py` use these values.
+
+#### Data audit of the selection set before EXP-029, 19 October 2026 IST
+
+Manas asks for a defensible final run and a data check before it. A read-only audit reads the EXP-025 package, the EXP-028 selection build, the main-lease and Lease 2 inputs, and the S input receipt from durable storage; it changes nothing. Its scripts and `split_audit.json` are archived under `.private/ops/report_recount_20261019_v1/data_audit/`.
+
+Verified:
+
+- TRAIN (506 roots, 580 source statements with aliases), DEV, TEST and the 164-theorem selection set are pairwise disjoint by name, statement, binder-renamed statement, numeric template, token Jaccard at 0.7 and character 4-gram overlap. The highest cross-pair token Jaccard is 0.696. The compared TEST file matches the hash in `evaluation_reservations.json`.
+- S trained on 1,880 action rows; every row maps to a TRAIN root, and no row comes from a selection, DEV or TEST statement. 486 of 506 TRAIN roots, 59 of the 62 `RL_filtered` tasks and 60 of the 63 TRAIN tasks S solves have at least one SFT row from their own reference proof. The lemma-section (E3) and mined (E4) variants use TRAIN only.
+- R and C trained on exactly the 506 roots, twice each; `RL_filtered` on a subset of 62; the data archive hash is the same for the main lease and Lease 2. No retrieval was used, and no evaluation name appears in a training prompt.
+- The single-tactic screen tried 10 tactics one at a time and removed 14 of 216 candidates; the Lease 3 rescreen with 9 tactics accepts 0 of 1,476 attempts. All 8 DEV and 21 TEST items are `not_solved` under it.
+- Reference replay runs only under the pinned Lean and mathlib with the axiom check. Only `pool.jsonl`, `tasks_dev.jsonl` and `excluded_from_training.txt` reach the GPU host; none holds a proof.
+
+Defects and corrections:
+
+- Correction to the EXP-028 registration above ("Admission requires a fresh reference replay, target absence and the allowed-axiom check"): the frozen EXP-025 verifier that ran renames the theorem and checks axioms; it has no target-absence check. The target-absence check exists only in the uncommitted `scripts/data/verify_external_proofs.py`, which the third admission attempt did not use. Target absence is therefore not verified for the selection set.
+- Correction to the recount entry above: the `stp` source labels exist in the `source_labels` field of the private `references.jsonl` and `candidates.jsonl` of the selection build on the CPU artifact host, not in durable storage. The 46-against-39 count can be settled there; it remains unresolved here. One TEST row carries both `goedel_v2_sft` and `stp`, so a theorem can carry two labels.
+- The vacuous-hypothesis sweep (`REWARD_HACKING.md` T2) was never run on the selection set. A manual read of the 22 statements with quantified hypotheses finds at least 5 with contradictory premises; this is unchecked in Lean, and the other 142 statements were not read.
+- The near-duplicate screen is text-only. All three selection theorems any arm solved have TRAIN relatives that it does not flag: `…5d0b0e98` (E2, E3, E6) combines congruences into a composite modulus, as do `xgv2_OMR_problem_264141` and `lean_workbook_25004` in TRAIN; `…94ae2146` (E6, E7) follows from `pow_dvd_pow_of_dvd`, which SFT targets use 27 times. The nearest-proof copy baseline and the similarity-band report of `REWARD_HACKING.md` L2 and L3 were never run.
+- The selection set has been used to choose E0 to E7, both Kimina probes and the EXP-029 plan. Any further comparison on it is exploratory.
+- The single-tactic screen did not try short automation chains; C's actions converge on `omega`, `simp` and `simp_all`.
+
+Decisions: EXP-029 runs the vacuous sweep, an automation-chain screen and the similarity strata on the 164 theorems before any policy stage, and reports solved theorems per stratum with "other" as the headline. A fresh held-out benchmark with these screens at admission is scoped separately. Pretraining exposure of Qwen2.5-0.5B-Instruct and Kimina to the public sources (Goedel v2, STP, Lean Workbook) remains unknown.
+
+#### Analysis: why RL raises TRAIN acceptance without a held-out gain, 20 October 2026 IST
+
+Manas asks why RL raises acceptance on its TRAIN tasks but gives no detected held-out gain, and whether the cause is the RL update or the reward.
+Mode: exploratory and read-only. Every result below is a postdiction from saved records, and no result is a registered metric. The analysis makes no Lean call, no model call and no S3 write.
+Report section: `sec:oct20-why` in `docs/tex/project_report.tex`.
+
+Evidence (all under `.private/ops/report_recount_20261019_v1/`; each script exited 0 in the session, and no file records the exit codes):
+
+- `scripts/p4_why.py`, output `out/p4_why.json`: training proofs, visit splits, the 62 tasks and tactic application.
+- `scripts/p4b_tests.py`, output `out/p4b_tests.json`: exact sign-flip tests and held-out first actions.
+- `scripts/p4c_format.py`, output `out/p4c_format.json`: causes of selection-set format errors.
+- `scripts/p4d_train_format.py`, output `out/p4d_train_format.json`: causes of S's TRAIN format errors in `pass_rates`.
+- The power table: `.private/ops/exp028_remedies_20261018_v1/lease5/power/power_size.out`, from `power_size.py`.
+- SFT exposure: `data_audit/split_audit.json` of the data audit above.
+
+Candidate causes. The first four were stated in the session before the scripts ran; the fifth was added after the counts:
+
+1. The update: REINFORCE with the leave-one-out baseline does not raise acceptance even where the reward is nonzero.
+2. The reward: the terminal proof reward is rarely nonzero, so most groups give no update.
+3. The starting policy: S rarely makes valid progress on held-out theorems, so RL has little to reinforce there.
+4. The measurement: the held-out test cannot detect a gain of the measured size.
+5. The policy change: RL concentrates on actions that close TRAIN tasks and do not fit held-out theorems.
+
+Definitions:
+
+- A visit is one group of 4 attempts on one TRAIN task. R and C visit each of the 506 tasks twice. RL_filtered visits each of its 62 tasks 16 or 17 times.
+- The S reference of a task is S's accepted attempts of 4 in `pass_rates`, a separate run of S on the same tasks.
+- The per-task difference is d = (accepted attempts at the visit) − (S reference). The test is an exact two-sided paired sign-flip test on the sum of d, with 10,000 Monte Carlo replicates beside it as a check.
+- A split by first-visit outcome selects tasks on the arm's own first visit. If the policy equalled S, the second visit and the S reference would be exchangeable given the task, so the selection would not bias their difference.
+- The split does not isolate the update from each task's own first visit. The policy also changes through training on other tasks, before and after the first visit.
+
+Result 1, acceptance rises where the reward is nonzero:
+
+- RL_filtered trains only on tasks with an S pass rate in (0, 0.75]. Its mean per-task acceptance is 0.323 for S, 0.306 at the first visit, 0.355 at the second visit and 0.597 at the last visit.
+- At the last visit, 23 of the 62 tasks have 0 accepted attempts and 31 have 4 of 4.
+- C, on the 72 tasks with at least one proof at the first visit: the second visit accepts 95 of 288 attempts, against 54 for S. The sum of d is +41 (31 tasks up, 20 down, p = 0.011; 0.087 after a Bonferroni factor of 8).
+- R, on the 46 tasks with the same split: the second visit accepts 55 of 184, against 42 for S. The sum of d is +13 (13 up, 10 down, p = 0.199).
+- C's first visits already beat S over all 506 tasks (130 against 84 accepted attempts). Part of C's second-visit excess can therefore come from training on earlier tasks, not from each task's own first visit. The rise of RL_filtered within its 62 tasks is the cleaner evidence.
+
+Result 2, the reward is rarely nonzero:
+
+- S's `pass_rates` has no accepted attempt on 443 of the 506 TRAIN tasks (recorded above).
+- R's first visit has at least one proof on 46 of 506 tasks. C's first visit has one on 72.
+- On the other 460 tasks, R's second visit accepts 28 of 1,840 attempts, against 42 for S (sum of d −14, p = 0.136).
+- On the other 434 tasks, C's second visit accepts 30 of 1,736, against 30 for S (sum of d 0, p = 1.0).
+- A group with no proof gives every attempt an advantage of 0, so it gives no update (report Section `sec:zero`).
+
+Result 3, S is weaker on held-out theorems than on TRAIN:
+
+- S applies at least one tactic in 105 of 326 selection-set episodes (E0). In `pass_rates`, it does so in 1,199 of 2,024 TRAIN episodes.
+- By action, 156 of 1,953 held-out actions and 2,106 of 11,890 TRAIN actions apply at least one tactic.
+- S has SFT rows from its own reference proof for 486 of 506 TRAIN roots and for 59 of the 62 RL_filtered tasks. No SFT row comes from a selection-set statement.
+- RL_filtered (E6) applies at least one tactic in 183 of 328 held-out episodes and in 292 of 1,948 held-out actions.
+- S's most frequent held-out first action starts with `have` and has more than one line: 161 of 326. Lean rejects 147 of them at the first tactic.
+
+Result 4, the held-out test cannot detect the measured gain:
+
+- The test is the exact two-sided sign test at alpha 0.05 on theorems that exactly one arm solves. The power is computed under two dependence assumptions: nested (every S-solved theorem is also arm-solved) and independent. Negative dependence, where the arms solve disjoint theorems, is not computed, and it can give a lower power.
+- At the observed rates (S 1 of 163, RL_filtered 2 of 164) and 164 theorems, the power is 0.001 (nested) to 0.006 (independent).
+- A grid search (steps of 10 theorems below 2,000 and 250 above) finds 1,310 (nested) and 4,250 (independent) theorems for a power of 0.8 at the same gain.
+- At the registered 5-point bar and 164 theorems, the power is 0.693 (independent) to 0.833 (nested).
+- This power is for the sign test, not for the registered bootstrap rule.
+
+Result 5, RL concentrates on one action template:
+
+- 1,627 of RL_filtered's 2,082 accepted training episodes close the proof with the first action.
+- By closing action 1 to 6, RL_filtered's accepted training episodes number 1,627, 258, 90, 50, 34 and 23. S's 84 accepted episodes in `pass_rates` number 19, 18, 10, 14, 11 and 12 (`out/p3_horizon_tokens.json`).
+- 2 of those 1,627 first actions are a single screen tactic without arguments. The screen tactics are the 10 of `scripts/eval/single_tactic_baseline.TACTICS`; `p4_why.py` holds the same 10 names in `SCREEN`.
+- The most frequent closing first actions are `simp_all [Int.ModEq, Int.emod_eq_emod_iff_emod_sub_eq_zero]` (451), the same followed by `omega` (239), `simp_all [Nat.fib_dvd]` (94) and `simp_all [Nat.fib_gcd]` (73).
+- In the last quarter of training (253 groups), 40 tasks have a proof. 14 of them use one distinct proof text, and 10 use two.
+- The 12 most frequent closing first-action texts all start with `simp_all` and a lemma list. Together they cover 1,076 of the 1,627.
+- On the selection set (E6), 326 of RL_filtered's 328 first actions start with `simp_all` and a lemma list. Of these 326, Lean rejects 224 at the first tactic. 94 apply some tactics and then fail, 4 close the proof, and 4 are format errors.
+- The learner has no KL, entropy or reference-model term. Its loss for each action is the negative advantage times the action log-probability, divided by the group size, with the gradient norm clipped at 1.0 (`scripts/train/rl_components/objectives.py`, `PolicyGradientUpdater`). A search of that file and of `run_tactic_rl.py` for `kl` and `entropy` finds no term.
+
+Action limits, the classes checked in this order: the 192-token cap, then more than 4 tactics, then other malformed actions:
+
+- R (E7): 20, 1,257 and 11 of its 1,288 selection-set format errors.
+- S (E0): 320, 44 and 9 of 373.
+- RL_filtered (E6): 1, 10 and 7 of 18.
+- S on TRAIN (`pass_rates`): 893, 465 and 58 of 1,416. 468 format errors carry the 4-tactic message, and 3 of them also reach the cap.
+- Provenance correction: the 20 October decision-log line on the limits states 468 and 1,358 without a saved output. `p4d_train_format.py` now gives both: 893 + 465 = 1,358.
+
+Order, recorded above and repeated for the test count: C's first visits beat S by +46 (p = 0.0019), and R's first visits differ by −3 (p = 0.867).
+The 8 tests in `p4b_tests.json` share one question. Under a Bonferroni factor of 8, only C's first-visit result stays below 0.05 (0.015). C's split result becomes 0.087.
+
+Interpretation. These are inferences, and no run tests them:
+
+- The records show no sign of a fault in the update. On the 62 RL_filtered tasks, which all have a nonzero S pass rate, acceptance rises from 0.306 to 0.597, and the rise is not regression to the mean.
+- The reward is Lean-verified, and it is rarely nonzero: S solves 63 of the 506 TRAIN tasks in 4 attempts, and R's first visit finds a proof on 46 of the 506. RL has little signal on the other tasks.
+- On held-out theorems, S applies a tactic in fewer episodes than on TRAIN. TRAIN also carries SFT exposure that the selection set lacks.
+- RL concentrates on `simp_all` templates with a lemma list, which close TRAIN tasks in one action. On the selection set, 326 of RL_filtered's 328 first actions start this way, and Lean rejects 224 of them at the first tactic.
+- The records therefore point at the rarity of the reward under S and at the narrowness of what RL reinforces, more than at the update.
+
+Alternative channels, not controlled:
+
+- Tasks with a first-visit proof are easier. On R's split, S accepts 42 of 184 attempts on them and 42 of 1,840 on the others. A general drift toward short actions could help easy tasks without a task-specific update.
+- S's TRAIN advantage can come from SFT exposure, from the selection set's exclusion of theorems that one fixed tactic solves, or from difficulty. No count separates them.
+- The `simp_all` concentration changes how RL_filtered fails. S without it also solves 1 of 163 held-out theorems, so it is not the only cause.
+
+Limits:
+
+- Each arm is one training run.
+- No run varies the reward, the starting policy, a KL or entropy term, or the action limits. EXP-029 and EXP-030 were to vary the limits and the reward, and they did not run.
+- RL_filtered makes 18 format errors in 1,948 held-out actions and solves 2 of 164 theorems, so fewer format errors alone did not give held-out proofs. The dense reward of EXP-030 also penalizes Lean rejections, and 1,636 of RL_filtered's 1,948 held-out actions are Lean rejections (`out/p3_horizon_tokens.json`). No record shows what that penalty would change. This is an inference, not a measurement of the dense reward.
+
+## EXP-029
+
+Registered 19 October 2026 IST, before any EXP-029 run. Lease run ID `exp029-lease5-s20261019-v1`; program, configs, input manifest and quote under `.private/ops/exp028_remedies_20261018_v1/lease5/` (dry run, no bucket write).
+Question: on the 164-theorem selection set, split into strata by three screens, do C, R and RL_filtered differ from S in complete-proof acceptance at 8 attempts per theorem, and does the RL_filtered gain on its 62 training tasks hold at 8 attempts and under a second training seed?
+Mode: confirmatory only for the predeclared comparisons below; every other read is exploratory. The selection set has already been used to choose E0 to E7, both Kimina probes and this plan (data audit entry of 19 October), so no result on it is a fresh held-out test.
+Manas owns the question and approvals; root owns the program, inputs and run records.
+
+#### Inputs
+
+- Models: S, C and R final weights of the main lease and the RL_filtered final weights of Lease 2. Each `model.safetensors` is 1,976,163,472 bytes in the bucket; the expected hash of each is the `model_sha256` recorded by the run that evaluated it (dev_S, dev_C, dev_R, E6_RL_filtered), checked on the instance before any stage.
+- Selection set: the Lease 3 `validation.tar.gz` (164 validation rows in `tasks_dev.jsonl`, 201 pool rows, statements only), checked against Lease 3's recorded hashes.
+- The 62 RL_filtered tasks: Lease 2 `training_task_ids.json`; a CPU stage checks 62 distinct ids. The data audit recounted the registered filter (0, 0.75] from the rebuilt `pass_rates/steps.jsonl` (506 rows, 2,024 attempts, 84 accepted) and gets the same 62.
+- Second-seed training input: `pass_rates/steps.jsonl` rebuilt from its 332 upload chunks with `materialize_logs.py`; its SHA-256 equals the Lease 2 `run.json` value `1b1da3c3…`.
+- Copy baseline for the similarity screen: `sft_full_proof/sft_train.jsonl` (516 TRAIN reference proofs for 506 roots) from the lease `data.tar.gz`. It feeds a Lean-only screen and nothing model-facing.
+- miniF2F: `dsp15_minif2f.jsonl`, 488 rows (244 valid, 244 test), statements only, SHA-256 `d6654c88…`, byte-identical to `datasets/minif2f.jsonl` in `deepseek-ai/DeepSeek-Prover-V1.5` (git blob `bf6c8ece…`). That repository's `LICENSE-CODE` is MIT; the file carries no separate dataset licence, and the original miniF2F licence is not checked. 0 exact normalized matches with the 506 roots, 580 sources, 2,005 action rows or 548 full-proof statements.
+- Lean `leanprover/lean4:v4.10.0-rc1` and mathlib `29dcec07…`, unchanged.
+- Separation, recounted from files on 19 October: 164 selection theorems against 506 TRAIN roots, 516 alias ids, 580 source identities, 8 DEV, 21 TEST, EXP-025 v1 (60) and v2 (234): 0 overlaps by name, statement hash, binder-normalized key, numeric template or token Jaccard at 0.7 (highest 0.696). The 62 tasks are a subset of the 506 and overlap the 164 in 0 cases (highest Jaccard 0.68).
+- Correction: the EXP-028 registration says 536 canonical TRAIN roots. The files hold 506 roots and 516 alias problem ids; 536 is not reproduced.
+
+#### Program
+
+29 stages: 19 required and 10 best-effort. Group size 8 everywhere; no group of 16, because lockstep mode opens one Lean REPL per attempt (16 × 4.5 GiB + 2 GiB = 74 GiB exceeds the 48 GiB cap; 8 × 4.5 + 2 = 38 GiB fits).
+
+1. `backend_gate`: `check_rollout_backends.py`, batched HF against single-prompt HF on 48 selection first steps, with explicit sampling settings. Pass needs greedy exact match on at least 80% and sign-flip p ≥ 0.01 on log-probability, length and stop fraction. Lockstep stages depend on it; sequential stages run only if it fails. A crash of the gate counts as a fail and takes the sequential branch.
+2. Screens on the 164 set, separate output directories: automation chains (`automation_chain_screen.py`), vacuous hypotheses (`false_hypothesis_sweep.py --intros --split validation`), train similarity with the copy baseline (`train_similarity_strata.py`).
+3. `minif2f_elaborate`: `elaborate_statements.py`, 6 workers, 20 s Lean timeout, our header (`maxHeartbeats 400000`, not the file's 0). Counts statements that elaborate with `sorry`; no model runs on them.
+4. Lockstep branch (6 Lean workers, seed 20261019): S, RL_filtered, C, R on the 164 set; S, RL_filtered on the 62 set; `RL_filtered_seed2` training from S with the Lease 2 `rl_R.json` plus task filter, differing only in run identity, seed 20261020, the staged pass-rate path and a wall cap of 17,377 s (Lease 2 measured 11,585 s; its cap was 43,200 s); strata join (`stratify_heldout.py`) over the four 164-set results.
+5. Sequential branch: S and RL_filtered on the 164 and 62 sets, seed 20261019, then its own strata join. No C, R or seed-2 training on this branch.
+6. Best-effort, after every required stage, cut by the lease end with complete groups saved: RL_filtered_seed2 on the 62 and 164 sets (seed 20261019); then seed 20261020 evaluations of S, RL_filtered, C, R on the 164 set, S and RL_filtered on the 62 set, and RL_filtered_seed2 on both.
+
+Caps: 11.625 s per attempt (Lease 3 lockstep rate with 2 workers; 6 workers unmeasured) × 1.25 + 300 s per lockstep stage; 13.802 s per attempt for sequential; screens at the every-call-times-out bound × 1.25; miniF2F 3,600 s. Required totals: 41.05 h lockstep, 28.09 h sequential; best-effort 40.70 h. Lease 42 h.
+
+#### Metric, strata and decision rules
+
+- Primary metric: per-theorem accepted-attempt fraction and solved-within-8, with the unbiased pass@k estimator from 8 samples, per stratum vacuous, automation, near_train, other. "other" is the headline stratum, as registered on 19 October.
+- Predeclared comparisons, paired by theorem, bootstrap 95% interval with 10,000 replicates and seed 20261018, promotion at a gain of at least 5 points with an interval excluding 0, as in EXP-028: C against S, R against S, RL_filtered against S on the 164-set other stratum.
+- On the 62 tasks: RL_filtered against S at 8 attempts, paired sign-flip test; RL_filtered_seed2 against S the same way if its best-effort evaluation completes.
+- miniF2F: the count of statements that elaborate under the pin, descriptive only.
+- A best-effort file with fewer rows than theorems is reported as incomplete with its row count. Seed 20261019 and 20261020 files pool to 16 attempts per theorem only when both are complete for that arm.
+- Known limits recorded before the run: 6 Lean workers share a 600% CPU quota, so lockstep mode may time out more Lean calls than sequential mode; lockstep HF attempts share one random stream per batch and cannot be reproduced one at a time; target absence remains unverified for the 164; the vacuous and automation strata are measured for the first time here and can shrink the other stratum.
+
+#### Resource limits and approval state
+
+One `g6e.2xlarge` (1 L40S, 8 vCPU, 64 GiB) in us-east-2, on-demand only, 42 h nonrenewing, one instance, no replacement. Instance caps: `MemoryMax=48G`, `CPUQuota=600%`, `RuntimeMaxSec`, per-stage timeouts, CUDA memory fraction 0.8. Termination guard: an EventBridge Scheduler one-shot schedule at launch + 42 h + 15 min that terminates the instance, armed before the instance starts its program; the instance `RuntimeMaxSec` is the second guard. The CPU host is not used. The guard needs an IAM role that EventBridge Scheduler can assume with `ec2:TerminateInstances`; it does not exist yet, and the current credentials can create it.
+Dry-run quote: USD 118.75 reserved for 42 h at the recorded USD 2.24208/h (USD 94.17) plus allowances plus 20%, within a USD 120 budget argument. Live staging reprices at the current rate. Not approved; no instance exists; nothing is uploaded.
+
+#### Readiness record, 19 October 2026 IST
+
+Engineering audit: 119 tactic RL tests, 4 backend-check tests, 20 held-out screen tests, 3 search-SFT tests and 26 private lease tests pass (exit 0). The code ships as a tarball of the working tree, so the root automation timeout fix, the mined-row `format` label and the corrected backend check all ship. `uv lock --check` passes; the lease pins torch 2.8.0 and transformers 4.57.1, and the local `.venv` drifts from both.
+Fixes: `run_screen.py` gains `gate`, `unless` and `best_effort` stage fields (a skipped branch also skips its dependants; a best-effort stage that does not fit starts with the time left minus 600 s); `build_programs.py` gains the lease5 builder with program validation (unique names and output directories, dependencies exist, branches disjoint, caps valid); `stage_lease.py` gains lease5 staging without the CPU host and a `--dry-run`; `launch.py` gains the scheduler guard and the on-demand-only mode for lease5; leases 1 to 4 are unchanged. New `scripts/eval/elaborate_statements.py` with 8 tests. `tests/test_heldout_screens.py` gains two refusal assertions.
+Data audit: inputs recounted as above. The 15 non-admitted EXP-028 candidates are recovered from `excluded_from_training.txt` (1 parent-exposed by a proof-free reproduction; the 14 single-tactic labels are not recounted, since the admission record stays on the CPU host); a 1,130-row protected list (1,115 before) is prepared locally and not uploaded, because no stage of this lease reads it. A benchmark v3 supply count on the 40,814-row corpus gives 18,491 fresh candidates below Jaccard 0.7 to 1,625 protected statements and 601 below 0.5; no selection code for a 2,000-candidate pool exists, so v3 screening is dropped from this lease. 5 Lean Workbook rows sit in that fresh pool and are barred from evaluation by the 10 October rule.
+Open before launch: Manas approves the live quote; the guard role is created; the pass@8 cut stands or is reversed.
+
+#### Amendment, 20 October 2026 IST: one L4 lease within USD 50
+
+Manas sets a total budget of about USD 50 and prefers an L4. The lease5 program above (L40S, 42 h, USD 118.75) is not launched; lease6 supersedes it and also carries EXP-030. Lease run ID `exp029-030-lease6-s20261020-v1`; program, configs, inputs and quote under `.private/ops/exp028_remedies_20261018_v1/lease6/` (dry run, no bucket write).
+
+- Instance: one `g6.4xlarge` (1 L4, 16 vCPU, 64 GiB) in us-east-2, on-demand, 28 h, nonrenewing. Dry-run quote: USD 49.51 reserved at the recorded USD 1.3232/h (USD 37.05 compute) plus allowances plus 20%, against a USD 50 ceiling.
+- Required if the backend gate passes (27.67 h at the caps): `dense_check`, `tasks62`, `backend_gate`, `R_dense` (EXP-030), then S, S with relaxed limits and RL_filtered on the 62 tasks, then S and RL_filtered on the 164 set. Every evaluation uses 8 attempts and sampling seed 20261019.
+- If the gate fails: S, S with relaxed limits and RL_filtered on the 62 tasks run one attempt at a time (required); S and RL_filtered on the 164 set follow as best effort.
+- Best effort, in this order: the three screens and the strata join, then R, C and R_dense on the 164 set, then the miniF2F elaboration. The runner runs one stage at a time, so the CPU screens cannot run beside the GPU stages.
+- Dropped: `RL_filtered_seed2` and every seed-20261020 evaluation. C and R on the 164 set move from required to best effort.
+- New exploratory comparison: S with 12 actions, 384 action tokens and 8 tactics per action against S at the registered limits on the 62 tasks, paired sign-flip test on the per-task accepted-attempt fraction. The relaxed config differs from `lock62_S` only in these three limits, the run ID, and the token, Lean-call and wall budgets scaled to them. The instruction changes from "up to 4 tactics" to "up to 8 tactics", and S's SFT examples may never show more than 6 actions left (not checked), so this comparison measures the new limits and the new wording together.
+- Secondary analysis added before launch, not a decision rule: an exact two-sided sign test on the 164-set theorems that exactly one of the two compared arms solves.
+- Known limits: the stage caps come from L40S rates times 1.25, and L4 throughput is not measured; a stage that reaches its cap keeps its complete groups and is reported as incomplete with its row count. If the screens do not run, the 164-set results have no strata and the registered headline stratum "other" is unavailable; the screens need no GPU and can stratify the saved results later.
+- Checks: 39 private lease tests pass (exit 0); the lease dry run exits 0; 92 tactic RL unit tests pass with 4 torch-only skips (exit 0).
+- Open before launch: Manas approves the live quote; the guard role is created.
+
+#### Stop, 20 October 2026 IST
+
+Manas stops all experiments before any launch approval: "I don't want to run any more experiments."
+Neither lease5 nor lease6 is launched, and no EXP-029 stage runs. No instance ran, so EXP-029 has no GPU cost.
+The lease6 staging process is ended with exit code 144 before it writes a lease record.
+A check after the stop finds 0 running instances in us-east-2 and no guard schedule.
+Two things stay and are not deleted: partial input copies under the lease6 prefix (at least 1.03 GB at the last check), and the scheduler guard role, which was created for the launch.
+The exit code, the instance check and the 1.03 GB come from command output in the session; no saved file records them.
+The program, configs, inputs and dry-run quotes under `.private/ops/exp028_remedies_20261018_v1/lease5/` and `lease6/` remain the record of the design.
+The questions of EXP-029 stay open. The counts in the analysis entry of 20 October under EXP-028 come from saved records.
+
+## EXP-030
+
+Registered 20 October 2026 IST, before any EXP-030 run. It runs in lease6 with the EXP-029 amendment (`exp029-030-lease6-s20261020-v1`). Config `lease6/configs/R_dense.json`; task order `lease6/inputs/R_dense_task_order.json`.
+Question: from the same S checkpoint, the same TRAIN task order and the same seed, does REINFORCE with per-action Lean-error penalties close more proofs than REINFORCE with the terminal proof reward alone?
+Mode: exploratory pilot. Each arm has one training seed. R trained on an L40S and R_dense trains on an L4, so the sampled episodes differ even with the same seed.
+Manas owns the question and approvals; root owns the program and run records.
+
+#### Arms
+
+- R_dense (`exp030-l6-r-dense-s20261018-v1`): S plus REINFORCE with the leave-one-out baseline. Its config equals R's recorded config (`exp026-nt-main-r-s20261018-v1`) except `reward_mode` `error_feedback_v1`, `max_groups` 506, `max_wall_seconds` 21,600, `max_generated_tokens` 2,331,648, `max_lean_calls` 62,744, `experiment_id` and `run_id`. The task order is the first 506 entries of R's frozen order, whose SHA-256 matches R's recorded `task_order` hash; the 506 groups cover 377 distinct TRAIN tasks.
+- Control: R, groups 0 to 505 of its existing records. R is not rerun.
+
+#### Reward
+
+| Event | Reward | Label |
+|---|---|---|
+| Lean accepts the complete proof | +1 | Lean-verified |
+| Format, syntax, forbidden code, unresolved name or invalid backtrack | −0.2 | Heuristic |
+| Type or tactic error, unchanged goals, repeated state, unclassified Lean rejection or rejected replay | −0.1 | Heuristic |
+| Valid step, timeout, crash or prompt-cap end | 0 | None |
+
+A partial action is scored by the failure that stopped it. The discount stays 0.95, as in R. Deviation from the 11 October registration of `error_feedback_v1`: unchanged goals, repeated states and unclassified rejections cost −0.1 instead of 0. Errors do not end a v2 episode, so a zero would let a policy avoid every penalty by repeating an action that changes nothing. Code: `v2_feedback` in `scripts/train/run_tactic_rl.py`. Group records gain an `accepted` list, because penalties can make a proved episode's return zero or negative.
+
+#### Metrics and decision rule
+
+- Primary: accepted episodes in groups 0 to 505, counted from `accepted`. R closes 87 of 2,024 episodes in these groups (recount from R's `steps.jsonl`, 20 October).
+- Secondary: accepted episodes on the 443 TRAIN tasks that S never solved in `pass_rates` (R: 27 of 1,756 episodes), and the action-outcome mix per arm (format error, Lean rejection, partial, valid step, no progress, cycle).
+- Test: groups pair by position, because both arms see the same task there. An exact two-sided sign-flip test on the per-group difference in accepted episodes, alpha 0.05.
+- Pass rule: R_dense closes more proofs than R with p < 0.05. A higher return or fewer errors without more accepted proofs does not pass.
+- Gaming audit: compare the share of valid steps and of no-progress actions between arms, and read 30 random R_dense valid steps for actions that change the state without progress.
+- Held-out: R_dense on the 164 set at 8 attempts is a best-effort lease6 stage, descriptive only.
+
+#### Resource limits and approval state
+
+R_dense shares lease6 (EXP-029 amendment) with a 21,900 s stage cap. The real-Lean `dense_check` stage (`test_real_v2_error_feedback_penalties`) must pass before R_dense starts. Not approved; no instance exists; nothing is uploaded.
+
+#### Stop, 20 October 2026 IST
+
+EXP-030 does not run, because Manas stops all experiments (EXP-029 stop entry).
+Correction to "nothing is uploaded" above: the stopped lease6 staging copied some inputs before it ended. The EXP-029 stop entry records them.
+The `error_feedback_v1` support for environment v2 in `scripts/train/run_tactic_rl.py` and its unit tests stay uncommitted in the working tree. Its real-Lean test `test_real_v2_error_feedback_penalties` has not run.
+Correction to the reward table above: the code keeps the reward of an action's outcome when the next prompt exceeds the limit. A penalized action that ends the episode at the prompt limit therefore keeps its penalty; a valid step that ends it there gets 0 (`bound_state` after `v2_feedback` in `run_tactic_rl.py`).
+The question of EXP-030 stays open. No result about a dense reward exists.

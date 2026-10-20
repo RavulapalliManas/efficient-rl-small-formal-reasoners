@@ -2,6 +2,8 @@
 
 ## Scope and source of truth
 - Read `README.md`, `docs/EXPERIMENTS.md`, and the relevant config before editing.
+- Find code through `scripts/README.md` and configs through `configs/README.md`. When you add, rename, or move a script or config, update its row there.
+- Give each new experiment a row in the register of `docs/EXPERIMENTS.md`, and fill its Results and Report cells when it has them.
 - Treat the README status table as the only project status record.
 - Do not report a planned command, baseline, dataset, or result as implemented.
 - Keep decisions in the decision log of `docs/EXPERIMENTS.md`; append a dated line instead of rewriting history.

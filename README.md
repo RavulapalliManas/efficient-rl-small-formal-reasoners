@@ -6,6 +6,7 @@ This project tests when reinforcement learning (RL) helps a small language model
 
 | Purpose | Location |
 | --- | --- |
+| Abhinav (EXP-026): start here. One page with the branch, data, DEV, TEST and models to use, and the sets to ignore | [Start here](docs/EXPERIMENTS.md#start-here-one-page-for-abhinav) |
 | Current project status | [Status](#status) |
 | Every experiment, with its record, results and report section | [Experiment register](docs/EXPERIMENTS.md#experiment-register) |
 | What each script does, the shared code, and where to start | [scripts/README.md](scripts/README.md) |
@@ -17,7 +18,7 @@ This project tests when reinforcement learning (RL) helps a small language model
 | Saved model checkpoints | [Downloads](#checkpoints) |
 | Curriculum data and builders | [Curriculum](#curriculum) |
 | Experiment catalogue, protocols, evidence, ownership, and decisions | [EXPERIMENTS.md](docs/EXPERIMENTS.md) |
-| Generalization: Abhinav; curriculum: Manas | [Generalization](docs/EXPERIMENTS.md#exp-026); [curriculum](docs/EXPERIMENTS.md#exp-027); [Abhinav's handoff](docs/EXPERIMENTS.md#abhinavs-task-handoff-and-checklist); [report](docs/tex/project_report.pdf) |
+| Generalization: Abhinav; curriculum: Manas | [Generalization](docs/EXPERIMENTS.md#exp-026); [curriculum](docs/EXPERIMENTS.md#exp-027); [Abhinav's start page](docs/EXPERIMENTS.md#start-here-one-page-for-abhinav); [report](docs/tex/project_report.pdf) |
 | Evaluation questions, expected answers and semantic issues | [Evaluation review pack](docs/EXPERIMENTS.md#exp-025-evaluation-specification-and-semantic-review-17-october-2026) |
 | Description of every DEV and TEST question | [Report appendix A](docs/tex/project_report.pdf#page=37); [source and verification](docs/EXPERIMENTS.md#full-evaluation-question-descriptions-17-october-2026) |
 | Prerequisite curriculum, proof strategy and reward discussion | [Handoff of 14 October](docs/EXPERIMENTS.md#handoff-prerequisites-proof-strategy-and-reward-14-october) |

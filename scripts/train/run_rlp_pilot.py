@@ -90,6 +90,22 @@ def controlled_checkpoint(path, cfg):
             'weights_sha256':digest.hexdigest()}
 
 
+def pipeline_checkpoint(path, metadata):
+    """Validate a new objective handoff without changing the historical RLP pin."""
+    if metadata is None:
+        raise ValueError('Pipeline handoff requires parent metadata')
+    parent = json.loads(metadata.read_text())
+    if parent.get('status') != 'complete' or Path(parent['checkpoint']).resolve() != path.resolve():
+        raise ValueError('Pipeline parent must be complete and name this checkpoint')
+    digest = hashlib.sha256()
+    with (path / 'model.safetensors').open('rb') as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b''):
+            digest.update(chunk)
+    if digest.hexdigest() != parent['weights_sha256']:
+        raise ValueError('Pipeline weights differ from the completed parent')
+    return {'optimizer_steps': parent['optimizer_steps'], 'weights_sha256': digest.hexdigest()}
+
+
 def boxed_integer(text):
     values = re.findall(r"\\boxed\{\s*(-?\d+)\s*\}", text)
     return int(values[-1]) if values else None
@@ -130,7 +146,10 @@ def main():
         raise ValueError('Controlled run requires funded authorization and the registered early checkpoint')
     if controlled and args.initial_teacher:
         raise ValueError('Controlled teacher must initialize from the registered policy')
-    identity = controlled_checkpoint(args.initial_model,cfg) if controlled else None
+    if controlled and cfg.get('initialization') == 'pipeline_handoff':
+        identity = pipeline_checkpoint(args.initial_model, args.parent_metadata)
+    else:
+        identity = controlled_checkpoint(args.initial_model,cfg) if controlled else None
     args.output.mkdir(parents=True, exist_ok=False)
     started = time.monotonic()
     run = {"status": "starting", "config": cfg, "generated_tokens": 0,
@@ -527,6 +546,7 @@ def main():
         torch.cuda.synchronize()
         run["training_wall_seconds"] = time.monotonic() - before
         trainer.save_model(str(args.output / "policy_final"))
+        tokenizer.save_pretrained(str(args.output / "policy_final"))
         trainer.save_state()
         torch.save(teacher.state_dict(), args.output / "ema_teacher.pt")
         (args.output / 'policy_final' / 'acquisition_manifest.json').write_text(json.dumps(run, indent=2) + '\n')

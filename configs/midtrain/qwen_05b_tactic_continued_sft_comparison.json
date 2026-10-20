@@ -1,0 +1,29 @@
+{
+  "purpose": "Exploratory continued-SFT candidate for EXP-019. Not yet a data- or compute-matched causal control; no training or paid launch authorized.",
+  "experiment_id": "EXP-019",
+  "run_id": "exp019-tactic-continued-sft-comparison-s20261011-v1",
+  "initial_policy": "Use --model with the same immutable EXP-020 common_sft checkpoint as both tactic reward arms. Resolve its stage record and weights digest before any launch; never use the isolated CPU smoke export.",
+  "data": "Prepared partial projection: cpu-angad formal_rl/continued_sft_projection_20261011_v1/data, with sft_train.jsonl and sft_val.jsonl aliases. projection_manifest.json records existing accepted reference sources, original theorem membership, missing references/states, and a disjoint theorem-hash loss-validation allocation. proposed_common_rl_tasks.jsonl contains only existing RL tasks for the projected SFT training names; proposed_common_root_order.json records the seeded kind-balanced schedule, including repeated roots. This subset is proposed, not substituted into the original RL bank. Original parent/SFT data and its proof holdouts remain unchanged; this arm adds explicit supervision of training-side proof holdouts. DEV, pool validation/test and recorded forward exclusions remain excluded. tokenizer_audit.json verifies saved-parent chat tokenization under the unchanged max_length. Hardware-budget and actual exposure matching remain pending.",
+  "seed": 20261011,
+  "learning_rate": 1e-06,
+  "warmup_ratio": 0.0,
+  "epochs": 1,
+  "batch_size": 1,
+  "grad_accum": 4,
+  "max_steps": 128,
+  "max_length": 2048,
+  "logging_steps": 1,
+  "eval_steps": 128,
+  "milestone_steps": [],
+  "precision": "run_sft.py loads FP32 master weights and uses BF16 when CUDA is available.",
+  "inference_boundary": "This config supplies a bounded nominal optimizer-step candidate, not an equal-compute control. Interactive RL groups can make no update and include generated actions plus Lean calls; SFT uses teacher-forced references with different lengths and prompts. Match measured training hardware time under an external managed-runner cap after profiling, and report generated, processed and target tokens separately. Same theorem membership does not imply identical supervision or state exposure. run_sft.py uses cosine scheduling and the SFTConfig optimizer defaults; it does not match the tactic trainer's constant-rate AdamW with zero weight decay. Claim method comparison under the resolved protocol, not a reward-only ablation against SFT.",
+  "launch_requirements": [
+    "Inspect fresh prerequisite and post-parser DEV assessments before deciding whether the shared parent needs warm-up",
+    "Resolve and record identical immutable parent weights for all arms",
+    "Use the projection manifest and proposed common training subset to resolve eligible theorem membership across the future arms; retain the original bank, missing-reference records and tokenizer audit; declare actual exposure differences from repeated roots and distinct state/target supervision",
+    "Measure training time and token exposure on separately approved hardware; resolve this nominal step cap using the declared compute budget rather than equating SFT steps with RL groups",
+    "Use the established managed runner with external wall-time and memory caps, one writer, durable output streaming, and a unique output directory; this SFT trainer does not enforce a wall-time or token budget from config metadata",
+    "Select checkpoints on DEV only and evaluate all arms with the identical unassisted proof-completion contract",
+    "Record launch-specific cost approval before paid compute"
+  ]
+}

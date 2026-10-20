@@ -1,0 +1,23 @@
+{
+  "purpose": "Exploratory midterm RL follow-up. Start from the unchanged common SFT parent. Freeze three variable-containing practice starts with at least two mixed groups in the completed frozen-parent prescreen. Repeat their order sixteen times. Keep binary complete-proof rewards and the existing REINFORCE learner. No additional SFT, reference-policy term, repair, progress reward or paid GPU lease. DEV success requires greater aggregate accepted attempts over two fresh paired seeds with no parent-covered theorem lost in either seed; this is small-panel reliability, not broad generalization.",
+  "run_id": "exp019-mixed-train-s20261018-v1",
+  "seed": 20261018,
+  "lean": "leanprover/lean4:v4.10.0-rc1",
+  "mathlib": "29dcec074de168ac2bf835a77ef68bbe069194c5",
+  "group_size": 4,
+  "max_groups": 48,
+  "max_episode_steps": 4,
+  "max_prompt_tokens": 1024,
+  "max_action_tokens": 64,
+  "reward_mode": "goal_change_v1",
+  "exploration_bonus": 0.0,
+  "curriculum_max_lines_remaining": 3,
+  "learning_rate": 1e-06,
+  "cpu_threads": 4,
+  "lean_timeout_seconds": 20,
+  "lean_setup_timeout_seconds": 120,
+  "max_wall_seconds": 3600,
+  "max_generated_tokens": 49152,
+  "max_lean_calls": 1728,
+  "max_repair_attempts": 0
+}

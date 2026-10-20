@@ -1,0 +1,32 @@
+{
+  "purpose": "Initial interactive number-theory SFT pilot on the checked prerequisite action release. Supports EXP-026 and EXP-027; does not constitute either full study.",
+  "experiment_id": "EXP-026",
+  "run_id": "exp026-prerequisite-interactive-sft-contract-fix-s20261018-v4",
+  "initial_policy": "Fresh upstream Qwen/Qwen2.5-0.5B-Instruct, revision 7ae557604adf67be50417f59c2c2f167def9a775. No historical project warmstart.",
+  "model_id": "Qwen/Qwen2.5-0.5B-Instruct",
+  "model_revision": "7ae557604adf67be50417f59c2c2f167def9a775",
+  "data": "formal_rl/prerequisite_sft_contract_fix_20261018/data_nonrec/release/",
+  "data_contract": "Capped action subset. Exact chat completion including terminator is at most 192 tokens. Whole tactics only; no truncation. Same TRAIN and loss-validation theorem partitions; explicit exclusions. No DEV or TEST training.",
+  "checkpoint_selection": "Use final after all configured epochs. Intermediate checkpoints preserve partial progress and cannot replace final in the declared before/after comparison.",
+  "seed": 20261017,
+  "learning_rate": 1e-05,
+  "warmup_ratio": 0.03,
+  "epochs": 3,
+  "batch_size": 2,
+  "grad_accum": 32,
+  "max_length": 2048,
+  "logging_steps": 1,
+  "eval_steps": 24,
+  "eval_rows": 80,
+  "milestone_steps": [
+    24,
+    48
+  ],
+  "gradient_checkpointing": true,
+  "precision": "FP32 master weights and AdamW moments; BF16 autocast",
+  "training_wall_cap_seconds": 1800,
+  "notes": "Preparation only. A new paid lease requires approval of its exact quote. Fixed final checkpoint; matched fresh-parent evaluation uses nonrecursive anonymous local roots.",
+  "max_action_tokens": 192,
+  "expected_optimizer_steps": 72,
+  "data_manifest_sha256": "9dea44fe7b188f6bcba9290d6afe9a4d344e334f8b15ce786e7400decb95b756"
+}

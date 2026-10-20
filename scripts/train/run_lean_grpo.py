@@ -53,35 +53,24 @@ import sys
 import time
 import zipfile
 
-sys.path[:0] = [str(Path(__file__).resolve().parents[1] / d) for d in ("data", "audit", "eval")]
+sys.path[:0] = [str(Path(__file__).resolve().parents[1] / d) for d in ("train", "data", "audit", "eval")]
 from bench_lean_verifier import repl_context, verify_group  # noqa: E402
 from prepare_grpo_pilot import load_checker  # noqa: E402
 from probe_nt_pool import INSTRUCTION as PROOF_INSTRUCTION, header, lean_unit, prompt  # noqa: E402
 from probe_start_depth import FORBIDDEN, INSTRUCTION as CONTINUE_INSTRUCTION  # noqa: E402
 from replay_training_proofs import load, proof_body  # noqa: E402
+from rl_components import PoolTaskAdmission, component_fingerprints  # noqa: E402
 
 
 def train_statements(pool, names=None):
     """Pool rows of split train, or only `names`; raises if a name is not a train statement of the pool."""
-    if names is None:
-        return [r for r in pool if r["split"] == "train"]
-    split = {r["name"]: r["split"] for r in pool}
-    outside = sorted(n for n in names if split.get(n) != "train")
-    if outside:  # validation and test statements stay out of training, prompts, and adaptive sampling
-        raise RuntimeError(f"{len(outside)} names are not train statements of the pool, for example {outside[:3]}")
-    return [r for r in pool if r["name"] in names]
+    return PoolTaskAdmission(pool, header=header, unit_factory=lean_unit, forbidden=FORBIDDEN).train_statements(names)
 
 
-def task_units(tasks, pool):
-    """verify_group units (with goal state) of RL tasks; raises if a name is not a train statement of the pool, a header
+def task_units(tasks, pool, split='train'):
+    """verify_group units (with goal state) of RL tasks; raises if a name is outside the declared split, a header
     is not the pool statement's header, a given text has a FORBIDDEN match, or a task_id repeats."""
-    rows = {r["name"]: r for r in train_statements(pool, {t["name"] for t in tasks})}
-    bad = sorted(t["task_id"] for t in tasks if t["header"] != header(rows[t["name"]]) or FORBIDDEN.search(t["given"]))
-    if bad:
-        raise RuntimeError(f"{len(bad)} tasks differ from the pool statement or have a FORBIDDEN given text, for example {bad[:3]}")
-    if len({t["task_id"] for t in tasks}) != len(tasks):
-        raise RuntimeError("task_id values repeat")
-    return [dict(lean_unit(t), state=t["state"]) for t in tasks]
+    return PoolTaskAdmission(pool, header=header, unit_factory=lean_unit, forbidden=FORBIDDEN).units(tasks, split)
 
 
 def excluded_names(units, excluded):
@@ -189,6 +178,11 @@ def main():
         sources_info.update(pool_statements=len(kept), pool_without_state=len(statements) - len(kept))
     if args.tasks:
         tasks = [json.loads(line) for line in args.tasks.open()]
+        if 'curriculum_max_lines_remaining' in config:
+            from run_interleaved_training import prefix_curriculum
+            tasks = prefix_curriculum(tasks, config['curriculum_max_lines_remaining'],
+                                      config['curriculum_include_whole'])
+        (args.output / 'training_task_ids.json').write_text(json.dumps([t['task_id'] for t in tasks]) + '\n')
         units += task_units(tasks, pool)
         sources_info.update(tasks=str(args.tasks), tasks_sha256=hashlib.sha256(args.tasks.read_bytes()).hexdigest(),
                             task_kinds={k: sum(t.get("kind") == k for t in tasks) for k in sorted({t.get("kind") for t in tasks})})
@@ -212,16 +206,33 @@ def main():
         if len(tokenizer(text, add_special_tokens=False)["input_ids"]) > config["max_prompt_tokens"]:
             dropped += 1
             continue
-        rows.append({"prompt": text, "task_id": u["task_id"]})
-    random.Random(config["seed"]).shuffle(rows)
+        rows.append({"prompt": text, "task_id": u["task_id"],
+                     "problem_name": u.get("name", u.get("theorem_id"))})
+    if config.get('balance_by_problem', False):
+        from run_interleaved_training import balanced_prompt_order
+        rows = balanced_prompt_order(rows, config['seed'])
+    else:
+        random.Random(config["seed"]).shuffle(rows)
+    if not rows:
+        raise ValueError('No training prompts remain after the token cap')
     needed = config["max_steps"] * config["prompts_per_step"]
     dataset = Dataset.from_list([rows[i % len(rows)] for i in range(needed)])
+    (args.output / 'training_prompt_order.json').write_text(
+        json.dumps([rows[i % len(rows)]['task_id'] for i in range(needed)]) + '\n')
     by_id = {u["task_id"]: u for u in units}
     run = {"config": config, "model": str(args.model), **sources_info, "units": len(units),
+           "component_sha256": component_fingerprints(),
            "units_with_prompts": len(rows), "dropped_long_prompts": dropped,
            "lean": "v4.10.0-rc1", "mathlib": "29dcec074de168ac2bf835a77ef68bbe069194c5", "repl": str(ctx.repl),
            "device": torch.cuda.get_device_name(0) if torch.cuda.is_available() else "cpu", "status": "running"}
     (args.output / "run.json").write_text(json.dumps(run, indent=2) + "\n")
+
+    if config.get('algorithm', 'grpo') == 'ppo':
+        from lean_ppo import run_ppo
+        run_ppo(args, config, ctx, by_id, dataset, tokenizer, run)
+        return
+    if config.get('algorithm', 'grpo') != 'grpo':
+        raise ValueError('algorithm must be grpo or ppo')
 
     counts = {"generated_tokens": 0, "lean_calls": 0, "lean_seconds": 0.0, "lean_cpu_seconds": 0.0, "samples": 0,
               "accepted": 0, "forbidden": 0, "timeouts": 0, "capped": 0, "groups_zero": 0, "groups_mixed": 0, "groups_all": 0}
@@ -232,9 +243,12 @@ def main():
     # the same Lean calls and the record keeps the true verdicts; only the reward each completion receives is permuted.
     shuffle = config["shuffle_rewards"]
     reward_rng = random.Random(config["seed"])
+    presented_tasks = set()
+    stop_reason = 'requested_steps'
     started = time.monotonic()
 
     def lean_reward(prompts, completions, completion_ids, task_id, trainer_state, **kwargs):
+        presented_tasks.update(task_id)
         texts, groups, verdicts = score(ctx, by_id, task_id, completions, executor)
         rewards = [float(v["status"] == "accepted") for v in verdicts]
         if shuffle:
@@ -269,12 +283,14 @@ def main():
             self.file = (args.output / "steps.jsonl").open("x")
 
         def on_log(self, _args, state, control, logs=None, **kwargs):
+            nonlocal stop_reason
             wall = time.monotonic() - started
             record = {"step": state.global_step, "wall_seconds": wall, "gpu_seconds": wall * gpus, **counts, **(logs or {})}
             self.file.write(json.dumps(record) + "\n")
             self.file.flush()
             print(json.dumps(record), flush=True)
             if over_budget(counts, wall, config):  # checked after each optimizer step: a run overshoots by at most one step
+                stop_reason = 'resource_cap'
                 control.should_training_stop = True
 
     model = AutoModelForCausalLM.from_pretrained(args.model, dtype=torch.float32)
@@ -300,7 +316,11 @@ def main():
     try:
         trainer.train()
         trainer.save_model(str(args.output / "final"))
-        run.update(status="complete", optimizer_steps=trainer.state.global_step)
+        tokenizer.save_pretrained(str(args.output / "final"))
+        run.update(status="complete", optimizer_steps=trainer.state.global_step,
+                   stop_reason=stop_reason, requested_optimizer_steps=config['max_steps'],
+                   unique_presented_tasks=len(presented_tasks),
+                   curriculum_covered=len(presented_tasks) == len(rows))
     except BaseException as error:
         run.update(status="failed", error=type(error).__name__ + ": " + str(error))
         raise

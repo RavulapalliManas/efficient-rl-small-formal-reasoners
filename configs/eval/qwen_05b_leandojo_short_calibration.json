@@ -1,0 +1,23 @@
+{
+  "purpose": "Frozen native LeanDojo calibration. Assess all public starts once per seed; compare the two registered seeds without optimizer updates. Preserve all-zero, all-one, mixed, partial, censored and unobserved groups. Same fixed state order and episode limits in both runs. Requires --assessment-only. No paid GPU lease.",
+  "run_id": "exp019-leandojo-short-calibration-s20261014-v1",
+  "seed": 20261014,
+  "lean": "leanprover/lean4:v4.10.0-rc1",
+  "mathlib": "29dcec074de168ac2bf835a77ef68bbe069194c5",
+  "group_size": 4,
+  "max_groups": 51,
+  "max_episode_steps": 4,
+  "max_prompt_tokens": 1024,
+  "max_action_tokens": 64,
+  "reward_mode": "goal_change_v1",
+  "exploration_bonus": 0.0,
+  "curriculum_max_lines_remaining": 3,
+  "learning_rate": 1e-06,
+  "cpu_threads": 4,
+  "lean_timeout_seconds": 20,
+  "lean_setup_timeout_seconds": 120,
+  "max_wall_seconds": 1800,
+  "max_generated_tokens": 52224,
+  "max_lean_calls": 2040,
+  "max_repair_attempts": 0
+}

@@ -1,0 +1,84 @@
+{
+  "experiment_id": "EXP-023",
+  "purpose": "Freeze broader TRAIN-source proof roots and separate DEV roots before model sampling. Admission requires source exclusions, fresh root reconstruction, accepted reference replay and prompt limits. Historical SFT exposure remains unresolved. No model capability or paid launch is established by this config.",
+  "lean": "leanprover/lean4:v4.10.0-rc1",
+  "mathlib": "29dcec074de168ac2bf835a77ef68bbe069194c5",
+  "max_prompt_tokens": 1024,
+  "max_reference_blocks": 12,
+  "max_reference_chars": 4096,
+  "max_prefix_blocks": 3,
+  "train_names": [
+    "lean_workbook_17972",
+    "lean_workbook_33000",
+    "lean_workbook_3290",
+    "lean_workbook_30845",
+    "lean_workbook_3535",
+    "lean_workbook_plus_30739",
+    "lean_workbook_plus_17093",
+    "lean_workbook_plus_34191",
+    "lean_workbook_35627",
+    "lean_workbook_2743",
+    "lean_workbook_33642",
+    "lean_workbook_40145",
+    "lean_workbook_plus_65403",
+    "lean_workbook_283",
+    "lean_workbook_plus_64104",
+    "lean_workbook_plus_61497",
+    "lean_workbook_39627",
+    "lean_workbook_41434",
+    "lean_workbook_plus_11432",
+    "lean_workbook_plus_18068",
+    "lean_workbook_plus_55225",
+    "lean_workbook_plus_53263"
+  ],
+  "dev_names": [
+    "lean_workbook_plus_39175",
+    "lean_workbook_30622",
+    "lean_workbook_plus_17718",
+    "lean_workbook_plus_43729",
+    "lean_workbook_plus_75279",
+    "lean_workbook_50064",
+    "lean_workbook_493",
+    "lean_workbook_52254"
+  ],
+  "protocol_version": 3,
+  "excluded_train_names": [
+    "lean_workbook_plus_10700"
+  ],
+  "exclusion_reason": "Universal hypothesis is contradictory at zero; old SFT exposure remains in parent history.",
+  "structural_primers": true,
+  "rounds_per_stage": {
+    "structure": 1,
+    "application": 3,
+    "composition": 4,
+    "whole": 8
+  },
+  "review_every": 4,
+  "sample_uniformity": "Equal trajectory groups per admitted parent, not per start.",
+  "application_task_ids": [
+    "lean_workbook_33000:prefix_top:3",
+    "lean_workbook_plus_30739:prefix_top:3",
+    "lean_workbook_283:prefix_top:1",
+    "lean_workbook_plus_18068:prefix_top:1",
+    "lean_workbook_30845:prefix_top:5",
+    "lean_workbook_plus_17093:prefix_top:2",
+    "lean_workbook_plus_34191:prefix_top:3",
+    "lean_workbook_plus_11432:prefix_top:2",
+    "lean_workbook_3535:prefix_top:3"
+  ],
+  "stage_order": [
+    "structure",
+    "application",
+    "composition",
+    "whole"
+  ],
+  "missing_structural_operations": [
+    "constructor",
+    "case_split",
+    "induction"
+  ],
+  "capability_boundary": "Structure primers supply an accepted local proof of the entire target. Assisted closure is syntax practice, not unassisted number-theory competence. Later-stage unsupported parent slots review earlier starts. No mastery or learning benefit is established.",
+  "application_scope": "Apply a lemma or an arithmetic/normalization tactic in an assisted goal. This stage is not exclusively named-lemma application.",
+  "operations_reference_only": true,
+  "curriculum_revision": 4
+}

@@ -1,0 +1,21 @@
+{
+  "purpose": "Exploratory interactive tactic RL from EXP020 common SFT; GPU launch remains unapproved",
+  "run_id": "exp019-tactic-shaped-s20261011-v1",
+  "seed": 20261011,
+  "lean": "leanprover/lean4:v4.10.0-rc1",
+  "mathlib": "29dcec074de168ac2bf835a77ef68bbe069194c5",
+  "group_size": 4,
+  "max_groups": 16,
+  "max_episode_steps": 8,
+  "max_prompt_tokens": 1024,
+  "max_action_tokens": 64,
+  "exploration_bonus": 0.2,
+  "curriculum_max_lines_remaining": 3,
+  "learning_rate": 0.000001,
+  "cpu_threads": 4,
+  "lean_timeout_seconds": 20,
+  "lean_setup_timeout_seconds": 120,
+  "max_wall_seconds": 1200,
+  "max_generated_tokens": 32768,
+  "max_lean_calls": 832
+}

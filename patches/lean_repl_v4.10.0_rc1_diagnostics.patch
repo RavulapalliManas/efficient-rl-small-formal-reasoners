@@ -1,0 +1,17 @@
+diff --git a/REPL/Snapshots.lean b/REPL/Snapshots.lean
+--- a/REPL/Snapshots.lean
++++ b/REPL/Snapshots.lean
+@@ -120,3 +120,12 @@
+ def runCoreM (p : ProofSnapshot) (t : CoreM α) : IO (α × ProofSnapshot) := do
+-  let (a, coreState) ← (Lean.Core.CoreM.toIO · p.coreContext p.coreState) do t
++  let (a, coreState) ← (Lean.Core.CoreM.toIO · p.coreContext p.coreState) do
++    try t
++    catch ex =>
++      if Lean.Elab.isAbortTacticException ex then
++        let messages := (← Lean.Core.getMessageLog).toList.drop p.coreState.messages.toList.length
++        let errors := messages.filter fun message => message.severity == .error
++        unless errors.isEmpty do
++          -- Render the logged cause before CoreM.toIO discards the failed state.
++          throwError (MessageData.joinSep (errors.map (·.data)) m!"\n")
++      throw ex
+   return (a, { p with coreState })

@@ -8,7 +8,7 @@ span come a SENTINEL command and its `#print axioms`: a declaration cut off afte
 parse error at the next token, which is then the sentinel, not the next declaration (before 2026-10-10 it fell on
 the next declaration and rejected it, and all `#print axioms` lines stood at the end of the file). An unterminated
 block comment still swallows the rest of the file, so every later declaration loses its `#print axioms` output and
-is rejected. Model-proof scoring uses the REPL path instead (verify_group in bench_lean_verifier.py), where each
+is incomplete. Model-proof scoring uses the REPL path instead (verify_group in bench_lean_verifier.py), where each
 proof is its own command.
 Modes: proofs (Goedel full proofs, Lean Workbook proofs) and statements (statement + sorry; elaboration only).
 
@@ -21,6 +21,7 @@ import os
 from pathlib import Path
 import re
 import subprocess
+import sys
 import time
 
 HEADER = "import Mathlib\nimport Aesop\nset_option maxHeartbeats 400000\nopen BigOperators Real Nat Topology Rat\n"
@@ -54,34 +55,84 @@ def items(workbook, goedel, mode, number_theory_only):
     return out, by_name
 
 
-def check_batch(lean, env, path, batch, timeout):
+def check_batch(lean, env, path, batch, timeout, *, strict=False):
+    if strict:
+        eval_path = str(Path(__file__).resolve().parents[1] / "eval")
+        if eval_path not in sys.path:
+            sys.path.insert(0, eval_path)
+        data_path = str(Path(__file__).resolve().parent)
+        if data_path not in sys.path:
+            sys.path.insert(0, data_path)
+        from bench_lean_verifier import one_command_check
+        from build_proof_tasks import GUARD
+        from probe_start_depth import FORBIDDEN
+        outcomes = [None] * len(batch)
+        runnable = []
+        for k, item in enumerate(batch):
+            if FORBIDDEN.search(item["text"]):
+                outcomes[k] = {"status": "forbidden_construct", "first_error": None, "axioms": None}
+            else:
+                runnable.append((k, item))
+        if not runnable:
+            path.write_text("\n".join(HEADER.split("\n")) + "\n")
+            return outcomes, 0.0
+    else:
+        outcomes = [None] * len(batch)
+        runnable = list(enumerate(batch))
     lines, spans, axiom_line = HEADER.split("\n"), [], {}
-    for k, item in enumerate(batch):
+    for k, item in runnable:
         # Give every declaration a unique name so duplicates of one problem can share a file.
         text = re.sub(r"theorem\s+(\S+)", f"theorem check_{k}", item["text"], count=1)
+        if strict:
+            text = re.sub(r"(:=\s*by\b)", lambda match: match.group(1) + "\n" +
+                          GUARD.format(name=json.dumps(f"check_{k}")), text, count=1)
         start = len(lines) + 1
+        if strict:
+            lines.extend(one_command_check(text).split("\n"))
         lines.extend(text.split("\n") + [SENTINEL, f"#print axioms check_{k}"])
         spans.append((start, len(lines)))
         axiom_line[len(lines)] = k
+    index = [k for k, _ in runnable]
     path.write_text("\n".join(lines) + "\n")
     start_time = time.monotonic()
     try:
         result = subprocess.run([str(lean), "--json", str(path)], env=env, capture_output=True, text=True, timeout=timeout)
-        messages = [json.loads(l) for l in result.stdout.splitlines() if l.startswith("{")]
     except subprocess.TimeoutExpired:
-        return [{"status": "batch_timeout"} for _ in batch], time.monotonic() - start_time
-    status = []
-    for k, (a, b) in enumerate(spans):
+        for k in index:
+            outcomes[k] = {"status": "batch_timeout"}
+        return outcomes, time.monotonic() - start_time
+    except OSError as error:
+        for k in index:
+            outcomes[k] = dict(status="crash", returncode=None, stderr=str(error)[:300])
+        return outcomes, time.monotonic() - start_time
+    if result.returncode not in (0, 1):
+        for k in index:
+            outcomes[k] = dict(status="crash", returncode=result.returncode, stderr=result.stderr[:300])
+        return outcomes, time.monotonic() - start_time
+    messages = [json.loads(l) for l in result.stdout.splitlines() if l.startswith("{")]
+    for local_k, (a, b) in enumerate(spans):
+        k = index[local_k]
         errors = [m["data"] for m in messages if m["severity"] == "error" and a <= m["pos"]["line"] <= b]
         axioms = None
         for m in messages:
             if m["severity"] == "information" and axiom_line.get(m["pos"]["line"]) == k:
-                found = re.search(r"depends on axioms:\s*\[([^\]]*)\]", m["data"], re.S)
-                axioms = [x.strip() for x in found.group(1).split(",")] if found else ([] if "does not depend" in m["data"] else None)
-        ok = not errors and axioms is not None and set(axioms) <= ALLOWED
-        status.append({"status": "accepted" if ok else ("sorry_only" if not errors and axioms and set(axioms) - ALLOWED == {"sorryAx"} else "rejected"),
-                       "first_error": errors[0][:300] if errors else None, "axioms": axioms})
-    return status, time.monotonic() - start_time
+                name = f"check_{k}"
+                found = re.fullmatch(rf"'?{re.escape(name)}'? depends on axioms:\s*\[([^\]]*)\]", m["data"], re.S)
+                no_axioms = re.fullmatch(rf"'?{re.escape(name)}'? does not depend on any axioms", m["data"])
+                axioms = [x.strip() for x in found.group(1).split(",")] if found else ([] if no_axioms else None)
+        if errors:
+            verdict = "rejected"
+        elif axioms is None:
+            verdict = "incomplete"
+        elif set(axioms) <= ALLOWED:
+            verdict = "accepted"
+        elif set(axioms) - ALLOWED == {"sorryAx"}:
+            verdict = "sorry_only"
+        else:
+            verdict = "rejected"
+        outcomes[k] = {"status": verdict,
+                       "first_error": errors[0][:300] if errors else None, "axioms": axioms}
+    return outcomes, time.monotonic() - start_time
 
 
 def main():

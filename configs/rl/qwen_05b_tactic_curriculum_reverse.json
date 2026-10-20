@@ -1,0 +1,23 @@
+{
+  "purpose": "Preparation candidate. Fixed stages use one-block, two-block, longer-prefix and original-root starts. This changes starting-state distribution, not solely order. Pair with uniform using frozen schedules and immutable common SFT. No paid launch authorized; actual exposure and compute require counting.",
+  "run_id": "exp019-tactic-curriculum-reverse-s20261011-v1",
+  "seed": 20261011,
+  "lean": "leanprover/lean4:v4.10.0-rc1",
+  "mathlib": "29dcec074de168ac2bf835a77ef68bbe069194c5",
+  "group_size": 4,
+  "max_groups": 48,
+  "max_episode_steps": 8,
+  "max_prompt_tokens": 1024,
+  "max_action_tokens": 64,
+  "reward_mode": "goal_change_v1",
+  "exploration_bonus": 0.0,
+  "curriculum_max_lines_remaining": 64,
+  "learning_rate": 1e-06,
+  "cpu_threads": 4,
+  "lean_timeout_seconds": 20,
+  "lean_setup_timeout_seconds": 120,
+  "max_wall_seconds": 3600,
+  "max_generated_tokens": 98304,
+  "max_lean_calls": 2496,
+  "max_repair_attempts": 0
+}

@@ -1,0 +1,584 @@
+{
+ "experiment": "EXP-024",
+ "version": "undergrad_nt_v1",
+ "status": "draft for Manas's review",
+ "lean": "v4.10.0-rc1",
+ "mathlib": "29dcec074de168ac2bf835a77ef68bbe069194c5",
+ "split_rule": {
+  "heldout_topics": [
+   6,
+   7
+  ],
+  "heldout_families_per_training_topic": 2,
+  "selection": "random.Random(20261015).sample over sorted family IDs of each training topic, in topic order"
+ },
+ "capability_vocabulary": [
+  "arith_function",
+  "bezout",
+  "coprime_lemma",
+  "dvd_algebra",
+  "fermat_euler",
+  "finite_field",
+  "gcd_lemma",
+  "group_order",
+  "induction",
+  "legendre",
+  "library_application",
+  "modeq_algebra",
+  "pow_rewrite",
+  "residue_cases",
+  "witness_exhibit"
+ ],
+ "notes": [
+  "lean_statement is one sample instance; the builder varies it along instance_variation.",
+  "Reference proofs, step counts and the single-tactic screen come from the evaluation build stage, not from this file.",
+  "Families that the screen solves are removed from evaluation and labelled in training."
+ ],
+ "topics": [
+  {
+   "id": 1,
+   "name": "Divisibility and the Euclidean algorithm",
+   "heldout": false
+  },
+  {
+   "id": 2,
+   "name": "Bezout and linear Diophantine equations",
+   "heldout": false
+  },
+  {
+   "id": 3,
+   "name": "Congruences and the Chinese remainder theorem",
+   "heldout": false
+  },
+  {
+   "id": 4,
+   "name": "Fermat, Euler and Wilson",
+   "heldout": false
+  },
+  {
+   "id": 5,
+   "name": "Order and primitive roots",
+   "heldout": false
+  },
+  {
+   "id": 6,
+   "name": "Quadratic residues",
+   "heldout": true
+  },
+  {
+   "id": 7,
+   "name": "Arithmetic functions",
+   "heldout": true
+  },
+  {
+   "id": 8,
+   "name": "Classic Diophantine equations",
+   "heldout": false
+  }
+ ],
+ "families": [
+  {
+   "id": "t1_dvd_lincomb",
+   "topic": 1,
+   "name": "Divisor of a linear combination",
+   "capabilities": [
+    "dvd_algebra"
+   ],
+   "informal": "If c divides a and b, then c divides ma + nb.",
+   "lean_statement": "(a b c m n : ℤ) (ha : c ∣ a) (hb : c ∣ b) : c ∣ m * a + n * b",
+   "instance_variation": "number and signs of terms",
+   "split": "A_training_family"
+  },
+  {
+   "id": "t1_gcd_shift",
+   "topic": 1,
+   "name": "Euclidean step",
+   "capabilities": [
+    "gcd_lemma"
+   ],
+   "informal": "gcd(a + kb, b) = gcd(a, b).",
+   "lean_statement": "(a b k : ℕ) : Nat.gcd (a + k * b) b = Nat.gcd a b",
+   "instance_variation": "position of the multiple",
+   "split": "B_heldout_family"
+  },
+  {
+   "id": "t1_consec_product",
+   "topic": 1,
+   "name": "Product of consecutive integers",
+   "capabilities": [
+    "residue_cases",
+    "dvd_algebra"
+   ],
+   "informal": "2 divides n(n + 1).",
+   "lean_statement": "(n : ℕ) : 2 ∣ n * (n + 1)",
+   "instance_variation": "number of factors and divisor (2, 6, 24)",
+   "split": "B_heldout_family"
+  },
+  {
+   "id": "t1_fermat_poly",
+   "topic": 1,
+   "name": "Divisibility of n^k - n",
+   "capabilities": [
+    "residue_cases"
+   ],
+   "informal": "6 divides n^3 - n.",
+   "lean_statement": "(n : ℤ) : 6 ∣ n ^ 3 - n",
+   "instance_variation": "exponent and divisor (n^2 - n by 2, n^5 - n by 30)",
+   "split": "A_training_family"
+  },
+  {
+   "id": "t1_common_divisor_coprime",
+   "topic": 1,
+   "name": "Common divisor of coprime numbers",
+   "capabilities": [
+    "gcd_lemma",
+    "library_application"
+   ],
+   "informal": "If d divides a and b and gcd(a, b) = 1, then d = 1.",
+   "lean_statement": "(a b d : ℕ) (h1 : d ∣ a) (h2 : d ∣ b) (h3 : Nat.gcd a b = 1) : d = 1",
+   "instance_variation": "integer or natural form",
+   "split": "A_training_family"
+  },
+  {
+   "id": "t2_bezout_exists",
+   "topic": 2,
+   "name": "Bezout coefficients exist",
+   "capabilities": [
+    "bezout",
+    "library_application"
+   ],
+   "informal": "There are x, y with ax + by = gcd(a, b).",
+   "lean_statement": "(a b : ℤ) : ∃ x y : ℤ, a * x + b * y = (Int.gcd a b : ℤ)",
+   "instance_variation": "natural or integer form",
+   "split": "A_training_family"
+  },
+  {
+   "id": "t2_euclid_lemma",
+   "topic": 2,
+   "name": "Euclid's lemma",
+   "capabilities": [
+    "coprime_lemma"
+   ],
+   "informal": "If a is coprime to c and a divides bc, then a divides b.",
+   "lean_statement": "(a b c : ℤ) (h : IsCoprime a c) (hd : a ∣ b * c) : a ∣ b",
+   "instance_variation": "order of factors",
+   "split": "A_training_family"
+  },
+  {
+   "id": "t2_no_solution",
+   "topic": 2,
+   "name": "Unsolvable linear equation",
+   "capabilities": [
+    "bezout",
+    "dvd_algebra"
+   ],
+   "informal": "If gcd(a, b) does not divide c, then ax + by = c has no solution.",
+   "lean_statement": "(a b c : ℤ) (h : ¬ ((Int.gcd a b : ℤ) ∣ c)) : ¬ ∃ x y : ℤ, a * x + b * y = c",
+   "instance_variation": "contrapositive form",
+   "split": "B_heldout_family"
+  },
+  {
+   "id": "t2_solve_concrete",
+   "topic": 2,
+   "name": "Solve a linear equation",
+   "capabilities": [
+    "witness_exhibit"
+   ],
+   "informal": "Find integers x, y with 17x + 5y = 1.",
+   "lean_statement": "∃ x y : ℤ, 17 * x + 5 * y = 1",
+   "instance_variation": "coefficients (coprime pairs)",
+   "split": "B_heldout_family"
+  },
+  {
+   "id": "t2_coprime_from_comb",
+   "topic": 2,
+   "name": "Coprime from a combination",
+   "capabilities": [
+    "coprime_lemma"
+   ],
+   "informal": "If ax + by = 1, then a and b are coprime.",
+   "lean_statement": "(a b x y : ℤ) (h : a * x + b * y = 1) : IsCoprime a b",
+   "instance_variation": "right-hand side form",
+   "split": "A_training_family"
+  },
+  {
+   "id": "t3_modeq_combine",
+   "topic": 3,
+   "name": "Combine congruences",
+   "capabilities": [
+    "modeq_algebra"
+   ],
+   "informal": "From a ≡ b and c ≡ d (mod n), get ac + d ≡ bd + c (mod n).",
+   "lean_statement": "(a b c d n : ℤ) (h1 : a ≡ b [ZMOD n]) (h2 : c ≡ d [ZMOD n]) : a * c + d ≡ b * d + c [ZMOD n]",
+   "instance_variation": "combination of + and *",
+   "split": "A_training_family"
+  },
+  {
+   "id": "t3_modeq_pow",
+   "topic": 3,
+   "name": "Raise a congruence to a power",
+   "capabilities": [
+    "modeq_algebra",
+    "induction"
+   ],
+   "informal": "If a ≡ b (mod n), then a^k ≡ b^k (mod n).",
+   "lean_statement": "(a b n : ℤ) (k : ℕ) (h : a ≡ b [ZMOD n]) : a ^ k ≡ b ^ k [ZMOD n]",
+   "instance_variation": "integer or natural form",
+   "split": "A_training_family"
+  },
+  {
+   "id": "t3_solve_linear",
+   "topic": 3,
+   "name": "Solve a linear congruence",
+   "capabilities": [
+    "witness_exhibit"
+   ],
+   "informal": "Find x with 7x ≡ 3 (mod 11).",
+   "lean_statement": "∃ x : ℤ, 7 * x ≡ 3 [ZMOD 11]",
+   "instance_variation": "coefficient and prime modulus",
+   "split": "B_heldout_family"
+  },
+  {
+   "id": "t3_crt",
+   "topic": 3,
+   "name": "Chinese remainder theorem",
+   "capabilities": [
+    "library_application"
+   ],
+   "informal": "For all a, b there is x with x ≡ a (mod 3) and x ≡ b (mod 5).",
+   "lean_statement": "(a b : ℕ) : ∃ x : ℕ, x ≡ a [MOD 3] ∧ x ≡ b [MOD 5]",
+   "instance_variation": "coprime moduli",
+   "split": "A_training_family"
+  },
+  {
+   "id": "t3_cancel",
+   "topic": 3,
+   "name": "Cancel a coprime factor",
+   "capabilities": [
+    "coprime_lemma",
+    "modeq_algebra"
+   ],
+   "informal": "If c is coprime to n and ca ≡ cb (mod n), then a ≡ b (mod n).",
+   "lean_statement": "(a b c n : ℤ) (hc : IsCoprime c n) (h : c * a ≡ c * b [ZMOD n]) : a ≡ b [ZMOD n]",
+   "instance_variation": "side of the factor",
+   "split": "B_heldout_family"
+  },
+  {
+   "id": "t4_fermat_little",
+   "topic": 4,
+   "name": "Fermat's little theorem",
+   "capabilities": [
+    "finite_field",
+    "library_application"
+   ],
+   "informal": "In Z/p, a ≠ 0 gives a^(p-1) = 1.",
+   "lean_statement": "(p : ℕ) [Fact p.Prime] (a : ZMod p) (ha : a ≠ 0) : a ^ (p - 1) = 1",
+   "instance_variation": "ZMod or congruence form",
+   "split": "B_heldout_family"
+  },
+  {
+   "id": "t4_power_period",
+   "topic": 4,
+   "name": "Periodic powers",
+   "capabilities": [
+    "pow_rewrite",
+    "fermat_euler",
+    "induction"
+   ],
+   "informal": "2^(6n) ≡ 1 (mod 7).",
+   "lean_statement": "(n : ℕ) : 2 ^ (6 * n) ≡ 1 [MOD 7]",
+   "instance_variation": "base and prime modulus",
+   "split": "A_training_family"
+  },
+  {
+   "id": "t4_euler",
+   "topic": 4,
+   "name": "Euler's theorem",
+   "capabilities": [
+    "fermat_euler",
+    "library_application"
+   ],
+   "informal": "If gcd(a, n) = 1, then a^φ(n) ≡ 1 (mod n).",
+   "lean_statement": "(a n : ℕ) (h : Nat.Coprime a n) : a ^ Nat.totient n ≡ 1 [MOD n]",
+   "instance_variation": "natural or integer form",
+   "split": "B_heldout_family"
+  },
+  {
+   "id": "t4_wilson",
+   "topic": 4,
+   "name": "Wilson's theorem",
+   "capabilities": [
+    "finite_field",
+    "library_application"
+   ],
+   "informal": "(p - 1)! = -1 in Z/p.",
+   "lean_statement": "(p : ℕ) [Fact p.Prime] : ((p - 1).factorial : ZMod p) = -1",
+   "instance_variation": "ZMod or congruence form",
+   "split": "A_training_family"
+  },
+  {
+   "id": "t4_last_digit",
+   "topic": 4,
+   "name": "Last digit of a power family",
+   "capabilities": [
+    "pow_rewrite",
+    "induction"
+   ],
+   "informal": "3^(4n+1) ends in 3.",
+   "lean_statement": "(n : ℕ) : 3 ^ (4 * n + 1) % 10 = 3",
+   "instance_variation": "base and offset",
+   "split": "A_training_family"
+  },
+  {
+   "id": "t5_order_dvd_p_sub_one",
+   "topic": 5,
+   "name": "Order divides p - 1",
+   "capabilities": [
+    "group_order",
+    "library_application"
+   ],
+   "informal": "The order of a unit mod p divides p - 1.",
+   "lean_statement": "(p : ℕ) [Fact p.Prime] (a : (ZMod p)ˣ) : orderOf a ∣ p - 1",
+   "instance_variation": "unit or nonzero form",
+   "split": "A_training_family"
+  },
+  {
+   "id": "t5_order_concrete",
+   "topic": 5,
+   "name": "Order of a residue",
+   "capabilities": [
+    "group_order",
+    "witness_exhibit"
+   ],
+   "informal": "The order of 3 mod 7 is 6.",
+   "lean_statement": "orderOf (3 : ZMod 7) = 6",
+   "instance_variation": "residue and prime",
+   "split": "A_training_family"
+  },
+  {
+   "id": "t5_pow_gcd",
+   "topic": 5,
+   "name": "Power at the gcd",
+   "capabilities": [
+    "group_order",
+    "bezout"
+   ],
+   "informal": "If a^m = 1 and a^n = 1, then a^gcd(m,n) = 1.",
+   "lean_statement": "{G : Type*} [Monoid G] (a : G) (m n : ℕ) (hm : a ^ m = 1) (hn : a ^ n = 1) : a ^ Nat.gcd m n = 1",
+   "instance_variation": "group or ZMod form",
+   "split": "B_heldout_family"
+  },
+  {
+   "id": "t5_primitive_root",
+   "topic": 5,
+   "name": "Primitive roots exist",
+   "capabilities": [
+    "group_order",
+    "library_application"
+   ],
+   "informal": "There is a unit mod p of order p - 1.",
+   "lean_statement": "(p : ℕ) [Fact p.Prime] : ∃ g : (ZMod p)ˣ, orderOf g = p - 1",
+   "instance_variation": "statement form",
+   "split": "B_heldout_family"
+  },
+  {
+   "id": "t5_order_dvd_exponent",
+   "topic": 5,
+   "name": "Order divides any annihilating exponent",
+   "capabilities": [
+    "group_order"
+   ],
+   "informal": "If a^k = 1, then the order of a divides k.",
+   "lean_statement": "(n : ℕ) (a : (ZMod n)ˣ) (k : ℕ) (h : a ^ k = 1) : orderOf a ∣ k",
+   "instance_variation": "ambient group",
+   "split": "A_training_family"
+  },
+  {
+   "id": "t6_euler_criterion",
+   "topic": 6,
+   "name": "Euler's criterion, residue case",
+   "capabilities": [
+    "legendre",
+    "finite_field"
+   ],
+   "informal": "If a is a nonzero square mod p, then a^(p/2) = 1.",
+   "lean_statement": "(p : ℕ) [Fact p.Prime] (a : ZMod p) (h : IsSquare a) (ha : a ≠ 0) : a ^ (p / 2) = 1",
+   "instance_variation": "residue or non-residue case",
+   "split": "C_heldout_topic"
+  },
+  {
+   "id": "t6_neg_one_square",
+   "topic": 6,
+   "name": "-1 is a square mod p ≡ 1 (mod 4)",
+   "capabilities": [
+    "legendre",
+    "library_application"
+   ],
+   "informal": "If p ≡ 1 (mod 4), then -1 is a square mod p.",
+   "lean_statement": "(p : ℕ) [Fact p.Prime] (hp : p % 4 = 1) : IsSquare (-1 : ZMod p)",
+   "instance_variation": "direction of the equivalence",
+   "split": "C_heldout_topic"
+  },
+  {
+   "id": "t6_square_mod4",
+   "topic": 6,
+   "name": "Squares mod 4",
+   "capabilities": [
+    "residue_cases"
+   ],
+   "informal": "A square is never 2 mod 4.",
+   "lean_statement": "(a : ℤ) : a ^ 2 % 4 ≠ 2",
+   "instance_variation": "modulus and excluded residue",
+   "split": "C_heldout_topic"
+  },
+  {
+   "id": "t6_legendre_mul",
+   "topic": 6,
+   "name": "Legendre symbol is multiplicative",
+   "capabilities": [
+    "legendre",
+    "library_application"
+   ],
+   "informal": "(ab/p) = (a/p)(b/p).",
+   "lean_statement": "(p : ℕ) [Fact p.Prime] (a b : ℤ) : legendreSym p (a * b) = legendreSym p a * legendreSym p b",
+   "instance_variation": "number of factors",
+   "split": "C_heldout_topic"
+  },
+  {
+   "id": "t6_reciprocity",
+   "topic": 6,
+   "name": "Quadratic reciprocity, p ≡ 1 (mod 4)",
+   "capabilities": [
+    "legendre",
+    "library_application"
+   ],
+   "informal": "If p ≡ 1 (mod 4), q is an odd prime and q ≠ p, then q is a square mod p iff p is a square mod q.",
+   "lean_statement": "(p q : ℕ) [Fact p.Prime] [Fact q.Prime] (hp : p % 4 = 1) (hq : q ≠ 2) (hpq : p ≠ q) : IsSquare (q : ZMod p) ↔ IsSquare (p : ZMod q)",
+   "instance_variation": "which prime is 1 mod 4",
+   "split": "C_heldout_topic"
+  },
+  {
+   "id": "t7_totient_prime",
+   "topic": 7,
+   "name": "Totient of a prime",
+   "capabilities": [
+    "arith_function"
+   ],
+   "informal": "φ(p) = p - 1.",
+   "lean_statement": "(p : ℕ) (hp : p.Prime) : Nat.totient p = p - 1",
+   "instance_variation": "prime or prime power",
+   "split": "C_heldout_topic"
+  },
+  {
+   "id": "t7_totient_prime_pow",
+   "topic": 7,
+   "name": "Totient of a prime power",
+   "capabilities": [
+    "arith_function",
+    "pow_rewrite"
+   ],
+   "informal": "φ(p^k) = p^(k-1)(p - 1).",
+   "lean_statement": "(p k : ℕ) (hp : p.Prime) (hk : 0 < k) : Nat.totient (p ^ k) = p ^ (k - 1) * (p - 1)",
+   "instance_variation": "exponent form",
+   "split": "C_heldout_topic"
+  },
+  {
+   "id": "t7_sigma_mul",
+   "topic": 7,
+   "name": "Sigma is multiplicative",
+   "capabilities": [
+    "arith_function",
+    "coprime_lemma"
+   ],
+   "informal": "σ(mn) = σ(m)σ(n) for coprime m, n.",
+   "lean_statement": "(m n : ℕ) (h : Nat.Coprime m n) : ArithmeticFunction.sigma 1 (m * n) = ArithmeticFunction.sigma 1 m * ArithmeticFunction.sigma 1 n",
+   "instance_variation": "sigma index",
+   "split": "C_heldout_topic"
+  },
+  {
+   "id": "t7_totient_sum",
+   "topic": 7,
+   "name": "Gauss's totient sum",
+   "capabilities": [
+    "arith_function",
+    "library_application"
+   ],
+   "informal": "The sum of φ(d) over divisors d of n is n.",
+   "lean_statement": "(n : ℕ) : ∑ d in n.divisors, Nat.totient d = n",
+   "instance_variation": "sum form",
+   "split": "C_heldout_topic"
+  },
+  {
+   "id": "t7_moebius_prime",
+   "topic": 7,
+   "name": "Möbius at a prime",
+   "capabilities": [
+    "arith_function"
+   ],
+   "informal": "μ(p) = -1.",
+   "lean_statement": "(p : ℕ) (hp : p.Prime) : ArithmeticFunction.moebius p = -1",
+   "instance_variation": "prime or squarefree product",
+   "split": "C_heldout_topic"
+  },
+  {
+   "id": "t8_pythagorean_parity",
+   "topic": 8,
+   "name": "Parity in Pythagorean triples",
+   "capabilities": [
+    "residue_cases"
+   ],
+   "informal": "If a^2 + b^2 = c^2, then a or b is even.",
+   "lean_statement": "(a b c : ℤ) (h : a ^ 2 + b ^ 2 = c ^ 2) : 2 ∣ a ∨ 2 ∣ b",
+   "instance_variation": "divisor (2 or 3)",
+   "split": "B_heldout_family"
+  },
+  {
+   "id": "t8_mod3_obstruction",
+   "topic": 8,
+   "name": "Obstruction mod 3",
+   "capabilities": [
+    "residue_cases"
+   ],
+   "informal": "x^2 - 3y^2 = 2 has no integer solution.",
+   "lean_statement": "(x y : ℤ) : x ^ 2 - 3 * y ^ 2 ≠ 2",
+   "instance_variation": "coefficients and modulus",
+   "split": "A_training_family"
+  },
+  {
+   "id": "t8_cubes_mod9",
+   "topic": 8,
+   "name": "Three cubes mod 9",
+   "capabilities": [
+    "residue_cases"
+   ],
+   "informal": "x^3 + y^3 + z^3 is never 4 mod 9.",
+   "lean_statement": "(x y z k : ℤ) : x ^ 3 + y ^ 3 + z ^ 3 ≠ 9 * k + 4",
+   "instance_variation": "excluded residue (4 or 5)",
+   "split": "A_training_family"
+  },
+  {
+   "id": "t8_flt_four",
+   "topic": 8,
+   "name": "No solution for exponent 4",
+   "capabilities": [
+    "library_application"
+   ],
+   "informal": "a^4 + b^4 = c^4 has no solution with a, b nonzero.",
+   "lean_statement": "(a b c : ℤ) (ha : a ≠ 0) (hb : b ≠ 0) : a ^ 4 + b ^ 4 ≠ c ^ 4",
+   "instance_variation": "sum or difference form",
+   "split": "A_training_family"
+  },
+  {
+   "id": "t8_pell_witness",
+   "topic": 8,
+   "name": "Pell equation witness",
+   "capabilities": [
+    "witness_exhibit"
+   ],
+   "informal": "Find x, y > 0 with x^2 = 2y^2 + 1.",
+   "lean_statement": "∃ x y : ℕ, 0 < y ∧ x ^ 2 = 2 * y ^ 2 + 1",
+   "instance_variation": "coefficient d",
+   "split": "B_heldout_family"
+  }
+ ]
+}

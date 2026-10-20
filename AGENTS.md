@@ -7,6 +7,7 @@
 - Keep decisions in the decision log of `docs/EXPERIMENTS.md`; append a dated line instead of rewriting history.
 
 ## Document requests
+- Follow section 9 of `~/.claude/CLAUDE.md` for shared document, catalogue, and verification rules.
 - The main report source is `docs/tex/project_report.tex`.
 - When asked to make, expand, or update a project document, edit that TeX source unless another target is explicit.
 - Read the relevant report section and its source artifacts before drafting. Preserve numbers, citations, and uncertainty.
@@ -20,16 +21,19 @@
 - Update README status from evidence. Append decisions and corrections to `docs/EXPERIMENTS.md`; never overwrite historical outcomes.
 - Default to no new Markdown files, including inside `artifacts/notes/`. Use the existing catalogue or run artifacts.
 - Keep scientific narrative in the TeX report and exploit details in `docs/REWARD_HACKING.md`.
-- Treat dated notes and `HANDOFF.md` as historical sources. Do not maintain competing status or plans there.
+- Treat dated notes and `docs/archive/HANDOFF.md` as historical sources. Do not maintain competing status or plans there.
 
 ## Environment
-- Use uv: `uv sync` and `uv run pre-commit run --all-files`.
+- Use uv: `uv sync`. Use the file-scoped check below; run all hooks when the changed scope requires it.
 - Treat Lean and mathlib as a pinned pair. Record both revisions before any verifier result.
-- Keep generated data, proof traces, checkpoints, and logs in `artifacts/`, outside Git.
-- Run only small local checks. Request approval before substantial GPU spend or external changes.
+- Keep data, proof traces, checkpoints, and logs in remote run directories and durable storage, outside Git.
+- Read `.private/infrastructure.md` and the existing `.private/ops/` scripts for access and launch procedures; never guess infrastructure identifiers.
+- Run small local checks only. Each paid GPU launch needs Manas's approval with its cost; a budget ceiling is not launch approval.
+- Keep one writer per output. Use the established managed remote runner with memory and resource caps.
+- Keep private infrastructure identifiers out of tracked files and user-facing text.
 
 ## Research controls
-- Keep train, curriculum-validation, and held-out evaluation theorems separate.
+- Keep training, DEV, curriculum-validation, and held-out test theorems separate. Choose checkpoints and task mixes on DEV only.
 - Do not load evaluation proofs into training data, prompts, retrieval, or adaptive sampling.
 - Record exact and near-duplicate checks before using a benchmark.
 - Label each reward component as Lean-verified or heuristic. Never call subgoal reduction a proof.

@@ -2807,6 +2807,8 @@ Prerequisite acquisition is a hypothesis. The comparison identifies the total sc
 
 #### Abhinav's execution guide
 
+Superseded for Abhinav, 20 October 2026 IST: start with the [one-page start](#start-here-one-page-for-abhinav). This entry is kept as history; its data paths and names are out of date.
+
 1. Receive Manas's reviewed task manifest and exposure audit. Bind one parent checkpoint and tokenizer by digest, including all known earlier SFT/RL inputs. Return unsupported families or missing lineage fields to Manas before freezing the study.
 2. Reuse `scripts/train/rl_components/tasks.py::TaskSchedule.frozen` through `scripts/train/run_tactic_rl.py --task-order`. Supply a JSON list with exactly `max_groups` admitted task IDs. Repeats encode explicit exposure. Check whole-root membership and O/R multiset equality in the study manifest; the scheduler does not check those cross-arm conditions. Keep `task_sampler` fixed.
 3. Register optimizer-disabled parent assessment before training. Reuse `--assessment-only --assessment-split validation` for DEV and the TRAIN default for training-state calibration. Use each declared split's task file. Never assess TEST to decide TRAIN admission. Record correct/incorrect groups, return variation, parser failures and verifier failures. A successful tokenizer check is not model calibration.
@@ -2873,6 +2875,8 @@ Use distinct run/output identities under the experiment record that launches the
 Revision verification, 16 October: the first report replacement command fails before editing because its JavaScript template contains TeX quotation backticks. A corrected file operation applies the requested framing. The final `latexmk -pdf -quiet -cd -interaction=nonstopmode -halt-on-error docs/tex/project_report.tex` returns exit 0. The final log contains no unresolved references or box warnings; the PDF contains the two-experiment and curriculum-interpretation tables. File-scoped `uv run pre-commit run --files README.md docs/EXPERIMENTS.md docs/tex/project_report.tex` passes, exit 0. `git diff --check` returns exit 0. The updated report replaces prospective narrative only; historical outcomes and the superseded draft remain preserved in this catalogue. No training, benchmark change, commit or push occurs.
 
 #### Abhinav's task handoff and checklist
+
+Superseded for Abhinav, 20 October 2026 IST: start with the [one-page start](#start-here-one-page-for-abhinav). This entry is kept as history; its data paths and names are out of date.
 
 Abhinav, you own the generalization experiment, EXP-026: compare B, S and R on familiar and unseen problem panels. Manas owns curriculum, EXP-027, including C training and the R/C comparison. Keep the benchmark and evaluation protocol shared. Anwesha owns Lean interaction and replay. Your deliverables are the B/S/R runs, generalization analysis and a reproducible control handoff to Manas.
 
@@ -5811,54 +5815,76 @@ The question of EXP-030 stays open. No result about a dense reward exists.
 
 #### Start here: one page for Abhinav
 
-Read this page first. The numbered sections below it are reference material; open them only when this page points you there.
+Read this page first. It uses one name for each thing. The names table below lists the other names that older records and files use for the same things. Open the numbered sections only when this page sends you there.
 
-Your experiment, EXP-026, compares three models on the same tasks ([protocol](#generalization-experiment-revised-framing-16-october-2026)):
+In one minute:
 
-- B: the unchanged `Qwen/Qwen2.5-0.5B-Instruct`.
-- S: B after the project SFT on 1,880 action rows.
-- R: S after REINFORCE on the 506 TRAIN roots in a shuffled order.
+- Your experiment is EXP-026. It compares three models: B, the unchanged `Qwen/Qwen2.5-0.5B-Instruct`; S, which is B after project SFT; and R, which is S after RL with REINFORCE ([protocol](#generalization-experiment-revised-framing-16-october-2026)).
+- All three models exist. The main run trained S and R on 18 and 19 October. You need no GPU to start.
+- On DEV, B, S and R each prove 0 of 8 theorems (32 attempts each). On the selection set, S proves 1 of 163 assessed theorems and R proves 1 of 164; B was not measured there. TEST is unopened.
+- The open decision is which theorems you evaluate on, because DEV cannot separate the three models. Decide it with Manas before any run.
 
-All three models already exist. The main lease trained S and R on 18 and 19 October. Results so far:
+Do this, in order:
 
-- DEV: B, S and R each solve 0 of the 8 DEV roots (32 attempts per model). DEV cannot separate them yet.
-- The 164-theorem selection set (EXP-028): S solves 1 of 163 assessed theorems and R solves 1 of 164. B was not measured on it.
-- TEST: not opened.
+1. Ask Manas for read access to the data archive (its bucket name and prefix) and for the private run configs.
+2. Clone the repository and use branch `main`.
+3. Fetch the small archives (under 30 MB in total) and check their hashes: section 6, steps 3 to 7. No GPU is needed.
+4. Agree the evaluation theorems with Manas.
+5. Then, on a Linux GPU machine, fetch the Lean environment (1.6 GB) and the model weights (about 2 GB each): section 6, step 10. Each paid GPU run needs Manas's approval of its cost.
 
-Use exactly these, and nothing else:
+Use exactly these:
 
 | You need | Use | Where |
 | --- | --- | --- |
 | Code | Branch `main` | GitHub |
-| Training data | `validated_v2`: 506 TRAIN roots and 1,880 SFT action rows | `data.tar.gz` (section 4.1) |
-| DEV, for every choice | 8 roots from `release_v3` | `dev_pool.jsonl` and `dev_names.txt` in `inputs.tar.gz` (sections 4.2 and 4.10) |
-| TEST, for the final measurement only | 21 roots from `release_v3`, opened only after Manas approves | Not staged (section 4.2) |
+| Training data | `validated_v2`: 506 TRAIN theorems and 1,880 SFT examples | `data.tar.gz` (section 4.1) |
+| DEV, for every choice | 8 theorems | `dev_pool.jsonl` and `dev_names.txt` in `inputs.tar.gz` (sections 4.2 and 4.10) |
+| TEST, for the final measurement only | 21 theorems, opened only after Manas approves | Not staged (section 4.2) |
 | Models | B, S and R | Section 4.9 |
-| Lean | `environment.tar.gz`, plus the checker and REPL in `inputs.tar.gz` | Section 4.10 |
-| Commands and settings | What the main lease ran | Section 7 |
+| Lean | `environment.tar.gz`, plus the checker and the REPL in `inputs.tar.gz` | Section 4.10 |
+| Commands and settings | What the main run used | Section 7 |
+
+Names:
+
+| Name on this page | Meaning | Other names in older records and files |
+| --- | --- | --- |
+| theorem | One formal statement to prove in Lean | task, root, canonical root, problem; the file field `task_id` |
+| statement | The Lean text of a theorem | formal statement, header |
+| attempt | One full try at a theorem, with at most 6 actions | episode, sample, trajectory, rollout |
+| action | One model output: at most 4 Lean tactics and at most 192 tokens | step, chunk |
+| accepted attempt | An attempt whose complete proof Lean accepts | pass, success |
+| proved theorem | A theorem with at least one accepted attempt | solved theorem |
+| SFT example | One Lean state and the next action, used for supervised fine-tuning | action row, SFT row, `v21_observation` row |
+| SFT validation | SFT examples that only monitor the SFT loss; they hold TRAIN theorems | loss validation, loss-validation rows, `sft_val.jsonl` |
+| TRAIN, DEV, TEST | Theorems for training, for choices, and for the final measurement | "validation" in some file names means DEV or the selection set; check the row count |
+| selection set | 164 held-out theorems that EXP-028 used; results on them are exploratory | validation set, `nt_validation_v1`, `validation.tar.gz`, `tasks_dev.jsonl` with 164 rows |
+| release | One frozen, versioned dataset directory | package, build, projection, snapshot |
+| `validated_v2` | The release that you train on | data archive, `data.tar.gz`, current release, filtered release |
+| main run | The GPU run of 18 and 19 October that trained S, R and C and tested B, S, R and C on DEV | main lease, main study, `exp026-027-nt-clean-main-s20261018-v2` |
+| lease | One paid GPU machine for a fixed time | Lease 1 to Lease 6 (EXP-028 to EXP-030) |
+| E0, E7 | S and R tested on the selection set | EXP-028 run names |
+| arm | One compared model or condition | B, S, R, C, `RL_filtered`, E0 to E7 |
+| C, `RL_filtered` | Other RL models: Manas's curriculum run and the EXP-028 filtered run | Not yours |
+| historical S, W | Models from before 18 October | SFT parent, warmstart. Not yours |
+| `<ARCHIVE>` | The data archive on AWS S3 | durable storage, bucket prefix |
+| environment version 2.2 | The Lean interaction rules of every current run | v2, MDP v2.2 |
 
 These sets look like DEV or TEST, but they are not yours. Do not use them for choices:
 
-| Name you will see | What it is |
+| Set | What it is |
 | --- | --- |
-| `tasks_dev.jsonl` with 164 rows, config `configs/data/nt_validation_v1.json` | The EXP-028 selection set. Earlier runs already used it to choose arms, so results on it are exploratory. The 8-row `release_v3/benchmark/tasks_dev.jsonl` is your DEV |
-| `sft_action/sft_val.jsonl` (125 rows) | The SFT loss monitor. It holds TRAIN theorems |
-| `calibration/tasks.jsonl` (32 rows) | TRAIN roots for a calibration run |
-| `prepared_v1` DEV 34 and TEST 82 | The earlier EXP-025 package. The cleanup reduced them to your DEV 8 and TEST 21 |
+| `tasks_dev.jsonl` with 164 rows, config `configs/data/nt_validation_v1.json` | The selection set. Your DEV is the 8-row file `release_v3/benchmark/tasks_dev.jsonl` |
+| `sft_action/sft_val.jsonl` (125 rows) | SFT validation. It holds TRAIN theorems |
+| `calibration/tasks.jsonl` (32 rows) | TRAIN theorems for a calibration run |
+| `prepared_v1` DEV 34 and TEST 82 | The earlier EXP-025 release. The cleanup reduced them to your DEV 8 and TEST 21 |
 | `nt_benchmark_v1` DEV 9 and TEST 16 | The EXP-025 pilot. Not used |
-| `id_val` (40), held-out (142), `retention` (3), `external` (64) | Panels of the older EXP-023 curriculum study |
+| `id_val` (40), held-out (142), `retention` (3), `external` (64) | Sets of the older EXP-023 curriculum study |
 | `nt_pool_v2` validation (420) and the EXP-019 DEV (3 theorems) | Historical sets |
-| `curriculum_validation` in `evaluation_reservations.json` | Not built |
-
-Branches: use `main`. The other branches (`midsem-rl-pipeline`, `docs/repo-navigation`, `docs/lean-reward-audit`) are older working branches, and `main` contains all of them. Ignore them.
+| `curriculum_validation` in `evaluation_reservations.json` | Never built |
 
 People: Manas owns the data, the curriculum experiment and every approval. Anwesha owns the Lean environment. You own EXP-026.
 
-Your first three steps:
-
-1. Ask Manas for read access to the archive bucket, its name and prefix, and the private run configs.
-2. Fetch and verify the data with section 6. Report every mismatch to Manas.
-3. Agree your evaluation panels with Manas before any run. DEV 8 is at the floor for all three models, so it cannot show a difference.
+Branches: use `main`. The other branches (`midsem-rl-pipeline`, `docs/repo-navigation`, `docs/lean-reward-audit`) are older working branches, and `main` contains all of them. Ignore them.
 
 Manas asks for a detailed description of every dataset of the number-theory study, how each one was created, and step-by-step instructions that Abhinav can follow.
 This section is that handoff. Abhinav owns the generalization experiment (EXP-026). Manas owns the data and the curriculum experiment (EXP-027).
@@ -5874,9 +5900,9 @@ Nothing was rebuilt. No Lean, model, GPU or GCP job ran. Paths on the CPU host a
 
 #### 1. Read this first
 
-1. Use `validated_v2` as the training data. It holds 506 TRAIN roots and 1,880 SFT action rows. S, R and C of the main study trained on it, and Leases 1 and 2 of EXP-028 read the same archive.
-   - Correction to "Abhinav's task handoff and checklist" (16 October): that entry names `nt_benchmark_v2_20261016/prepared_v1/` as your input. `prepared_v1` is an earlier package with 93 TRAIN, 34 DEV and 82 TEST tasks. Do not train on it.
-2. Use the fixed evaluation panels: DEV has 8 roots and TEST has 21 roots, both from `release_v3`. TEST stays unopened until the final evaluation that Manas approves. Use DEV for every choice.
+1. Use `validated_v2` as the training data. It holds 506 TRAIN theorems and 1,880 SFT examples. S, R and C of the main run trained on it, and Leases 1 and 2 of EXP-028 read the same archive.
+   - Correction to "Abhinav's task handoff and checklist" (16 October): that entry names `nt_benchmark_v2_20261016/prepared_v1/` as your input. `prepared_v1` is an earlier release with 93 TRAIN, 34 DEV and 82 TEST theorems. Do not train on it.
+2. Use the fixed evaluation panels: DEV has 8 theorems and TEST has 21 theorems, both from `release_v3`. TEST stays unopened until the final evaluation that Manas approves. Use DEV for every choice.
 3. Fetch and verify the frozen copies; do not rebuild the data. A fresh clone cannot rebuild the chain (section 8).
 4. The frozen copies expire. A 30-day expiry rule covers the archive prefix, and the archive receipts say "not permanent storage". Section 6.1 gives the expiry date of each object; the earliest expiry is 11 November 2026. Manas must copy them to permanent storage before then (section 10).
 5. Run new compute on your own machine or on AWS. Do not run jobs on the CPU host `cpu-angad`; it is on GCP, which the project no longer uses. Its working copies are not reachable now. Every file that you need for training and DEV evaluation has a copy in the durable archive. TEST has no checked copy (section 4.2).
@@ -5885,18 +5911,15 @@ Nothing was rebuilt. No Lean, model, GPU or GCP job ran. Paths on the CPU host a
 
 #### 2. Terms
 
+The names table on the start page defines the main terms and their other names. This table adds the rest.
+
 | Term | Meaning in this project |
 | --- | --- |
-| Root | One theorem statement used as a whole-proof task. Its task ID has the form `ntcurr:<64 hex>:whole:0` (main study) or `ntb_<24 hex>:whole:0` (benchmark and selection set) |
-| Source proof | One accepted Lean proof of a root, taken from an external dataset. A root can have more than one source proof (variants) |
-| Action row | One SFT example: an observation of the Lean state and the next action of at most 4 tactics and at most 192 tokens |
+| Task ID | The identifier of a theorem in the files: `ntcurr:<64 hex>:whole:0` (main run) or `ntb_<24 hex>:whole:0` (benchmark and selection set) |
+| Source proof | One accepted Lean proof of a theorem, taken from an external dataset. A theorem can have more than one source proof (variants) |
 | Pool | A JSONL file of statements (`name`, `formal_statement`, `split`) that the RL runner reads with `--pool` |
-| Exclusion list | A text file of reserved theorem names that the runner refuses as training tasks (`--exclude-names`) |
-| TRAIN | Tasks that RL and SFT may use |
-| DEV | Held-out tasks for choices during the study (8 roots) |
-| TEST | Held-out tasks for the final measurement only (21 roots) |
-| Loss validation | TRAIN-side rows that monitor the SFT loss. They are not DEV |
-| Selection set | The 164 held-out theorems that EXP-028 used. Any further result on them is exploratory |
+| Exclusion list | A text file of reserved theorem names that the runner refuses as training theorems (`--exclude-names`) |
+| Held-out | Never used for training |
 | Pin | The fixed Lean and mathlib versions: Lean `v4.10.0-rc1`, mathlib `29dcec074de168ac2bf835a77ef68bbe069194c5` |
 | `<ARCHIVE>` | The durable archive prefix in the project bucket (ask Manas) |
 | `<F>` | The data root on the CPU host, `formal_rl/` (historical working copies; not reachable now) |
@@ -5907,7 +5930,7 @@ The diagram shows each dataset and what it was built from. Dates are 2026.
 
 ```mermaid
 flowchart TD
-  SRC["External proof datasets<br/>Lean Workbook, Goedel, STP<br/>checked 9-10 Oct"] --> INV["EXP-024 source inventory<br/>40,814 NT problems, 15 Oct"]
+  SRC["External proof datasets<br/>Lean Workbook, Goedel, STP<br/>checked 9-10 Oct"] --> INV["EXP-024 source inventory<br/>40,814 NT theorems, 15 Oct"]
   SYL["Syllabus undergrad_nt_v1<br/>8 topics, 40 families, 15 Oct"] --> CORPUS
   INV --> CORPUS["Corpus v0<br/>40,732 kept + 82 excluded, 15 Oct"]
   CORPUS --> B1["nt_benchmark_v1<br/>55 admitted, 16 Oct"]
@@ -5918,18 +5941,18 @@ flowchart TD
   CLEAN --> REL3["release_v3<br/>DEV 8, TEST 21, 17 Oct"]
   CORPUS --> FULL["full_scale_v1 corpus map<br/>29,262 candidates, 17 Oct"]
   FULL --> ADM["Prerequisite admission,<br/>certificates, replay shards, 17 Oct"]
-  ADM --> TR1["training_release_v1<br/>1,771 action rows, 17 Oct"]
-  TR1 --> NONREC["data_nonrec release<br/>1,503 rows, 18 Oct"]
-  NONREC --> REC["Recovery release_final<br/>2,095 rows, 18 Oct"]
-  TR1 --> COMMON["Common projection release/<br/>536 roots, 18 Oct, superseded"]
+  ADM --> TR1["training_release_v1<br/>1,771 SFT examples, 17 Oct"]
+  TR1 --> NONREC["data_nonrec release<br/>1,503 SFT examples, 18 Oct"]
+  NONREC --> REC["Recovery release_final<br/>2,095 SFT examples, 18 Oct"]
+  TR1 --> COMMON["Common projection release/<br/>536 theorems, 18 Oct, superseded"]
   REC --> COMMON
-  COMMON --> V2["validated_v2<br/>506 roots, 1,880 rows, 18 Oct"]
+  COMMON --> V2["validated_v2<br/>506 theorems, 1,880 SFT examples, 18 Oct"]
   V2 --> ORD["R and C task orders<br/>1,012 groups each, 18 Oct"]
-  V2 --> MAIN["Main lease: S, R, C, DEV evals<br/>18-19 Oct"]
+  V2 --> MAIN["Main run: S, R, C, DEV tests<br/>18-19 Oct"]
   REL3 --> MAIN
   ORD --> MAIN
-  MAIN --> PR["pass_rates on 506 roots<br/>19 Oct"]
-  PR --> F62["62 RL_filtered tasks"]
+  MAIN --> PR["pass_rates on 506 theorems<br/>19 Oct"]
+  PR --> F62["62 RL_filtered theorems"]
   CORPUS --> SEL["EXP-028 selection set<br/>164 of 201 admitted, 18 Oct"]
   V2 -. protected .-> SEL
   REL3 -. protected .-> SEL
@@ -5943,8 +5966,8 @@ The same chain, as numbered steps. Each step names the catalogue entry that reco
 
 1. External sources were checked at the pin on 9 and 10 October ("EXP-024 source inventory registration, 15 October 2026").
 2. The syllabus `configs/data/undergrad_nt_v1.json` was authored on 15 October ("EXP-024 syllabus stage, 15 October 2026").
-3. The source inventory counted the accepted proofs and the number-theory problems ("EXP-024 source inventory outcome, 15 October 2026").
-4. Corpus v0 built one record per problem, with exposure flags and a held-out exclusion ("EXP-024 corpus v0 outcome, 15 October 2026").
+3. The source inventory counted the accepted proofs and the number-theory theorems ("EXP-024 source inventory outcome, 15 October 2026").
+4. Corpus v0 built one record per theorem, with exposure flags and a held-out exclusion ("EXP-024 corpus v0 outcome, 15 October 2026").
 5. `nt_benchmark_v1` was selected and verified from corpus v0 ("EXP-025 verification and consumer outcome, 16 October 2026").
 6. `nt_benchmark_v2` `prepared_v1` was selected from corpus v0, protecting v1 ("EXP-025 expanded dataset outcome, 16 October 2026").
 7. The evaluation specification and the question descriptions were exported from its DEV and TEST ("EXP-025 evaluation specification and semantic review, 17 October 2026"; "Full evaluation-question descriptions, 17 October 2026").
@@ -5952,99 +5975,99 @@ The same chain, as numbered steps. Each step names the catalogue entry that reco
 9. `release_v3` was released from the cleanup. It holds the fixed DEV 8 and TEST 21 ("Filtered release outcome, 17 October 2026").
 10. `full_scale_v1` mapped every corpus record to a disposition ("Full-corpus mapping outcome, 17 October 2026").
 11. Prerequisite admission, consistency certificates and replay shards selected a conservative subset ("Prerequisite admission and replay registration", "Concrete consistency certificate extension", "Certified prerequisite proof shards", "Action export continuation", all 17 October 2026).
-12. `training_release_v1` projected the admitted subset into full proofs and action rows ("Checked prerequisite release outcome, 17 October 2026").
-13. The action-contract repair rebuilt the action rows under the 192-token action limit and the `nonrec example` root ("SFT action-contract repair, 18 October 2026 IST").
+12. `training_release_v1` projected the admitted subset into full proofs and SFT examples ("Checked prerequisite release outcome, 17 October 2026").
+13. The action-contract repair rebuilt the SFT examples under the 192-token action limit and the `nonrec example` header ("SFT action-contract repair, 18 October 2026 IST").
 14. The recovery release added format-recovery and Lean-error-recovery rows ("Recovery data preparation, 18 October 2026 IST").
 15. The common projection joined the release and the recovery rows ("Common data and curriculum execution plan, 18 October 2026 IST", subsection "Common data outcome").
 16. `validated_v2` replaced the common projection after a fresh replay filter ("Current data and model contract closure, 18 October 2026 IST").
-17. The R and C runtime orders were built over the 506 roots of `validated_v2` (same entry).
-18. The main lease trained S, R and C and evaluated B, S, R and C on DEV ("Spot-first amendment and launch, 18 October 2026 IST").
-19. EXP-028 built the selection set, the pass-rate map, the 62 tasks, the premise corpus and the E3 and E4 rows (the EXP-028 entries of 18 and 19 October).
+17. The R and C runtime orders were built over the 506 theorems of `validated_v2` (same entry).
+18. The main run trained S, R and C and evaluated B, S, R and C on DEV ("Spot-first amendment and launch, 18 October 2026 IST").
+19. EXP-028 built the selection set, the pass-rate map, the 62 theorems, the premise corpus and the E3 and E4 rows (the EXP-028 entries of 18 and 19 October).
 
 #### 4. The datasets you use
 
 Each subsection gives what the dataset is, how it was made, its counts, its frozen copy and its known issues.
 "Verified 20 October" means that the object was downloaded on 20 October and its SHA-256 matched the record.
 
-##### 4.1 `validated_v2`: the training data of the main study
+##### 4.1 `validated_v2`: the training data of the main run
 
 - What it is: the filtered release that S, R and C used. It replaced the earlier common projection `release/`.
-- How it was made: on 18 October, `finalize_current.py` filtered the common projection after a fresh replay. All 580 source proofs passed a fresh replay with the target-absence and axiom checks, and all 536 canonical roots rebuilt in environment version 2. The validation phases used 11,442 Lean calls. Record: "Current data and model contract closure, 18 October 2026 IST".
+- How it was made: on 18 October, `finalize_current.py` filtered the common projection after a fresh replay. All 580 source proofs passed a fresh replay with the target-absence and axiom checks, and all 536 canonical theorems rebuilt in environment version 2. The validation phases used 11,442 Lean calls. Record: "Current data and model contract closure, 18 October 2026 IST".
 - Counts:
-  - TRAIN action rows: 1,880 kept of 2,095 (215 quarantined).
-  - Loss-validation action rows: 125 kept of 128 (3 quarantined).
-  - Source proof variants: 548 kept of 580 (516 TRAIN proofs and 32 loss-validation proofs).
-  - Canonical TRAIN roots: 506 kept of 536. The policy exclusions are 19 foundational controls (moved to a separate source pack), 10 AI-reviewed redundancy cases and 1 task whose reference proof invokes a reserved DEV target lemma.
-  - The 1,880 action rows come from 486 theorems. 486 of the 506 roots have at least one action row from their own reference proof.
-- Fit to the model limits: the largest SFT row has 2,037 tokens, and the largest root prompt has 425 tokens. The context limit is 2,048 tokens, and the action limit is 192 tokens.
-- Topics of the 506 roots (`task_metadata.jsonl`, field `topic_marker`): 217 divisibility, 180 primes and factorization, 77 congruences, 32 Bezout and coprimality.
+  - TRAIN SFT examples: 1,880 kept of 2,095 (215 quarantined).
+  - SFT validation examples: 125 kept of 128 (3 quarantined).
+  - Source proof variants: 548 kept of 580 (516 TRAIN proofs and 32 SFT validation proofs).
+  - Canonical TRAIN theorems: 506 kept of 536. The policy exclusions are 19 foundational controls (moved to a separate source pack), 10 AI-reviewed redundancy cases and 1 theorem whose reference proof invokes a reserved DEV target lemma.
+  - The 1,880 SFT examples come from 486 theorems. 486 of the 506 theorems have at least one SFT example from their own reference proof.
+- Fit to the model limits: the largest SFT example has 2,037 tokens, and the largest first prompt of a theorem has 425 tokens. The context limit is 2,048 tokens, and the action limit is 192 tokens.
+- Topics of the 506 theorems (`task_metadata.jsonl`, field `topic_marker`): 217 divisibility, 180 primes and factorization, 77 congruences, 32 Bezout and coprimality.
 - Frozen copy: `<ARCHIVE>/nt_curriculum_execution_20261018_v1/inputs/data.tar.gz`, 1,721,751 bytes, SHA-256 `ff7562ddaea6d69af931e55ba5fa57a3e825accd6c906c18df5ccdadc0f204c5`. Verified 20 October. The same object (same size and ETag) is staged under the EXP-028 Lease 1 to 4 prefixes.
 - Complete build: `<ARCHIVE>/nt_curriculum_data_20261018_v1/validated_v2_complete.tar.gz`, 3,520,327 bytes, SHA-256 `7e9e7f4d7e4c82f6463784ec26063ff71e3e2b3795a674e8b7568ce5bdb7f767`. Verified 20 October. It holds 214 files: the release, `quarantine.jsonl` (250 rows), `actor_dispositions.jsonl` (536 rows), `source_index.json`, the replay shards, and the private builder code (`finalize_current.py`, `validate_current.py`, `continue_loss_val.py`, `continue_pending_train.py`, `prepare_pending_train.py`) with a code snapshot.
-- Files inside `data.tar.gz`. On 20 October all 19 matched the recorded SHA-256 in the main-lease `assets.json` (`member_checks.txt` in `.private/ops/abhinav_data_handoff_20261020_v1/`):
+- Files inside `data.tar.gz`. On 20 October all 19 matched the recorded SHA-256 in the main-run `assets.json` (`member_checks.txt` in `.private/ops/abhinav_data_handoff_20261020_v1/`):
 
 | File | Lines | SHA-256 | Contents |
 | --- | ---: | --- | --- |
-| `actor/exclude_names.txt` | 245 | `fc3e26a771cf2d8a60f5fd58c1091e90078fe361b372ed8285ff7df990c5357d` | Reserved theorem names, one per line, that the runner refuses as training tasks (`--exclude-names`) |
+| `actor/exclude_names.txt` | 245 | `fc3e26a771cf2d8a60f5fd58c1091e90078fe361b372ed8285ff7df990c5357d` | Reserved theorem names, one per line, that the runner refuses as training theorems (`--exclude-names`) |
 | `actor/train_pool.jsonl` | 506 | `713484ee7ef5c9988fdeee2550a460bb5791ffa9cbe53014517654c654d0dede` | TRAIN statements for the runner pool. Fields `name`, `formal_statement`, `split` |
-| `actor/train_tasks.jsonl` | 506 | `3ae371f547be1a5130ad21465998f4e8b1a237beddc5aef7583d71f0389bf8eb` | TRAIN whole-root RL tasks. Fields `task_id`, `name`, `kind` (`whole`), `header`, `given` (empty), `state` (the initial observation text), `lines_remaining` |
-| `aliases.jsonl` | 506 | `311b6232edb39dd42f9a1b202457bf4c06f31616130fbed7e579e5edfa01992f` | One row per root: canonical statement hash, the representative source proof and every source variant of the same statement |
-| `calibration/manifest.json` | 50 | `2d384dbafecb5306c8ddd6c58c26f5cd4ca491bdf68b4177fb49f6b4f138a4f4` | Selection record of the 32 calibration roots |
-| `calibration/tasks.jsonl` | 32 | `e1caddbc4e8ec68805f6c7eff847b07c1bef9c77ac1777147d95731fb99c650e` | The 32 calibration roots (8 per topic), same fields as `actor/train_tasks.jsonl`. All 32 are among the 506 TRAIN roots |
+| `actor/train_tasks.jsonl` | 506 | `3ae371f547be1a5130ad21465998f4e8b1a237beddc5aef7583d71f0389bf8eb` | TRAIN theorems for whole-proof RL. Fields `task_id`, `name`, `kind` (`whole`), `header`, `given` (empty), `state` (the initial observation text), `lines_remaining` |
+| `aliases.jsonl` | 506 | `311b6232edb39dd42f9a1b202457bf4c06f31616130fbed7e579e5edfa01992f` | One row per theorem: canonical statement hash, the representative source proof and every source variant of the same statement |
+| `calibration/manifest.json` | 50 | `2d384dbafecb5306c8ddd6c58c26f5cd4ca491bdf68b4177fb49f6b4f138a4f4` | Selection record of the 32 calibration theorems |
+| `calibration/tasks.jsonl` | 32 | `e1caddbc4e8ec68805f6c7eff847b07c1bef9c77ac1777147d95731fb99c650e` | The 32 calibration theorems (8 per topic), same fields as `actor/train_tasks.jsonl`. All 32 are among the 506 TRAIN theorems |
 | `coverage.json` | 30 | `71d5028ffaf890c976bea2f0b5b6baaf09856d26e560daa555300a6b05788bd4` | Coverage summary of the release |
 | `data_consumer_receipt.json` | 111 | `2bb521e4bd9f2ab65f5b2dcc9176d3379a146471d1b0260556c6fc092672b025` | Receipt of the consumer check that loaded the release |
-| `evaluation_reservations.json` | 75 | `911e0c419dd15d886db2518e94f19916e120e797132c96320b12a580b302b3d1` | Sources, SHA-256 and names of DEV (8) and TEST (21) and of the loss-validation set; `solutions_read` is false |
+| `evaluation_reservations.json` | 75 | `911e0c419dd15d886db2518e94f19916e120e797132c96320b12a580b302b3d1` | Sources, SHA-256 and names of DEV (8) and TEST (21) and of the SFT validation set; `solutions_read` is false |
 | `manifest.json` | 648 | `bc5c8edcbb12cd444bfc04c54361aa0f3dca5996d03313282d7629750274f08e` | Data manifest of `validated_v2`. Its SHA-256 identifies the release |
 | `runtime_source_manifest.json` | 94 | `567d414ef30744c7e56f0754208b6ad92c507b04a32d9466ab4f5ddefbab8c00` | Hashes of the runtime source files that the release was checked with |
-| `semantic_annotations.jsonl` | 506 | `e468ca0dd6de590421799633eb88c57f99ea7784fc0f6152222de4e75317d7b8` | AI annotation per root (statement and proof read). `human_confirmation` is false for all 506 |
-| `semantic_policy.json` | 3,197 | `fe8f7ba8b598e61e7cc3edb0a672f40bf1d0f446214c5904249e5cb7b95ccf54` | The keep or exclude policy that retained 506 of 536 roots |
-| `sft_action/sft_train.jsonl` | 1,880 | `0ea68641f35cfeea0fe1706232760c114029ceb53de11bdd666bef5c8f935128` | SFT action rows (format `v21_observation`) from 486 theorems. One row = one observation and the next action of at most 4 tactics and at most 192 tokens |
-| `sft_action/sft_val.jsonl` | 125 | `2cddd1c585d2990c536be1521916b846b5bf3982126377ab30e0ff0256be52d7` | TRAIN-only loss-validation action rows on 31 theorem names. Not research DEV |
-| `sft_full_proof/sft_train.jsonl` | 516 | `88f31c253a91a92b92ddbd14f3333a089e7622a4679866798914f258c1ce22db` | Whole-proof reference rows for the 506 TRAIN roots (516 proofs) |
-| `sft_full_proof/sft_val.jsonl` | 32 | `52520cb2ed33f22429386de752e7daf314d87052cb5a5db268792719ebb63c92` | Whole-proof loss-validation rows |
-| `task_metadata.jsonl` | 506 | `c65493a18609629a9902cea594ab78926d4752c43dcaa8ba231a4ddecbdc0fb8` | Per-root metadata: topic marker (217 divisibility, 180 primes and factorization, 77 congruences, 32 Bezout and coprimality) and review fields |
+| `semantic_annotations.jsonl` | 506 | `e468ca0dd6de590421799633eb88c57f99ea7784fc0f6152222de4e75317d7b8` | AI annotation per theorem (statement and proof read). `human_confirmation` is false for all 506 |
+| `semantic_policy.json` | 3,197 | `fe8f7ba8b598e61e7cc3edb0a672f40bf1d0f446214c5904249e5cb7b95ccf54` | The keep or exclude policy that retained 506 of 536 theorems |
+| `sft_action/sft_train.jsonl` | 1,880 | `0ea68641f35cfeea0fe1706232760c114029ceb53de11bdd666bef5c8f935128` | SFT examples (format `v21_observation`) from 486 theorems. One row = one observation and the next action of at most 4 tactics and at most 192 tokens |
+| `sft_action/sft_val.jsonl` | 125 | `2cddd1c585d2990c536be1521916b846b5bf3982126377ab30e0ff0256be52d7` | TRAIN-only SFT validation examples on 31 theorem names. Not research DEV |
+| `sft_full_proof/sft_train.jsonl` | 516 | `88f31c253a91a92b92ddbd14f3333a089e7622a4679866798914f258c1ce22db` | Whole-proof reference rows for the 506 TRAIN theorems (516 proofs) |
+| `sft_full_proof/sft_val.jsonl` | 32 | `52520cb2ed33f22429386de752e7daf314d87052cb5a5db268792719ebb63c92` | Whole-proof SFT validation rows |
+| `task_metadata.jsonl` | 506 | `c65493a18609629a9902cea594ab78926d4752c43dcaa8ba231a4ddecbdc0fb8` | Per-theorem metadata: topic marker (217 divisibility, 180 primes and factorization, 77 congruences, 32 Bezout and coprimality) and review fields |
 | `verification_records.json` | 78,210 | `27bd27e419d5647fddf9d1be52c2d5603a291c2a5106c857523eadbd4c198566` | Replay verification records of the release |
 
-- Example of one action row (`sft_action/sft_train.jsonl`): `format` is `v21_observation`, `theorem` is `lean_workbook_54256`, `state` is the Lean goal, `target_tactics` lists the 4 tactics of the action, and `messages` holds the user observation and the assistant answer, a `lean` code fence with those 4 tactics. Other fields record the source proof hash, the action contract `exact_chat_suffix_at_most_192_tokens_v1`, token counts and the runtime settings (version 2, horizon 6, 4 tactics, harness backtrack after 2).
+- One SFT example from `sft_action/sft_train.jsonl`: `format` is `v21_observation`, `theorem` is `lean_workbook_54256`, `state` is the Lean goal, `target_tactics` lists the 4 tactics of the action, and `messages` holds the user observation and the assistant answer, a `lean` code fence with those 4 tactics. Other fields record the source proof hash, the action contract `exact_chat_suffix_at_most_192_tokens_v1`, token counts and the runtime settings (version 2, horizon 6, 4 tactics, harness backtrack after 2).
 - Known issues:
-  - The semantic review is AI-only. `human_confirmation` is false for all 506 roots.
+  - The semantic review is AI-only. `human_confirmation` is false for all 506 theorems.
   - Of the 1,880 action targets, 881 contain a nested `have ... := by` block and 594 contain `<;>`.
-  - S trained on action rows from the reference proofs of 486 TRAIN roots, so TRAIN acceptance can include recall.
-  - Complete semantic independence of the roots and the pretraining exposure of Qwen to the public sources are not known.
+  - S trained on SFT examples from the reference proofs of 486 TRAIN theorems, so TRAIN acceptance can include recall.
+  - Complete semantic independence of the theorems and the pretraining exposure of Qwen to the public sources are not known.
 
-##### 4.2 DEV (8 roots) and TEST (21 roots)
+##### 4.2 DEV (8 theorems) and TEST (21 theorems)
 
-- What they are: the fixed evaluation panels of the main study.
+- What they are: the fixed evaluation panels of the main run.
 - How they were made: `release_v3` of the 17 October cleanup admitted them from the `prepared_v1` DEV (34) and TEST (82) under the admission policy of "Release admission policy and review corrections, 17 October 2026". The policy order is protected historical and candidate SFT validation, reviewed SFT training, benchmark TEST, DEV, then benchmark TRAIN, with a token-Jaccard threshold of 0.85.
 - Binding: `evaluation_reservations.json` in `data.tar.gz` names the sources and their SHA-256:
-  - DEV: `nt_dataset_cleanup_20261017_v1/release_v3/benchmark/tasks_dev.jsonl`, SHA-256 `46bb328afbe4e5409e01b6ba84b8a48068626a04c44578d4299755cc16f6818a`, 8 tasks.
-  - TEST: `nt_dataset_cleanup_20261017_v1/release_v3/benchmark/tasks_test.jsonl`, SHA-256 `4a2cb672d77bc32efbf7e438d290b0b5f79ee02716ca9273fd95c7effb4399b4`, 21 tasks.
+  - DEV: `nt_dataset_cleanup_20261017_v1/release_v3/benchmark/tasks_dev.jsonl`, SHA-256 `46bb328afbe4e5409e01b6ba84b8a48068626a04c44578d4299755cc16f6818a`, 8 theorems.
+  - TEST: `nt_dataset_cleanup_20261017_v1/release_v3/benchmark/tasks_test.jsonl`, SHA-256 `4a2cb672d77bc32efbf7e438d290b0b5f79ee02716ca9273fd95c7effb4399b4`, 21 theorems.
   - Both carry `unchanged: true` and `solutions_read: false`.
 - Runtime copy of DEV: `dev_pool.jsonl` and `dev_names.txt` inside `inputs.tar.gz` (section 4.10).
 - Runtime copy of TEST: none. The TEST file is on the CPU host. Whether the archived cleanup snapshots contain it is not checked. Do not open TEST until Manas approves the final evaluation.
-- Results so far: B, S, R and C each solve 0 of 8 DEV roots with 4 attempts per root (32 attempts per model). The single-tactic rescreen of 19 October solves none of the 8 DEV and 21 TEST items.
-- Known issue: DEV is at the measurement floor, so a DEV difference between models is not measurable with 8 roots.
+- Results so far: B, S, R and C each solve 0 of 8 DEV theorems with 4 attempts per theorem (32 attempts per model). The single-tactic rescreen of 19 October solves none of the 8 DEV and 21 TEST items.
+- Known issue: DEV is at the measurement floor, so a DEV difference between models is not measurable with 8 theorems.
 
 ##### 4.3 The R and C task orders
 
-- What they are: the training schedules of the main study. R is a shuffled order. C is an AI-proposed prerequisite-first order.
-- How they were made: on 18 October, a schedule build over the 506 roots of `validated_v2`, after a full AI source review that read 536 canonical roots and 548 TRAIN proof variants (README status row of EXP-027; private run registry `.private/ops/nt_curriculum_schedule_20261018_v1/full_review_v2/run_registry.json`). Record of the orders: "Current data and model contract closure, 18 October 2026 IST". The build code is private (same folder).
-- Counts: each order holds 1,012 task IDs. Each of the 506 roots appears twice, and the two multisets are equal. 54 proposed prerequisite edges are kept. The C order puts all 506 distinct tasks in its first 506 groups.
+- What they are: the training schedules of the main run. R is a shuffled order. C is an AI-proposed prerequisite-first order.
+- How they were made: on 18 October, a schedule build over the 506 theorems of `validated_v2`, after a full AI source review that read 536 canonical theorems and 548 TRAIN proof variants (README status row of EXP-027; private run registry `.private/ops/nt_curriculum_schedule_20261018_v1/full_review_v2/run_registry.json`). Record of the orders: "Current data and model contract closure, 18 October 2026 IST". The build code is private (same folder).
+- Counts: each order holds 1,012 task IDs. Each of the 506 theorems appears twice, and the two multisets are equal. 54 proposed prerequisite edges are kept. The C order puts all 506 distinct theorems in its first 506 groups.
 - Frozen copy: `<ARCHIVE>/nt_curriculum_execution_20261018_v1/inputs/schedules.tar.gz`, 65,173 bytes, SHA-256 `8254ebf8107659d156d9c24942fcc8ca9ac84b91fc35ebc115a8d6121c59a608`. Verified 20 October. A second copy: `<ARCHIVE>/nt_curriculum_schedule_20261018_v1/full_review_v2_runtime_orders.tar.gz`, 68,708 bytes, SHA-256 `f1a08703c1c7751cb9e2467143fad5711e8e0784310c797f3dcf6412a1375b91` (size listed on 20 October, not downloaded).
 - Files inside `schedules.tar.gz`:
 
 | File | Lines | SHA-256 | Contents |
 | --- | ---: | --- | --- |
-| `order_C_AI_runtime.json` | 1,014 | `9aed466e1ac73025fd72fb04ccce42dc132bb4dcdd2f22c8760918e65f976dfe` | C order: JSON list of 1,012 task IDs, AI-proposed prerequisite-first, each root twice |
-| `order_R_runtime.json` | 1,014 | `3e7522d083d14bc5f2c2a152eb3da56e9e844c3f20c344d758dbaceeec539202` | R order: JSON list of 1,012 task IDs, shuffled, each root twice |
-| `runtime_order_manifest.json` | 30 | `a464685910f1b0bb17c681dca186217ca8f9ab6272baefe732e0b9e68656be0f` | Binds both orders to the data manifest; records 506 roots, 1,012 groups per arm, equal multisets, 54 retained proposed edges, `human_reviewed` false |
+| `order_C_AI_runtime.json` | 1,014 | `9aed466e1ac73025fd72fb04ccce42dc132bb4dcdd2f22c8760918e65f976dfe` | C order: JSON list of 1,012 task IDs, AI-proposed prerequisite-first, each theorem twice |
+| `order_R_runtime.json` | 1,014 | `3e7522d083d14bc5f2c2a152eb3da56e9e844c3f20c344d758dbaceeec539202` | R order: JSON list of 1,012 task IDs, shuffled, each theorem twice |
+| `runtime_order_manifest.json` | 30 | `a464685910f1b0bb17c681dca186217ca8f9ab6272baefe732e0b9e68656be0f` | Binds both orders to the data manifest; records 506 theorems, 1,012 groups per arm, equal multisets, 54 retained proposed edges, `human_reviewed` false |
 
 - Known issue: the C order is an AI pedagogical proposal. No human reviewed it, and no measurement shows that its prerequisites are necessary.
 
-##### 4.4 `calibration_v1`: 32 TRAIN roots
+##### 4.4 `calibration_v1`: 32 TRAIN theorems
 
-- What it is: 32 TRAIN roots, 8 per topic in a deterministic order, for an assessment of S with updates disabled.
-- Where: `calibration/tasks.jsonl` and `calibration/manifest.json` in `data.tar.gz`. All 32 are among the 506 TRAIN roots (checked on 20 October).
-- Result: the main-lease stage `calibration_S` accepts 4 of 128 attempts.
+- What it is: 32 TRAIN theorems, 8 per topic in a deterministic order, for an assessment of S with updates disabled.
+- Where: `calibration/tasks.jsonl` and `calibration/manifest.json` in `data.tar.gz`. All 32 are among the 506 TRAIN theorems (checked on 20 October).
+- Result: the main-run stage `calibration_S` accepts 4 of 128 attempts.
 
 ##### 4.5 The EXP-028 selection set: 164 held-out theorems
 
@@ -6052,11 +6075,11 @@ Each subsection gives what the dataset is, how it was made, its counts, its froz
 - How it was made: on 18 October, the frozen EXP-025 benchmark code ran `select` and `verify` with `configs/data/nt_validation_v1.json` (seed 20261018, `dev_percent` 90, `test_percent` 5, Jaccard threshold 0.7, `max_protected` 2048) and the clean mathlib identity. Records: "Preparation record and program amendments, 18 October 2026 IST" and "Selection set and staged leases, 18 October 2026 IST".
 - Counts:
   - 40,814 corpus rows read.
-  - Excluded: the 580 source identities of the main study (exact match) and 14,205 relatives of 1,409 protected statements.
+  - Excluded: the 580 source identities of the main run (exact match) and 14,205 relatives of 1,409 protected statements.
   - 216 candidates (175 validation, 33 test, 8 train).
   - 201 admitted. Admission removed 14 that one fixed tactic solves and 1 with known parent exposure.
   - 164 validation theorems: 79 in the four TRAIN topics and 85 in other topics. The median reference proof has 29 lines.
-- Separation (data audit of 19 October): 0 overlaps with the 506 roots, 516 alias IDs, 580 sources, DEV 8, TEST 21, EXP-025 v1 (60) and v2 (234), by name, statement hash, binder-normalized key, numeric template and token Jaccard at 0.7. The highest token Jaccard is 0.696.
+- Separation (data audit of 19 October): 0 overlaps with the 506 theorems, 516 alias IDs, 580 sources, DEV 8, TEST 21, EXP-025 v1 (60) and v2 (234), by name, statement hash, binder-normalized key, numeric template and token Jaccard at 0.7. The highest token Jaccard is 0.696.
 - Frozen copy: `<ARCHIVE>/exp028_lease3_20261018_v1/inputs/validation.tar.gz`, 40,089 bytes, SHA-256 `e1bfc8c7aea1b0b84ceea2f8fd32ea0f43b1b935877e72acd9645a01b96ac359`. This archive SHA-256 was measured on 20 October; the earlier records give only its size and ETag. Its members match the recorded SHA-256 values:
 
 | File | Lines | SHA-256 | Contents |
@@ -6073,17 +6096,17 @@ Each subsection gives what the dataset is, how it was made, its counts, its froz
   - The set was used to choose E0 to E7, both Kimina probes and the EXP-029 plan. Any further result on it is exploratory.
   - The `stp` source-label count is 46 in one record and 39 in another. It is unresolved.
 
-##### 4.6 The pass-rate map and the 62 `RL_filtered` tasks
+##### 4.6 The pass-rate map and the 62 `RL_filtered` theorems
 
-- What they are: S's acceptance on each TRAIN root (4 attempts per root), and the 62 roots with an S pass rate in (0, 0.75].
-- How they were made: on 19 October, the Lease 2 stage `pass_rates` ran `scripts/train/run_tactic_rl.py` as an assessment of S with updates disabled. The `task_filter` option then kept the 62 roots for `RL_filtered`. Records: "Rollout speed result and pass-rate map, 19 October 2026 IST" and "RL_filtered result: learning on the 62 filtered TRAIN tasks, 19 October 2026 IST".
-- Counts: 506 rows, 2,024 attempts, 84 accepted, 63 roots solved. Roots by accepted attempts of 4: 443 with 0, 48 with 1, 10 with 2, 4 with 3, 1 with 4. The 62 tasks are the 48 + 10 + 4 roots with 1 to 3 accepted attempts.
+- What they are: S's acceptance on each TRAIN theorem (4 attempts per theorem), and the 62 theorems with an S pass rate in (0, 0.75].
+- How they were made: on 19 October, the Lease 2 stage `pass_rates` ran `scripts/train/run_tactic_rl.py` as an assessment of S with updates disabled. The `task_filter` option then kept the 62 theorems for `RL_filtered`. Records: "Rollout speed result and pass-rate map, 19 October 2026 IST" and "RL_filtered result: learning on the 62 filtered TRAIN tasks, 19 October 2026 IST".
+- Counts: 506 rows, 2,024 attempts, 84 accepted, 63 theorems solved. Theorems by accepted attempts of 4: 443 with 0, 48 with 1, 10 with 2, 4 with 3, 1 with 4. The 62 theorems are the 48 + 10 + 4 theorems with 1 to 3 accepted attempts.
 - Row format of `steps.jsonl`: `group`, `task_id`, `kind`, `returns` (4 values), `discounted_returns` (4), `n_steps` (4), `loss`, `gradient_norm`, `optimizer_updated`.
 - Frozen copies:
   - `pass_rates/steps.jsonl` exists only as 332 append chunks under `<ARCHIVE>/exp028_lease2_20261018_v1/runtime/.log_chunks/out/pass_rates/steps.jsonl/`. Section 6 step 8 rebuilds it. On 20 October the rebuilt file had 148,751 bytes, 506 lines and SHA-256 `1b1da3c3ac6b3d2ec1b8996efc96dccb645666a033887a52b3b4b42296b07be4`. That is the value that the EXP-029 input manifest records for this file (`.private/ops/exp028_remedies_20261018_v1/lease5/inputs_manifest.json`).
   - `pass_rates/run.json`: `<ARCHIVE>/exp028_lease2_20261018_v1/runtime/out/pass_rates/run.json`, 24,626 bytes, SHA-256 `c48e7ef5c39f9e3e969947124c61f66473c0ff27a12297c827b22df1e7143e00`. Verified 20 October.
-  - The 62 tasks: `<ARCHIVE>/exp028_lease2_20261018_v1/runtime/out/RL_filtered/training_task_ids.json`, 5,147 bytes, SHA-256 `2bb216c02ff87b818ad76225885ce99a34cf87344d530c6bcbb3eafa9f70ddea`, a JSON list of 62 task IDs. Verified 20 October.
-- Known issue: 59 of the 62 tasks have SFT rows from their own reference proof, so the `RL_filtered` training gain can include recall.
+  - The 62 theorems: `<ARCHIVE>/exp028_lease2_20261018_v1/runtime/out/RL_filtered/training_task_ids.json`, 5,147 bytes, SHA-256 `2bb216c02ff87b818ad76225885ce99a34cf87344d530c6bcbb3eafa9f70ddea`, a JSON list of 62 task IDs. Verified 20 October.
+- Known issue: 59 of the 62 theorems have SFT rows from their own reference proof, so the `RL_filtered` training gain can include recall.
 
 ##### 4.7 The premise corpus and the E3 and E4 SFT rows
 
@@ -6092,10 +6115,10 @@ Each subsection gives what the dataset is, how it was made, its counts, its froz
   - How it was made: `scripts/data/build_premise_corpus.py` dumped them from the pinned environment on 18 October in about 7 minutes (run `exp028-premise-corpus-cpu-s20261018-v1`). The script's docstring still says "NOT YET EXECUTED"; the docstring is out of date.
   - Frozen copy: `<ARCHIVE>/exp028_lease1_20261018_v1/inputs/premise_corpus.jsonl.gz`, 15,148,248 bytes (size listed; no SHA-256 recorded for the gzip file). The uncompressed `corpus.jsonl` has SHA-256 `28a53e9b1185595e1639775c494a5a8fc23fdbdadcac0725a4bfe72dc2bc7f19`.
 - E3 lemma-section rows (`S_prem`):
-  - `scripts/data/add_premises_sft.py` added a lemma section to the 1,880 action rows after an exact re-render check. `S_prem` trained on 1,848 TRAIN rows (32 omitted for the SFT length limit) and 123 validation rows.
+  - `scripts/data/add_premises_sft.py` added a lemma section to the 1,880 SFT examples after an exact re-render check. `S_prem` trained on 1,848 TRAIN rows (32 omitted for the SFT length limit) and 123 validation rows.
   - Frozen copy: append chunks under `<ARCHIVE>/exp028_lease1_20261018_v1/runtime/.log_chunks/out/data_prem/`. The validation file has SHA-256 `65212c6eca8f3e63c7d5dd506aaa9ef7b91ae8a702e6281242e537dbac1e9af5` (from its single chunk name). The training file has 2 chunks and no recorded whole-file SHA-256.
 - E4 search-mined rows (`S_mined`):
-  - `search_train` ran step search on 128 TRAIN tasks (`<ARCHIVE>/exp028_lease1_20261018_v1/inputs/train_search_tasks.jsonl`, 125,091 bytes, SHA-256 `b2a17dbb2a98550a385bc7d5862cc36710c4f77be864b315055b6cd8f510718b`). `scripts/data/build_search_sft.py` mined 64 rows (37 proof steps and 27 repairs). `scripts/data/merge_sft_rows.py` merged them into 1,944 training rows.
+  - `search_train` ran step search on 128 TRAIN theorems (`<ARCHIVE>/exp028_lease1_20261018_v1/inputs/train_search_tasks.jsonl`, 125,091 bytes, SHA-256 `b2a17dbb2a98550a385bc7d5862cc36710c4f77be864b315055b6cd8f510718b`). `scripts/data/build_search_sft.py` mined 64 rows (37 proof steps and 27 repairs). `scripts/data/merge_sft_rows.py` merged them into 1,944 training rows.
   - Frozen copies: `mined/sft_rows.jsonl` (94,902 bytes, SHA-256 `f74c59c1e6ba32255e55af23d880051c73d1f9c3a7a363fc2d5db6dd504f851a`) and `data_mined/sft_{train,val}.jsonl` (SHA-256 `917890916ceb1906d8531c03741c035dfa5fb3b7912da0d847957ee10d47d776` and `6b3dd44a827e8c02f8cd96ad83ff378a25ddfe7584d957a43ec2d592d340c333`), as chunks under the Lease 1 runtime. These SHA-256 values come from the chunk names.
   - Defect: these rows lack the `format` field, so `S_mined` failed with `KeyError: 'format'`. The builder is fixed in the code, but no fixed set of rows exists.
 
@@ -6112,10 +6135,10 @@ Weights are not data, but every comparison needs them. Each `final/` directory a
 | Model | Object under `<ARCHIVE>` | Bytes | SHA-256 |
 | --- | --- | ---: | --- |
 | B, `Qwen/Qwen2.5-0.5B-Instruct` revision `7ae557604adf67be50417f59c2c2f167def9a775` | `nt_curriculum_execution_20261018_v1/inputs/parent.tar` | 999,608,320 | tar `15236e305f277887906440981c6b821a54ed761a4d97b0c4611d2d0bcbb2f3b9`; `model.safetensors` inside `fdf756fa7fcbe7404d5c60e26bff1a0c8b8aa1f72ced49e7dd0210fe288fb7fe` |
-| S, SFT from B on the 1,880 action rows | `nt_curriculum_execution_20261018_v1/runtime/out/S/final/model.safetensors` | 1,976,163,472 | `a14fdfcbcb58b0c2874b62ed3b3ffc469ea0db1428d1ff9d8ffa3da8f5660227` |
+| S, SFT from B on the 1,880 SFT examples | `nt_curriculum_execution_20261018_v1/runtime/out/S/final/model.safetensors` | 1,976,163,472 | `a14fdfcbcb58b0c2874b62ed3b3ffc469ea0db1428d1ff9d8ffa3da8f5660227` |
 | R, S plus REINFORCE in the R order | `nt_curriculum_execution_20261018_v1/runtime/out/R/final/model.safetensors` | 1,976,163,472 | `cbd54b16578696aab88e6990e7a6768fd4980c611c8bc9cfa3fc9b83c31fc8ac` |
 | C, S plus REINFORCE in the C order | `nt_curriculum_execution_20261018_v1/runtime/out/C/final/model.safetensors` | 1,976,163,472 | `a2e2b41f6f5dc5c92e6c4e4d409b2c9c8a60a7368c0fc4512e438c8b6ec5ddf4` |
-| RL_filtered, S plus REINFORCE on the 62 tasks | `exp028_lease2_20261018_v1/runtime/out/RL_filtered/final/model.safetensors` | 1,976,163,472 | `05f9994a1ad14e0c6bc425a7124e313922c2f4d9932c4b23506e7ac882e6993b` |
+| RL_filtered, S plus REINFORCE on the 62 theorems | `exp028_lease2_20261018_v1/runtime/out/RL_filtered/final/model.safetensors` | 1,976,163,472 | `05f9994a1ad14e0c6bc425a7124e313922c2f4d9932c4b23506e7ac882e6993b` |
 
 The weights were listed on 20 October and not downloaded.
 
@@ -6128,7 +6151,7 @@ The weights were listed on 20 October and not downloaded.
 | File | Bytes | Lines | SHA-256 | Contents |
 | --- | ---: | ---: | --- | --- |
 | `checker.py` | 10,301 | 182 | `60a581b84f517cfe3da0acab46a2d7abea0f329fa3e8f141c465cdb9803471c7` | The Lean checker module that `--checker` loads (not in Git) |
-| `dev_names.txt` | 232 | 8 | `10fc89b47351aab5c0e06bb1416bbd825e9f6a6ea8e87a39caeca096901fe001` | The 8 DEV root names (`--evaluation-names`) |
+| `dev_names.txt` | 232 | 8 | `10fc89b47351aab5c0e06bb1416bbd825e9f6a6ea8e87a39caeca096901fe001` | The 8 DEV theorem names (`--evaluation-names`) |
 | `dev_pool.jsonl` | 1,970 | 8 | `d0b1202e933ad1b6a86bcfb99efc7f4794d53e1c8d30c6b63c2d3fbe1fda1bac` | The 8 DEV statements (`--pool` for DEV runs) |
 | `mathlib_source_identity.json` | 258 | 6 | `8b9b5a83b177d3aa791be60b4b2e1cbe2578213f621079aaaba120cdb3155c4f` | The mathlib identity receipt (`--mathlib-identity`) |
 | `parent.json` | 223 | 6 | `6cecf21b62164591526d9be5dcb68a879c2d43a7a597af48a264afd42a359a79` | B: `model_id`, `revision`, `weights_sha256`, `weights_bytes` |
@@ -6157,10 +6180,10 @@ You do not need these files to run EXP-026. They explain where the data in secti
 - Use: it supplies the held-out topics and the family reservations of the later builds.
 - Record: "EXP-024 syllabus stage, 15 October 2026".
 
-##### 5.3 Source inventory and corpus v0 (40,814 problems)
+##### 5.3 Source inventory and corpus v0 (40,814 theorems)
 
-- Inventory (run `exp024-source-inventory-cpu-v1`, 15 October): 45,658 distinct problems with an accepted proof, of which 40,814 are number theory by a keyword filter.
-- Corpus v0 (run `exp024-corpus-v0-cpu`, 15 October): one record per problem with up to 2 accepted proofs, tactic statistics and a parent-exposure flag. It keeps 40,732 problems with 49,377 proofs in `corpus_v0.jsonl` and excludes 82 problems near a split B or C family into `excluded_heldout.jsonl`. 800 kept problems carry the exposure flag.
+- Inventory (run `exp024-source-inventory-cpu-v1`, 15 October): 45,658 distinct theorems with an accepted proof, of which 40,814 are number theory by a keyword filter.
+- Corpus v0 (run `exp024-corpus-v0-cpu`, 15 October): one record per theorem with up to 2 accepted proofs, tactic statistics and a parent-exposure flag. It keeps 40,732 theorems with 49,377 proofs in `corpus_v0.jsonl` and excludes 82 theorems near a split B or C family into `excluded_heldout.jsonl`. 800 kept theorems carry the exposure flag.
 - Builders: `inventory.py`, `seen.py` and `corpus.py` under `.private/ops/exp024_*` on Manas's machine. They are not in Git.
 - Location: `<F>/exp024_corpus_v0/out/` on the CPU host. No archive copy is recorded.
 - Use: every later `select` run reads these two files.
@@ -6169,23 +6192,23 @@ You do not need these files to run EXP-026. They explain where the data in secti
 
 ##### 5.4 `nt_benchmark_v1` (pilot)
 
-- Built on 16 October by `scripts/data/build_nt_benchmark.py select` and `verify` with `configs/data/nt_benchmark_v1.json` (seed 20261016, at most 6 per topic and 64 per package, Jaccard threshold 0.7, held-out topics quadratic residues and arithmetic functions).
-- Counts: 60 candidates (TRAIN 34, DEV 9, TEST 17); 55 admitted (TRAIN 30, DEV 9, TEST 16) after 5 screen exclusions; SFT 29 training rows and 1 loss-validation row.
+- Built on 16 October by `scripts/data/build_nt_benchmark.py select` and `verify` with `configs/data/nt_benchmark_v1.json` (seed 20261016, at most 6 per topic and 64 per release, Jaccard threshold 0.7, held-out topics quadratic residues and arithmetic functions).
+- Counts: 60 candidates (TRAIN 34, DEV 9, TEST 17); 55 admitted (TRAIN 30, DEV 9, TEST 16) after 5 screen exclusions; SFT 29 training rows and 1 SFT validation row.
 - Use: no training run. Later builds protect its selection.
 - Record: "EXP-025 verification and consumer outcome, 16 October 2026".
 
 ##### 5.5 `nt_benchmark_v2` `prepared_v1`
 
 - Built on 16 October by `build_nt_benchmark.py` with `configs/data/nt_benchmark_v2.json` (seed 20261016, at most 24 per topic, ceiling 256, batch 12, Lean timeout 120 s), protecting v1. A private SFT view (`prepare_sft_view.py`) and consumer check (`check_dataset.py`) followed.
-- Counts: 234 candidates (TRAIN 101, DEV 39, TEST 94); 209 admitted after 22 screen exclusions, 2 parent-exposure exclusions and 1 replay rejection; RL TRAIN 93, DEV 34, TEST 82; SFT 83 training rows and 9 loss-validation rows.
+- Counts: 234 candidates (TRAIN 101, DEV 39, TEST 94); 209 admitted after 22 screen exclusions, 2 parent-exposure exclusions and 1 replay rejection; RL TRAIN 93, DEV 34, TEST 82; SFT 83 training rows and 9 SFT validation rows.
 - Location: `<F>/nt_benchmark_v2_20261016/prepared_v1/`. Archive snapshots: `<ARCHIVE>/nt_benchmark_v2_20261016/snapshot_20261016T145057Z.tar.gz` (1,468,519 bytes) and the later whole-directory `snapshot_20261016T231410Z.tar.gz` (2,655,477 bytes), which also holds `evaluation_spec_v1/`.
-- Use: source of the evaluation specification and of the 209 references of the cleanup. Not a training input of the main study.
+- Use: source of the evaluation specification and of the 209 references of the cleanup. Not a training input of the main run.
 - Record: "EXP-025 expanded dataset outcome, 16 October 2026".
 
 ##### 5.6 Evaluation specification and question descriptions
 
 - Built on 17 October by `build_nt_benchmark.py describe` and an AI review (`annotate_evaluation.py`, private).
-- Contents: 34 DEV and 82 TEST questions with exact statements, initial states, answer contract and private expected answers. The review flags 7 contradictory-premise tasks, 6 intent-review tasks and 3 overlap relationships. One DEV contradiction is confirmed in Lean.
+- Contents: 34 DEV and 82 TEST questions with exact statements, initial states, answer contract and private expected answers. The review flags 7 contradictory-premise theorems, 6 intent-review theorems and 3 overlap relationships. One DEV contradiction is confirmed in Lean.
 - Descriptions: one informal description per question, used in appendix A of the report.
 - Archive snapshot: `<ARCHIVE>/nt_benchmark_v2_20261016/snapshot_20261016T230045Z.tar.gz` (1,824,421 bytes).
 - Records: "EXP-025 evaluation specification and semantic review, 17 October 2026"; "Full evaluation-question descriptions, 17 October 2026".
@@ -6199,21 +6222,21 @@ You do not need these files to run EXP-026. They explain where the data in secti
 
 ##### 5.8 `full_scale_v1`, prerequisite admission and `training_release_v1`
 
-- `full_scale_v1` maps all 40,814 corpus records (49,488 proof records) to a disposition: 29,262 candidates (27,761 loss-train and 1,501 loss-validation), 6,651 reserved and 4,901 quarantined. Check: `check_full_scale.py` returns `status=pass`.
+- `full_scale_v1` maps all 40,814 corpus records (49,488 proof records) to a disposition: 29,262 candidates (27,761 SFT training and 1,501 SFT validation), 6,651 reserved and 4,901 quarantined. Check: `check_full_scale.py` returns `status=pass`.
 - Prerequisite admission selected a conservative subset. Consistency certificates showed that the hypotheses of the certified statements can hold together; a statement without a certificate stayed deferred. Replay shards produced full proofs and state-to-tactic actions with the strict verifier (batch 12, Lean timeout 120 s, at most 32 theorems per shard and 4 workers).
-- `training_release_v1` (`status=READY_PREREQUISITE_SUBSET`): full proofs 564 training and 32 loss-validation rows; action rows 1,771 training and 93 loss-validation rows. Manifest SHA-256 `7e97fd7e46e66c809b4b7f962e126882191836eeba6c952797913507d661d01d`; action rows SHA-256 `2e309e785e0dd559ca498ecd736964664896b52216dccb693dea8571139c654b` (training) and `93fbd97ff71f873fa8b51f467f960326bab4258a91f01b776eba29a2c879ad20` (validation).
-- Archive snapshot: `<ARCHIVE>/nt_dataset_cleanup_20261017_v1/snapshot_20261017T164024Z.tar.gz` (35,888,474 bytes). Staged copy of the action rows: `<ARCHIVE>/prerequisite_sft_20261017_v1/inputs/inputs.tar.gz` (27,157,771 bytes).
+- `training_release_v1` (`status=READY_PREREQUISITE_SUBSET`): full proofs 564 training and 32 SFT validation rows; SFT examples 1,771 training and 93 SFT validation rows. Manifest SHA-256 `7e97fd7e46e66c809b4b7f962e126882191836eeba6c952797913507d661d01d`; SFT examples SHA-256 `2e309e785e0dd559ca498ecd736964664896b52216dccb693dea8571139c654b` (training) and `93fbd97ff71f873fa8b51f467f960326bab4258a91f01b776eba29a2c879ad20` (validation).
+- Archive snapshot: `<ARCHIVE>/nt_dataset_cleanup_20261017_v1/snapshot_20261017T164024Z.tar.gz` (35,888,474 bytes). Staged copy of the SFT examples: `<ARCHIVE>/prerequisite_sft_20261017_v1/inputs/inputs.tar.gz` (27,157,771 bytes).
 - Records: "Full-corpus mapping outcome", "Prerequisite admission and replay registration", "Concrete consistency certificate extension", "Certified prerequisite proof shards", "Action export continuation" and "Checked prerequisite release outcome", all 17 October 2026.
 
 ##### 5.9 Action-contract repair and the recovery release
 
-- Repair (18 October, private `rebuild_actions.py`): the action rows were rebuilt to fit the 192-token action limit, with the `nonrec example` root. Result `data_nonrec/release/`: 1,503 training rows on 537 theorems and 80 validation rows. SHA-256 `6f300f6a203404af44eff1d879ecaef6bc804ee7b68be52ed6018501d5b2ad8a` (training) and `3c3000050acbe843cc1814bd15ec2696cd0098d938b7b4e4c93d8c7e295b1897` (validation). Staged copy: `<ARCHIVE>/prerequisite_sft_20261018_v4/inputs/inputs.tar.gz` (27,128,671 bytes).
+- Repair (18 October, private `rebuild_actions.py`): the SFT examples were rebuilt to fit the 192-token action limit, with the `nonrec example` header. Result `data_nonrec/release/`: 1,503 training rows on 537 theorems and 80 validation rows. SHA-256 `6f300f6a203404af44eff1d879ecaef6bc804ee7b68be52ed6018501d5b2ad8a` (training) and `3c3000050acbe843cc1814bd15ec2696cd0098d938b7b4e4c93d8c7e295b1897` (validation). Staged copy: `<ARCHIVE>/prerequisite_sft_20261018_v4/inputs/inputs.tar.gz` (27,128,671 bytes).
 - Recovery release (18 October, private `build_release.py` and `finalize_release.py`, settings in the tracked `configs/data/nt_sft_recovery_v1.json`, seed 20261018): training 2,095 rows (1,498 clean, 535 format-recovery, 62 Lean-error-recovery) on 536 theorem names; validation 128 rows (80 clean, 32 format, 16 Lean-rejection). SHA-256 `54351fd921e334ac858f68463587db3ed477e021a911979f33449bc959f83732` (training) and `8e2706b066ff46ec9a463b34af551b9f99cb67d25c7fad6ce133980a9b842bd0` (validation). The recovery entry names `<ARCHIVE>/nt_sft_recovery_20261018_v1/recovery_release.tar` (16,476,160 bytes) as the final durable archive and says that its manifest readback matches the CPU result. No SHA-256 of the tar file itself is recorded.
 - Records: "SFT action-contract repair, 18 October 2026 IST"; "Recovery data preparation, 18 October 2026 IST".
 
 ##### 5.10 The common projection `release/` (superseded)
 
-- Built on 18 October by the private `prepare_common.py` from `training_release_v1` and the recovery release: 2,095 action rows, 536 canonical roots, 548 source identities and 128 validation rows.
+- Built on 18 October by the private `prepare_common.py` from `training_release_v1` and the recovery release: 2,095 SFT examples, 536 canonical theorems, 548 source identities and 128 validation rows.
 - Status: superseded by `validated_v2`. Do not use it for training.
 - Record: "Common data and curriculum execution plan, 18 October 2026 IST".
 
@@ -6222,7 +6245,7 @@ You do not need these files to run EXP-026. They explain where the data in secti
 - EXP-001 LeanDojo subsets (configs `configs/data/leandojo_*.json`, archive pinned by URL and MD5).
 - EXP-016 `nt_pool_v2`: 4,306 Lean Workbook statements (train 3,450, validation 420, test 436), built by `scripts/data/build_nt_pool.py`. Its non-TRAIN identities stay protected in later builds.
 - EXP-017 `nt_splits_v3` and `nt_sft_v8` (5,812 training and 245 loss-evaluation rows). `nt_sft_v8` contains Lean Workbook rows.
-- EXP-023 curriculum templates: input set v2 has 192 TRAIN and 152 held-out tasks; the final run used input set v4 with 191 TRAIN and 142 held-out tasks.
+- EXP-023 curriculum templates: input set v2 has 192 TRAIN and 152 held-out theorems; the final run used input set v4 with 191 TRAIN and 142 held-out theorems.
 
 #### 6. Step by step: fetch and verify the data
 
@@ -6378,9 +6401,9 @@ These shell commands were not run in this exact form. The same downloads and che
 10. On a Linux GPU host, download the Lean environment and the weights that you need (section 4.9), and check them against section 6.1 and section 4.9 in the same way. Extract `environment.tar.gz` and confirm the layout of section 4.10.
 11. Report any mismatch to Manas before you use the data. Do not repair a file by hand.
 
-#### 7. Step by step: run with this data as the main lease did
+#### 7. Step by step: run with this data as the main run did
 
-The main lease (`exp026-027-nt-clean-main-s20261018-v2`) ran these commands from the repository root of its code snapshot. Placeholders: `<DATA>` is your `data/`, `<RUNTIME>` is `runtime/inputs/`, `<SCHEDULES>` is `schedules/`, `<ENV>` is the extracted Lean environment, `<CONFIGS>` holds the run configs, and `<OUT>` is a new output directory.
+The main run (`exp026-027-nt-clean-main-s20261018-v2`) ran these commands from the repository root of its code snapshot. Placeholders: `<DATA>` is your `data/`, `<RUNTIME>` is `runtime/inputs/`, `<SCHEDULES>` is `schedules/`, `<ENV>` is the extracted Lean environment, `<CONFIGS>` holds the run configs, and `<OUT>` is a new output directory.
 
 ```bash
 # S: SFT from B on the 1,880 action rows
@@ -6413,7 +6436,7 @@ The run configs are private (`.private/ops/nt_curriculum_execution_20261018_v1/c
 | Setting | `rl_R.json` and `rl_C.json` | `dev_*.json` | `calibration_S.json` |
 | --- | --- | --- | --- |
 | `seed` | 20261018 | 20261018 | 20261018 |
-| `group_size` (attempts per task) | 4 | 4 | 4 |
+| `group_size` (attempts per theorem) | 4 | 4 | 4 |
 | `max_groups` | 1,012 | 8 | 32 |
 | `max_episode_steps` (actions) | 6 | 6 | 6 |
 | `max_prompt_tokens` | 2,048 | 2,048 | 2,048 |
@@ -6452,13 +6475,13 @@ A fresh clone cannot rebuild the data chain. Use section 6.
 | Source inventory and corpus v0 | None (private `inventory.py`, `seen.py`, `corpus.py`) | Blocked. The output is on the CPU host only |
 | Benchmark `select` | `build_nt_benchmark.py select` | Runs, but needs corpus v0 |
 | Benchmark `verify` | `build_nt_benchmark.py verify` | Broken at `main` (defect below). The 16 and 18 October builds used a frozen code snapshot (`code_retry2/`) on remote storage, and `main` cannot reproduce them byte for byte |
-| Benchmark `describe` | `build_nt_benchmark.py describe` | Runs on a verified package |
+| Benchmark `describe` | `build_nt_benchmark.py describe` | Runs on a verified release |
 | Cleanup, `release_v3`, `full_scale_v1`, admission, `training_release_v1` | None (private builders) | Blocked. AI agents did the semantic review |
 | Action repair and recovery release | None (private builders); `configs/data/nt_sft_recovery_v1.json` is tracked | Blocked |
 | Common projection and `validated_v2` | None in Git; the finalizer code is inside `validated_v2_complete.tar.gz` | Partly recoverable from the archive |
 | R and C orders | None (private schedule build) | Blocked. The C order comes from AI annotations |
 | Selection set | `build_nt_benchmark.py` with `configs/data/nt_validation_v1.json` | Blocked by corpus v0, the private protected lists and the `verify` defect |
-| Pass-rate map and 62 tasks | `run_tactic_rl.py` with `task_filter` | Runs, but sampling makes a new map differ |
+| Pass-rate map and 62 theorems | `run_tactic_rl.py` with `task_filter` | Runs, but sampling makes a new map differ |
 | Premise corpus and E3 rows | `build_premise_corpus.py`, `add_premises_sft.py` | Runs with the Lean environment |
 | E4 rows | `build_search_sft.py`, `merge_sft_rows.py` | Runs after a step-search assessment; sampling makes new rows differ |
 
@@ -6486,10 +6509,10 @@ uv run python scripts/data/build_nt_benchmark.py describe --package <OUT>/verifi
 
 #### 9. Known contradictions between records
 
-1. TRAIN root count: the EXP-028 registration says 536 canonical TRAIN roots. The files hold 506 roots after filtering; 536 is the count before filtering.
+1. TRAIN theorem count: the EXP-028 registration says 536 canonical TRAIN theorems. The files hold 506 theorems after filtering; 536 is the count before filtering.
 2. Target absence: the EXP-028 registration requires it for the selection set, and the 19 October data audit says it was never checked. The audit is correct.
 3. `stp` label count: 46 in the Lease 3 amendment and 39 in the Kimina result. Unresolved.
-4. EXP-023 template sizes: the report's data table says 192 TRAIN and 152 held-out tasks (input set v2). The final run used input set v4: 191 TRAIN and 142 held-out tasks.
+4. EXP-023 template sizes: the report's data table says 192 TRAIN and 152 held-out theorems (input set v2). The final run used input set v4: 191 TRAIN and 142 held-out theorems.
 5. Your input: the 16 October entries and the README name `prepared_v1`. The 18 October operator handoff names `validated_v2`. Use `validated_v2` (section 1).
 6. Report appendix page: the README links appendix A at PDF page 24; the 17 October entry says DEV starts on page 21. Find the appendix by its title in the PDF.
 7. Protected-statement counts: 1,409 (selection set), 1,115 and then 1,130 (EXP-029 protected list) and 1,625 (benchmark v3 supply count). No record says whether these are different lists.
@@ -6498,7 +6521,7 @@ uv run python scripts/data/build_nt_benchmark.py describe --package <OUT>/verifi
 Two points that the records left open are settled by the files:
 
 - The fixed DEV 8 and TEST 21 come from `release_v3`: `evaluation_reservations.json` names those files and their SHA-256.
-- The 32 calibration roots are all among the 506 TRAIN roots.
+- The 32 calibration theorems are all among the 506 TRAIN theorems.
 
 #### 10. Open actions
 
@@ -6506,7 +6529,7 @@ Two points that the records left open are settled by the files:
 | --- | --- | --- |
 | Manas | Copy every object of section 6.1 and the weights to storage without expiry, or remove the expiry rule from these prefixes | Before 11 November 2026 for the environment source copy; before 16 November for the rest |
 | Manas | Give Abhinav read access, the bucket name and the archive prefix | Before Abhinav starts |
-| Manas | Share the main-lease run configs, or track them in `configs/` without host paths | Before Abhinav's first run |
+| Manas | Share the main-run configs, or track them in `configs/` without host paths | Before Abhinav's first run |
 | Manas | Fix the `exact?` defect in `verify` | Before any new benchmark build |
 | Manas | Commit or archive the private builders: corpus v0, cleanup, recovery, common projection, schedules | Not set |
 | Manas | Update the stale fake REPL in `tests/test_nt_tactic_expansion.py` for the `nonrec example` header (local test run of 20 October; recorded in the message of commit `0223b93`) | Not set |

@@ -1,0 +1,21 @@
+{
+  "version": "nt_curriculum_validation_v1",
+  "experiment": "EXP-028",
+  "purpose": "Held-out curriculum-validation set for EXP-028 screening. Excludes curriculum TRAIN sources by exact raw-statement SHA-256 and near-duplicate matching, the main-study DEV and TEST, and the EXP-025 v1 and v2 selections. Only the validation split is consumed; the few train and test labels of this build stay unused.",
+  "seed": 20261018,
+  "lean": "v4.10.0-rc1",
+  "mathlib": "29dcec074de168ac2bf835a77ef68bbe069194c5",
+  "max_per_topic": 24,
+  "max_candidates": 256,
+  "max_reference_chars": 4096,
+  "near_duplicate_threshold": 0.7,
+  "dev_percent": 90,
+  "test_percent": 5,
+  "heldout_topics": [
+    "Quadratic residues",
+    "Arithmetic functions"
+  ],
+  "batch": 12,
+  "timeout": 120,
+  "max_protected": 2048
+}

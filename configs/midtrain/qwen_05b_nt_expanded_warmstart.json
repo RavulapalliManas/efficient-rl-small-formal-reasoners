@@ -1,0 +1,23 @@
+{
+  "purpose": "Conditional supervised warmstart on accepted TRAIN continuations with exact STEP prompts and raw tactic-block targets. Never include DEV references. Freeze this common parent for all subsequent RL arms. Use only a prepared projection whose token audit establishes no target truncation. Existing trainer requires separate theorem-level train/loss-validation rows. External managed wall cap 1800 seconds. No training gain or paid launch approved.",
+  "experiment_id": "EXP-023",
+  "run_id": "exp023-expanded-warmstart-s20261023-v1",
+  "seed": 20261011,
+  "learning_rate": 1e-06,
+  "warmup_ratio": 0.0,
+  "epochs": 1,
+  "batch_size": 1,
+  "grad_accum": 4,
+  "max_steps": 128,
+  "max_length": 1536,
+  "logging_steps": 1,
+  "eval_steps": 32,
+  "milestone_steps": [
+    32,
+    64
+  ],
+  "loss_validation_names": [
+    "lean_workbook_plus_65403"
+  ],
+  "loss_validation_rule": "Before model sampling, choose the minimum sha256(exp023-warmstart-loss-v1/ + parent_name) from frozen TRAIN parents. Keep every start from this parent out of SFT training. This is a stage-specific loss diagnostic, not proof DEV or a held-out generalization score. The later RL task membership remains separately frozen."
+}

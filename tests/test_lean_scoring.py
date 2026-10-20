@@ -165,6 +165,19 @@ def score_with(respond, unit, texts):
 UNIT = {"task_id": "pool:t1", "kind": "statement", "name": "t1", "header": "theorem t1 : True", "given_steps": []}
 
 
+class ReplOutputTest(unittest.TestCase):
+    def test_detailed_error_response_preserves_the_lean_cause(self):
+        response = {"message": "Lean error:\nunknown identifier 'missing_fixture'"}
+        code, output = bench_lean_verifier.repl_output(response)
+        self.assertEqual(code, 1)
+        self.assertEqual(bench_lean_verifier.first_error(output), "unknown identifier 'missing_fixture'")
+
+    def test_opaque_error_response_remains_an_error(self):
+        code, output = bench_lean_verifier.repl_output({"message": "Lean error:\ninternal exception #4"})
+        self.assertEqual(code, 1)
+        self.assertEqual(output, "error: internal exception #4")
+
+
 class AxiomReportTest(unittest.TestCase):
     """Regression for the forged-report and namespace-shadow attacks (check_checker_attacks.py, 2026-10-10)."""
 
@@ -284,6 +297,17 @@ TASKS = [{"task_id": "t1:prefix_top:1", "name": "t1", "kind": "prefix_top", "hea
 
 
 class TaskTest(unittest.TestCase):
+    def test_explicit_assessment_split_keeps_pool_labels_and_metadata_guards(self):
+        task = dict(TASKS[1], task_id='v1:whole:0', name='v1', header='theorem v1 : True')
+        units = run_lean_grpo.task_units([task], TASK_POOL, split='validation')
+        self.assertEqual(units[0]['name'], 'v1')
+        self.assertEqual(TASK_POOL[-1]['split'], 'validation')
+        for tasks, split in (([task], 'train'), ([task], 'test'), (TASKS, 'validation'),
+                             ([dict(task, header='theorem v1 : False')], 'validation'),
+                             ([dict(task, given='  sorry\n')], 'validation')):
+            with self.subTest(tasks=tasks, split=split), self.assertRaises(RuntimeError):
+                run_lean_grpo.task_units(tasks, TASK_POOL, split=split)
+
     def test_units_carry_given_and_state(self):
         units = run_lean_grpo.task_units(TASKS, TASK_POOL)
         self.assertEqual([(u["task_id"], u["name"], u["given"], u["state"]) for u in units],

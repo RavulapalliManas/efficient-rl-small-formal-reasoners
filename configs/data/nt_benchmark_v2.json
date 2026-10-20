@@ -1,0 +1,17 @@
+{
+  "version": "nt_benchmark_v2",
+  "experiment": "EXP-025",
+  "purpose": "Expanded exploratory SFT/RL dataset from the existing broader corpus. Exclude the v1 frozen selection and text matches. Mathematical families remain unreviewed.",
+  "seed": 20261016,
+  "lean": "v4.10.0-rc1",
+  "mathlib": "29dcec074de168ac2bf835a77ef68bbe069194c5",
+  "max_per_topic": 24,
+  "max_candidates": 256,
+  "max_reference_chars": 4096,
+  "near_duplicate_threshold": 0.7,
+  "dev_percent": 20,
+  "test_percent": 20,
+  "heldout_topics": ["Quadratic residues", "Arithmetic functions"],
+  "batch": 12,
+  "timeout": 120
+}

@@ -1,0 +1,269 @@
+{
+  "experiment_id": "EXP-020",
+  "seed": 20261010,
+  "purpose": "Exploratory alternating SFT/RLP and SFT/Lean-GRPO branches from a common SFT checkpoint; different training data, not an algorithm-only comparison",
+  "budget_usd": 50,
+  "max_wall_seconds": 28800,
+  "checkpoint_selection": "Terminal checkpoints; frozen training mixes; no held-out selection",
+  "stages": [
+    {
+      "id": "common_sft",
+      "kind": "sft",
+      "config": "code/configs/midtrain/qwen_05b_nt_interleaved_sft_v1.json",
+      "data": "inputs/nt_sft",
+      "max_wall_seconds": 3600,
+      "overrides": {
+        "max_steps": 128,
+        "batch_size": 4,
+        "grad_accum": 16,
+        "eval_steps": 64,
+        "logging_steps": 1,
+        "milestone_steps": [
+          64
+        ],
+        "instance": "one L40S Spot, hard lease and USD 50 total cap"
+      }
+    },
+    {
+      "id": "rlp_1",
+      "parent": "common_sft",
+      "kind": "rlp",
+      "config": "code/configs/midtrain/qwen_05b_controlled_rlp.json",
+      "data": "inputs/rlp",
+      "max_curriculum_stage": 1,
+      "presentations": 108,
+      "max_wall_seconds": 3900,
+      "overrides": {
+        "seed": 20261010,
+        "max_completion_tokens": 512,
+        "num_generations": 4,
+        "max_wall_seconds": 3600,
+        "max_generated_tokens": 400000,
+        "max_score_forward_calls": 2200,
+        "evaluation_token_milestones": [],
+        "funding_status": "Manas approved L40S Spot work with a new total USD 50 cap on 2026-10-10",
+        "budget_usd": 50
+      }
+    },
+    {
+      "id": "grpo_1",
+      "parent": "common_sft",
+      "kind": "grpo",
+      "config": "code/configs/rl/qwen_05b_lean_grpo_smoke.json",
+      "max_wall_seconds": 4800,
+      "overrides": {
+        "seed": 20261010,
+        "max_steps": 60,
+        "prompts_per_step": 2,
+        "num_generations": 8,
+        "max_completion_tokens": 512,
+        "bf16": true,
+        "repetition_penalty": 1.0,
+        "max_wall_seconds": 4500,
+        "max_generated_tokens": 499712,
+        "max_lean_calls": 976,
+        "save_steps": 32,
+        "save_total_limit": 2,
+        "curriculum_include_whole": false,
+        "curriculum_max_lines_remaining": 1,
+        "balance_by_problem": true
+      },
+      "arguments": {
+        "pool": "inputs/pool_v2.jsonl",
+        "tasks": "inputs/tasks.jsonl",
+        "exclude-names": "inputs/dev.txt",
+        "checker": "inputs/checker.py",
+        "environment": "inputs/lean_env",
+        "repl": "inputs/repl",
+        "eval": [
+          "inputs/eval_validation.zip"
+        ]
+      }
+    },
+    {
+      "id": "rlp_sft_1",
+      "parent": "rlp_1",
+      "kind": "sft",
+      "config": "code/configs/midtrain/qwen_05b_nt_interleaved_sft_v1.json",
+      "data": "inputs/nt_sft",
+      "max_wall_seconds": 2400,
+      "overrides": {
+        "max_steps": 24,
+        "batch_size": 4,
+        "grad_accum": 16,
+        "eval_steps": 24,
+        "logging_steps": 1,
+        "milestone_steps": [],
+        "instance": "one L40S Spot, hard lease and USD 50 total cap",
+        "seed": 20261011
+      }
+    },
+    {
+      "id": "grpo_sft_1",
+      "parent": "grpo_1",
+      "kind": "sft",
+      "config": "code/configs/midtrain/qwen_05b_nt_interleaved_sft_v1.json",
+      "data": "inputs/nt_sft",
+      "max_wall_seconds": 2400,
+      "overrides": {
+        "max_steps": 24,
+        "batch_size": 4,
+        "grad_accum": 16,
+        "eval_steps": 24,
+        "logging_steps": 1,
+        "milestone_steps": [],
+        "instance": "one L40S Spot, hard lease and USD 50 total cap",
+        "seed": 20261011
+      }
+    },
+    {
+      "id": "rlp_2",
+      "parent": "rlp_sft_1",
+      "kind": "rlp",
+      "config": "code/configs/midtrain/qwen_05b_controlled_rlp.json",
+      "data": "inputs/rlp",
+      "max_curriculum_stage": 3,
+      "presentations": 108,
+      "max_wall_seconds": 3900,
+      "overrides": {
+        "seed": 20261010,
+        "max_completion_tokens": 512,
+        "num_generations": 4,
+        "max_wall_seconds": 3600,
+        "max_generated_tokens": 400000,
+        "max_score_forward_calls": 2200,
+        "evaluation_token_milestones": [],
+        "funding_status": "Manas approved L40S Spot work with a new total USD 50 cap on 2026-10-10",
+        "budget_usd": 50
+      }
+    },
+    {
+      "id": "grpo_2",
+      "parent": "grpo_sft_1",
+      "kind": "grpo",
+      "config": "code/configs/rl/qwen_05b_lean_grpo_smoke.json",
+      "max_wall_seconds": 4800,
+      "overrides": {
+        "seed": 20261010,
+        "max_steps": 148,
+        "prompts_per_step": 2,
+        "num_generations": 8,
+        "max_completion_tokens": 512,
+        "bf16": true,
+        "repetition_penalty": 1.0,
+        "max_wall_seconds": 4500,
+        "max_generated_tokens": 1220608,
+        "max_lean_calls": 2384,
+        "save_steps": 32,
+        "save_total_limit": 2,
+        "curriculum_include_whole": false,
+        "curriculum_max_lines_remaining": 3,
+        "balance_by_problem": true
+      },
+      "arguments": {
+        "pool": "inputs/pool_v2.jsonl",
+        "tasks": "inputs/tasks.jsonl",
+        "exclude-names": "inputs/dev.txt",
+        "checker": "inputs/checker.py",
+        "environment": "inputs/lean_env",
+        "repl": "inputs/repl",
+        "eval": [
+          "inputs/eval_validation.zip"
+        ]
+      }
+    },
+    {
+      "id": "rlp_sft_2",
+      "parent": "rlp_2",
+      "kind": "sft",
+      "config": "code/configs/midtrain/qwen_05b_nt_interleaved_sft_v1.json",
+      "data": "inputs/nt_sft",
+      "max_wall_seconds": 2400,
+      "overrides": {
+        "max_steps": 24,
+        "batch_size": 4,
+        "grad_accum": 16,
+        "eval_steps": 24,
+        "logging_steps": 1,
+        "milestone_steps": [],
+        "instance": "one L40S Spot, hard lease and USD 50 total cap",
+        "seed": 20261012
+      }
+    },
+    {
+      "id": "grpo_sft_2",
+      "parent": "grpo_2",
+      "kind": "sft",
+      "config": "code/configs/midtrain/qwen_05b_nt_interleaved_sft_v1.json",
+      "data": "inputs/nt_sft",
+      "max_wall_seconds": 2400,
+      "overrides": {
+        "max_steps": 24,
+        "batch_size": 4,
+        "grad_accum": 16,
+        "eval_steps": 24,
+        "logging_steps": 1,
+        "milestone_steps": [],
+        "instance": "one L40S Spot, hard lease and USD 50 total cap",
+        "seed": 20261012
+      }
+    },
+    {
+      "id": "rlp_3",
+      "parent": "rlp_sft_2",
+      "kind": "rlp",
+      "config": "code/configs/midtrain/qwen_05b_controlled_rlp.json",
+      "data": "inputs/rlp",
+      "max_curriculum_stage": 4,
+      "presentations": 108,
+      "max_wall_seconds": 3900,
+      "overrides": {
+        "seed": 20261010,
+        "max_completion_tokens": 512,
+        "num_generations": 4,
+        "max_wall_seconds": 3600,
+        "max_generated_tokens": 400000,
+        "max_score_forward_calls": 2200,
+        "evaluation_token_milestones": [],
+        "funding_status": "Manas approved L40S Spot work with a new total USD 50 cap on 2026-10-10",
+        "budget_usd": 50
+      }
+    },
+    {
+      "id": "grpo_3",
+      "parent": "grpo_sft_2",
+      "kind": "grpo",
+      "config": "code/configs/rl/qwen_05b_lean_grpo_smoke.json",
+      "max_wall_seconds": 4800,
+      "overrides": {
+        "seed": 20261010,
+        "max_steps": 303,
+        "prompts_per_step": 2,
+        "num_generations": 8,
+        "max_completion_tokens": 512,
+        "bf16": true,
+        "repetition_penalty": 1.0,
+        "max_wall_seconds": 4500,
+        "max_generated_tokens": 2490368,
+        "max_lean_calls": 4864,
+        "save_steps": 32,
+        "save_total_limit": 2,
+        "curriculum_include_whole": true,
+        "curriculum_max_lines_remaining": 20,
+        "balance_by_problem": true
+      },
+      "arguments": {
+        "pool": "inputs/pool_v2.jsonl",
+        "tasks": "inputs/tasks.jsonl",
+        "exclude-names": "inputs/dev.txt",
+        "checker": "inputs/checker.py",
+        "environment": "inputs/lean_env",
+        "repl": "inputs/repl",
+        "eval": [
+          "inputs/eval_validation.zip"
+        ]
+      }
+    }
+  ],
+  "protocol_revision": "v3: portable runtime archive and breadth-first branch scheduling after v2 verifier setup failed"
+}

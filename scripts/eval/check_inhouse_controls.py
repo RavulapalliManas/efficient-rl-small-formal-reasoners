@@ -1,9 +1,9 @@
 """Lean integration controls for build_nt_tactic_aug.py, build_nt_knowledge.py, and build_nt_archive.py (not unittest).
 
-1. Augmentation path (state_at + verify_group with given): for the first --proofs multi-step SFT bodies with a state
-   at cut n-1, the source's last step is accepted and `skip` and `done` are rejected. A cut without a state (the given
-   steps already close every goal) goes to observations with its verdicts: there verify_group accepts `skip`, which is
-   why build_nt_tactic_aug.py checks no tactic at such a cut.
+1. Augmentation path (state_at + verify_group with given): for the first --proofs multi-step SFT bodies whose cut n-1
+   does not end in `<;>`, the state exists, the source's last step is accepted, and `skip` and `done` are rejected. A
+   cut whose given text ends in `<;>` goes to observations with its verdicts: the continuation binds to the combinator,
+   so `skip` can pass there, which is why build_nt_tactic_aug.py skips such cuts.
 2. Knowledge replay (replay_file): the parsed items of --knowledge-file are accepted; with the second item changed to
    a `sorry` proof, a false proof, an extra command after it, a wrong name for `#print axioms`, or the text of the
    first item (already declared), it is rejected.
@@ -61,9 +61,10 @@ def main():
         state, reason, _ = state_at(ctx, hdr, given, [len(pad)])
         unit = {"task_id": "control", "kind": "statement", "name": r["theorem"], "header": hdr, "given": given, "given_steps": []}
         verdicts = [x["status"] for x in verify_group(ctx, unit, [steps[-1], pad + "skip", pad + "done"])]
-        if reason is not None:  # the given steps already close every goal; build_nt_tactic_aug.py checks no tactic here
-            observations.append({"proof": r["theorem"], "state_reason": reason, "last step, skip, done": verdicts})
+        if given.rstrip().endswith("<;>"):  # build_nt_tactic_aug.py skips this cut
+            observations.append({"proof": r["theorem"], "given_ends_in": "<;>", "state_reason": reason, "last step, skip, done": verdicts})
             continue
+        expect(f"aug {r['theorem']} state at n-1", reason, None)
         expect(f"aug {r['theorem']} last step, skip, done", verdicts, ["accepted", "rejected", "rejected"])
         done += 1
         if done == args.proofs:

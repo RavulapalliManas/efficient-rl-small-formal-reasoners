@@ -1,0 +1,32 @@
+{
+  "purpose": "Format warmstart for environment v2.1: teach the parent to answer the v2.1 observation with one ```lean fence of up to 4 tactics that ends at the closing fence. No new proof knowledge: 'cuts' targets are steps of proofs the parent already saw, 'aug' targets are one closing tactic. Not a capability claim. No training has run and no launch is approved.",
+  "experiment_id": "EXP-023",
+  "run_id": "exp023-sft-v21-warmstart-s20261013-v1",
+  "initial_policy": "cpu-angad formal_rl/monday_recovery_20261011_v2/model; model.safetensors sha256 4fda2d76482a47c7525502a1314c8dd565ddbffde511a09e12cc278d988ba112. Pass it as --model.",
+  "data": "cpu-angad formal_rl/sft_v21_20261013_v3b (v2 rows minus 14 theorems whose statements equal or near-transfer to an evaluation, held-out, reserve, demo or DEV statement; see docs/EXPERIMENTS.md 'SFT warmstart data v3b'). 1,911 training rows on 454 theorems; 85 loss-evaluation rows on 20 theorems. Pass its directory as --data.",
+  "alternative_data": "formal_rl/sft_v21_20261013_v2/build_all adds 377 nt_rl_tasks_v3 prefix_top rows (their reference continuations are RL training tasks). It has not been retraced, so its goal text and targets are unchecked against RL.",
+  "seed": 20261013,
+  "learning_rate": 5e-06,
+  "warmup_ratio": 0.05,
+  "epochs": 2,
+  "batch_size": 1,
+  "grad_accum": 16,
+  "max_length": 2048,
+  "logging_steps": 5,
+  "eval_steps": 50,
+  "eval_rows": 85,
+  "milestone_steps": [],
+  "precision": "run_sft.py loads FP32 master weights and uses BF16 autocast only when CUDA is available.",
+  "hyperparameter_reasoning": "Effective batch 16 rows gives 123 optimizer steps per epoch on 1,969 rows. Learning rate 5e-6 is half the 1e-5 of the original SFT (qwen_05b_lean_sft_v1.json) and 5 times the 1e-6 of the short warmstarts: the loss covers about 30 target tokens per row, so the gradient is noisy, but the parent already writes Lean and must keep it. Two epochs let the fence format and the stop after the fence settle. Cosine decay from run_sft.py. Batch 1 avoids padding on CPU (mean 360, maximum 2,048 tokens).",
+  "device_notes": {
+    "cpu": "Measured 70 tokens per second for forward, backward and optimizer step at 4 threads (bench.py, 6 steps, 2026-10-13, while a Lean job shared the host). 698,619 training tokens per epoch (chat-template input_ids, counted before retrace) gives about 2.8 h per epoch, 5.6 h for 2 epochs, plus about 12 min of evaluation. A 3,600 s service cap covers about 0.3 epoch; use epochs 1 with RuntimeMaxSec of at least 14,400, or set max_steps.",
+    "gpu": "run_sft.py has no device option. It uses CUDA when torch sees one and enables BF16 then. For a GPU copy, set batch_size 4 and grad_accum 4 (same effective batch 16). GPU throughput is not measured. Peak memory estimate: 8 GiB FP32 weights, gradients and AdamW states plus activations."
+  },
+  "run_command": "python scripts/train/run_sft.py --config configs/midtrain/qwen_05b_v21_warmstart.json --data <R>/sft_v21_20261013_v2/data --model <R>/monday_recovery_20261011_v2/model --output <R>/sft_v21_warmstart_20261013_v1  (managed service: MemoryMax=16G, CPUQuota=400%, unique output directory, one writer)",
+  "outputs": "<output>/final (weights and tokenizer), run.json, tb/. No intermediate checkpoints. save_strategy \"no\" stops the Trainer from writing a duplicate checkpoint-N/ with optimizer state at the last step.",
+  "launch_requirements": [
+    "Run the held-in checks on the final model before RL: first-action format-error rate on the v2.1 prompt and the rate of a bare-fence label other than lean",
+    "A GPU launch needs Manas's approval with its cost"
+  ],
+  "save_strategy": "no"
+}

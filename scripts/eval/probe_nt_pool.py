@@ -52,7 +52,11 @@ INSTRUCTION = ("Prove this Lean 4 theorem. The environment is Lean 4 with mathli
                "Write the tactic proof, indented by two spaces, then close the code block.")
 TACTICS = ["rfl", "decide", "norm_num", "simp", "omega", "linarith", "aesop", "simp_all", "tauto"]
 SETTINGS = ("count", "seed", "samples", "max_new_tokens", "temperature", "top_p", "repetition_penalty", "vllm_dtype",
-            "lean_timeout", "check_workers", "split")
+            "lean_timeout", "check_workers", "split", "prompt_format")
+# Kimina-Prover-Distill prompt from its model card (revision 332e8a5259d1bdfda19d7c7f339f30804813cd3a).
+KIMINA_SYSTEM = "You are an expert in mathematics and Lean 4."
+KIMINA_USER = ("Think about and solve the following problem step by step in Lean 4.\n# Problem:{problem}\n"
+               "# Formal statement:\n```lean4\n{formal}\n```\n")
 
 
 def header(row):
@@ -80,6 +84,28 @@ def prompt(tokenizer, unit, state):
     messages = [{"role": "user", "content": INSTRUCTION.format(state=state)}]
     return (tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
             + "```lean\n" + unit["header"] + " := by\n" + unit.get("given", ""))
+
+
+def kimina_prompt(tokenizer, unit):
+    """The card's system and user messages; the formal statement follows the checking header and ends at
+    ':= by'. These theorems have no informal problem text, so the problem field stays empty."""
+    formal = HEADER + "\n" + unit["header"] + " := by"
+    messages = [{"role": "system", "content": KIMINA_SYSTEM},
+                {"role": "user", "content": KIMINA_USER.format(problem="", formal=formal)}]
+    return tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+
+
+def kimina_continuation(text, header):
+    """Proof body for `header` from the last closed Lean fence whose theorem matches it, else "".
+
+    The model restates the theorem after its reasoning. A changed statement, a missing or unclosed fence
+    (a capped output) gives "", which the checker rejects. Only the body is checked, under our header."""
+    from build_nt_sft_data import body_of  # build_nt_sft_data imports this module, so import here.
+    for block in reversed(re.findall(r"```lean4?[ \t]*\n(.*?)```", text, re.S)):
+        body = body_of(re.sub(r"(^|\n)(\s*)lemma\s", r"\1\2theorem ", block), header)
+        if body:
+            return body
+    return ""
 
 
 def read(path):
@@ -116,19 +142,29 @@ def generate_vllm(args, label, path, pending, goal, out):
     llm = LLM(model=path, dtype=args.vllm_dtype, seed=args.seed)
     tokenizer = llm.get_tokenizer()
     # No per-request seed: vLLM gives sample i of every request seed + i, which would share draws across statements.
+    kimina = args.prompt_format == "kimina"
     params = SamplingParams(n=args.samples, temperature=args.temperature, top_p=args.top_p, top_k=0,
-                            repetition_penalty=args.repetition_penalty, max_tokens=args.max_new_tokens, stop=["```"])
+                            repetition_penalty=args.repetition_penalty, max_tokens=args.max_new_tokens,
+                            stop=None if kimina else ["```"])
     for c in range(0, len(pending), args.vllm_chunk):
         chunk = pending[c:c + args.vllm_chunk]
-        prompts = [prompt(tokenizer, lean_unit(r), goal[row_key(r)]) for r in chunk]
+        prompts = [kimina_prompt(tokenizer, lean_unit(r)) if kimina else prompt(tokenizer, lean_unit(r), goal[row_key(r)])
+                   for r in chunk]
         start = time.monotonic()
         outputs = llm.generate(prompts, params)
         seconds = (time.monotonic() - start) / len(chunk)
         for row, result in zip(chunk, outputs):
-            append(out / "candidates.jsonl", [{"arm": label, "name": row_key(row), "sample": i,
-                                               "continuation": o.text.split("```", 1)[0].rstrip(),
-                                               "generated_tokens": len(o.token_ids), "capped": o.finish_reason == "length",
-                                               "generation_seconds": seconds} for i, o in enumerate(result.outputs)])
+            group = []
+            for i, o in enumerate(result.outputs):
+                continuation = (kimina_continuation(o.text, lean_unit(row)["header"]) if kimina
+                                else o.text.split("```", 1)[0].rstrip())
+                record = {"arm": label, "name": row_key(row), "sample": i, "continuation": continuation,
+                          "generated_tokens": len(o.token_ids), "capped": o.finish_reason == "length",
+                          "generation_seconds": seconds}
+                if kimina:  # Keep the end of the raw output for audit; the full reasoning is not stored.
+                    record.update(extracted=bool(continuation), output_tail=o.text[-3000:])
+                group.append(record)
+            append(out / "candidates.jsonl", group)
         print(json.dumps({"arm": label, "generated": c + len(chunk), "of": len(pending),
                           "seconds_per_statement": round(seconds, 3)}), flush=True)
     del llm
@@ -205,7 +241,11 @@ def main():
     parser.add_argument("--vllm-chunk", type=int, default=500, help="statements per vLLM call")
     parser.add_argument("--no-check", action="store_true", help="stop after generation")
     parser.add_argument("--check-workers", type=int, default=1, help="Lean REPL threads")
+    parser.add_argument("--prompt-format", choices=("sft", "kimina"), default="sft",
+                        help="kimina: the Kimina-Prover card prompt, no stop string, proof taken from the last Lean fence")
     args = parser.parse_args()
+    if args.prompt_format == "kimina" and not args.vllm:
+        parser.error("--prompt-format kimina needs --vllm")
     if not args.merge and not args.no_check and not (args.checker and args.repl):
         parser.error("checking needs --checker and --repl (or give --no-check)")
     if not args.merge and not (args.pool or args.tasks):

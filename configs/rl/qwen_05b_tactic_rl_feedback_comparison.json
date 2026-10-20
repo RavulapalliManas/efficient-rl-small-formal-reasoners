@@ -1,0 +1,23 @@
+{
+  "purpose": "Exploratory Lean-in-the-loop feedback versus terminal reward. Common immutable SFT parent and frozen train/DEV package. No paid launch authorized.",
+  "run_id": "exp019-tactic-feedback-comparison-s20261011-v1",
+  "seed": 20261011,
+  "lean": "leanprover/lean4:v4.10.0-rc1",
+  "mathlib": "29dcec074de168ac2bf835a77ef68bbe069194c5",
+  "group_size": 4,
+  "max_groups": 128,
+  "max_episode_steps": 8,
+  "max_prompt_tokens": 1024,
+  "max_action_tokens": 64,
+  "reward_mode": "error_feedback_v1",
+  "exploration_bonus": 0.0,
+  "curriculum_max_lines_remaining": 3,
+  "learning_rate": 1e-06,
+  "cpu_threads": 4,
+  "lean_timeout_seconds": 20,
+  "lean_setup_timeout_seconds": 120,
+  "max_wall_seconds": 3600,
+  "max_generated_tokens": 262144,
+  "max_lean_calls": 6656,
+  "max_repair_attempts": 1
+}

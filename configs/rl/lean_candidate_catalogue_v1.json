@@ -1,0 +1,14 @@
+[
+  "intro",
+  "constructor",
+  "assumption",
+  "rfl",
+  "contradiction",
+  "simp",
+  "simp_all",
+  "omega",
+  "norm_num",
+  "ring",
+  "linarith",
+  "aesop"
+]

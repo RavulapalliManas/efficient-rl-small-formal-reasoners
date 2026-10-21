@@ -215,7 +215,9 @@ Version 1 has three defects.
 The model does not see the remaining actions, the theorem, or the proof so far.
 With an action limit that the model cannot see, the process is not exactly Markov.
 One error ends the episode.
-Section~\ref{sec:next} corrects these defects.
+Version 2 replaced the terminal-error transition with a self-loop and a fuller state; version 2.1 added tactic chunks and harness backtracking (Tables~\ref{tab:mdp-v2} and~\ref{tab:mdp-v21}).
+Version 2.2 fixed the deployed interface (Table~\ref{tab:mdp-v22}).
+Section~\ref{sec:next} gives the reasons for each change.
 
 \subsection{Learning algorithm}
 We maximize the expected return $J(\theta) = \mathbb{E}_{\tau \sim \pi_\theta}\big[\sum_t \gamma^t r_t\big]$.
@@ -698,12 +700,101 @@ Some failures were engineering faults, not scientific results (Table~\ref{tab:bu
 \label{sec:next}
 
 \paragraph{Corrected environment.}
-Version 2.1 of the environment corrects the defects of version 1 (Figure~\ref{fig:v2}).
-The model sees the theorem, the accepted actions, the current goals, the last Lean message, the tactics that already failed, and the remaining actions.
-An action contains up to four tactics, and Lean keeps all tactics before the first error, as in DeepSeek-Prover-V1.5~\cite{deepseekprover15}.
-The reward is 1 for a proof and 0 otherwise, with $\gamma = 0.95$, so shorter proofs receive more reward.
-Version 2.2 corrected further faults.
+Version 2 replaced the observation, the failure transition, and the return of version 1 (Table~\ref{tab:mdp-v2}).
+Version 2.1 then added tactic chunks and moved backtracking into the harness (Table~\ref{tab:mdp-v21}).
+Version 2.2 fixed the deployed interface (Table~\ref{tab:mdp-v22}).
 Integration tests with real Lean passed: 8 of 8 for version 2.1, and 86 of 86 for the version 2.2 trainer.
+
+\begin{table}[!htbp]
+\centering
+\small
+\caption{The interactive MDP, environment version 2 (13 October 2026).}
+\label{tab:mdp-v2}
+\begin{tabularx}{\textwidth}{@{}P{2.6cm}Y@{}}
+\toprule
+Part & Definition \\
+\midrule
+State & Theorem header, supplied proof lines, accepted policy steps, current goals, the last action result, and the steps remaining \\
+Observation & The whole state as text. The oldest policy steps are hidden only when the prompt cap requires it \\
+Action & Optional \code{-{}-} comment lines, then one tactic block or \code{backtrack k} \\
+Valid tactic & Append the step and read the new goals from Lean \\
+Goals closed & Replay the full proof in file context with \code{verify\_group}; the episode ends \\
+Failure & A Lean error, unchanged goals, a cycle on the current path, a malformed or forbidden action, or an invalid backtrack gives a self-loop: the verified state stays, the diagnostic enters the observation, and one step is used \\
+\code{backtrack k} & Return to the verified state after policy step $k$; later steps leave the proof \\
+Timeout & The episode ends with reward 0, because the REPL closes \\
+REPL crash & The group is censored and gets no update \\
+Reward & 1 for a Lean-verified complete proof, otherwise 0. No heuristic term \\
+Return & Discounted reward-to-go; the leave-one-out baseline uses the other trajectories' discounted returns from the start \\
+Supplied lines & Shown and labelled in the observation; a success earns reward 1; records keep the task kind \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Version 2 rejects repair, the error-feedback reward, and a nonzero exploration bonus.
+A failed action is a self-loop, not a terminal event; its diagnostic enters the observation and costs one step.
+Supplied lines are shown and labelled, so an assisted success is recorded separately from an unassisted one.
+Evaluation stays undiscounted complete-proof acceptance without supplied lines.
+
+\begin{table}[!htbp]
+\centering
+\small
+\caption{Version 2.1 amendments to environment version 2.}
+\label{tab:mdp-v21}
+\begin{tabularx}{\textwidth}{@{}P{2.6cm}Y@{}}
+\toprule
+Part & Version 2.1 \\
+\midrule
+Action & Up to \code{max\_chunk\_tactics} (default 4) top-level tactics, each optionally preceded by \code{-{}-} comment lines \\
+Transition & Lean runs the tactics in order and keeps the valid prefix. The first error, unchanged goals, or a cycle stops the action and enters the observation. A closing tactic ends the chunk \\
+Self-loop & An action that applies no tactic, a malformed or forbidden action, or an invalid backtrack \\
+Observation & A Lean file: header, labelled supplied lines, numbered policy steps, \code{/- tactic state: ... -/}, the last action result, the tactics that already failed at the current state, and the actions remaining \\
+Backtracking, default & After \code{harness\_backtrack\_after} (default 2) distinct tactics fail at one state, the harness reverts one step and records it as failed at the parent. At most one revert per action \\
+Backtracking, ablation & \code{backtrack\_owner} set to \code{policy} restores the version 2 \code{backtrack k} action instead of the harness revert \\
+Discount & $\gamma = 0.95$ at the configured value. Its role matches AlphaProof's step cost; that equivalence is an inference \\
+Parser & A restated declaration through \code{:= by} is dropped without execution, block comments are treated as comments, and RL, evaluation and SFT builders share one renderer \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Version 2.1 drops the policy \code{backtrack k} action from the default arm.
+No reviewed RL prover gives the policy a backtrack action, so the default puts search in the harness and keeps the policy backtrack as an ablation.
+
+\paragraph{Why the environment changed.}
+The first move, from Formulation A to version 1, was statistical: with a terminal reward, a group updates only if it contains both an accepted and a rejected attempt (Section~\ref{sec:zero}).
+Experiments 4 to 6 produced almost no mixed groups.
+Version 1 made the action small enough to produce them, and Experiment 19 gave the first gain.
+The second move, from version 1 to version 2, was formal: the state was too thin, an error ended the episode, and the hidden horizon made the process non-Markov.
+Experiment 23 adds an empirical reason: valid first actions rose, but no proof completed.
+The report records four candidate causes; two of them are environment defects rather than learner defects: the lost diagnostic, and the missing state with the terminal error.
+The third move, to version 2.1, follows the same diagnosis: keep the valid prefix, put the diagnostic in the state, and let the harness backtrack.
+The fourth move, to version 2.2, came from the run records, not from a new hypothesis: the parser, the checker, batch checking, lost diagnostics, proof export, and the forbidden-command filter all failed in practice.
+The design also follows published interactive provers.
+DeepSeek-Prover-V1.5 truncates at the first error and puts the tactic state in a comment~\cite{deepseekprover15}.
+COPRA puts the error in the state~\cite{copra}.
+InternLM2.5-StepProver keeps the preceding tactics~\cite{internlm}.
+AlphaProof uses a step cost~\cite{alphaproof}; the discount plays that role here, but the equivalence is an inference, not a result.
+No reviewed RL prover gives the policy a backtrack action.
+Table~\ref{tab:mdp-why} states what each change bought and what it cost.
+
+\begin{table}[!htbp]
+\centering
+\small
+\caption{What each change to the formulation bought and what it cost.}
+\label{tab:mdp-why}
+\begin{tabularx}{\textwidth}{@{}P{2.2cm}P{3.8cm}P{3.3cm}Y@{}}
+\toprule
+Need & Change & What it bought & What it cost \\
+\midrule
+Verifiable reward & Terminal Lean-only reward; forbidden constructs; full replay & Reward means proof & Very sparse signal \\
+Mixed groups & Whole proof $\rightarrow$ tactic step; later tactic chunks & Signal becomes possible & Partial observability; longer horizon \\
+Markov state & Full state, remaining actions, discount & Decisions use history & Prompt cap; hidden history; truncation ends episodes \\
+Informative failure & Self-loop, first-error truncation, harness revert & One typo no longer kills credit & No-op loops; the harness owns search \\
+Bounded cost & 4-tactic chunks; 192 tokens; 6 actions; 20\,s & Fewer Lean calls; shorter horizon & 202 of 516 TRAIN reference proofs do not fit the limits \\
+Clean measurement & Replay, censoring, status categories & Missing data is not counted as failure & Still low power at 164 theorems \\
+Dense signal & EXP-030 per-action penalties (not run; Section~\ref{sec:oct20-not-run}) & Gradient from errors & Heuristic; error avoidance is not proof skill \\
+\bottomrule
+\end{tabularx}
+\end{table}
 
 \begin{figure}[!htbp]
 \centering
@@ -1259,7 +1350,7 @@ Part & Definition \\
 Theorem & One statement, from TRAIN or a held-out set. No proof lines are supplied \\
 State $s_t$ & The theorem, the policy actions that Lean accepted, the current goals, the result of the last action, the tactics that already failed at the current goals, and the number of actions left \\
 Observation & The state written as a Lean file, with the goals in a \code{/- tactic state -/} comment. The prompt holds at most 2,048 tokens. If the prompt is longer, the oldest policy actions are hidden. If it is still longer after an action, the episode ends \\
-Action $a_t$ & Lean tactic text of at most 192 generated tokens, bare or in one code fence labelled \code{lean} or \code{lean4}, with at most 4 top-level tactics and optional \code{--} comment lines. Text around a fence, or a second fence, is a format error \\
+Action $a_t$ & Lean tactic text of at most 192 generated tokens, bare or in one code fence labelled \code{lean} or \code{lean4} in any letter case, with at most 4 top-level tactics and optional \code{-{}-} comment lines. Text around a fence, or a second fence, is a format error \\
 Transition & Lean runs the tactics in order and keeps the valid tactics before the first failure (Figure~\ref{fig:v22-action}). A failure is a Lean error, unchanged goals, or a repeat of an earlier state on the current proof path \\
 Harness revert & After 2 distinct tactics fail at one state, the harness removes the last accepted action and records it as failed at the earlier state. It reverts at most once per action \\
 End of episode & Lean replays a closed proof; 6 actions are used; a Lean call exceeds the 20\,s timeout; or the next prompt exceeds 2,048 tokens with every policy action hidden. A REPL crash, or a first prompt over the limit, censors the whole group \\
@@ -1270,6 +1361,31 @@ Evaluation & The same environment with no update, 2 attempts per selection theor
 \bottomrule
 \end{tabularx}
 \end{table}
+
+\begin{table}[!htbp]
+\centering
+\small
+\caption{What version 2.2 changed relative to version 2.1. State fields, the terminal Lean-verified reward, and the discount value are unchanged.}
+\label{tab:mdp-diff}
+\begin{tabularx}{\textwidth}{@{}P{2.4cm}P{4.6cm}Y@{}}
+\toprule
+Part & Version 2.1 & Version 2.2 \\
+\midrule
+Action & Up to 4 top-level tactics, each optionally preceded by \code{-{}-} comment lines & At most 192 generated tokens, bare or in one fence labelled \code{lean} or \code{lean4} in any letter case; at most 4 top-level tactics and optional comments. Text around a fence, or a second fence, is a format error \\
+Observation & A Lean file with the accepted steps and the tactic state & Prompt at most 2,048 tokens. The oldest policy actions are hidden first; if the prompt is still too long after an action, the episode ends \\
+Failure & A Lean error, unchanged goals, or a cycle gives a self-loop & A Lean error, unchanged goals, or a repeat of an earlier state on the current proof path gives a self-loop \\
+Harness revert & After 2 distinct tactics fail at one state, revert one step; at most once per action & Same, with the accepted action removed from the state and recorded as failed at the earlier state \\
+End of episode & Closed proof replayed; action or time budget; timeout & Closed proof replayed; 6 actions; 20\,s timeout; prompt cap. A REPL crash or a first prompt over the limit censors the group \\
+Reward & 1 for a verified complete proof, otherwise 0 & Same; Lean-verified, with no heuristic term \\
+Discount & $\gamma = 0.95$ at the configured value & $\gamma = 0.95$; a proof closed by action $t$ has return $\gamma^t$ \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Table~\ref{tab:mdp-diff} isolates the change.
+Version 2.2 is not a new reward and not a new state idea: the reward remains terminal and Lean-verified, and the state keeps the same fields.
+The changes are the deployed interface: the action cap, the prompt cap, the failure set, the harness revert, the end conditions, and the discount.
+Section~\ref{sec:oct20-why} reports what the interface still rejects, and Section~\ref{sec:oct21-harms} reports which reference proofs it cannot hold.
 
 \begin{figure}[!htbp]
 \centering
@@ -2163,6 +2279,9 @@ The script \pth{scripts/report/make_report_figures.py} draws the data figures an
 \bibitem{leanworkbook} H.~Ying, Z.~Wu, Y.~Geng, et al. Lean Workbook: A large-scale Lean problem set formalized from natural language math problems. \url{https://arxiv.org/abs/2406.03847}.
 \bibitem{r3} Training large language models for reasoning through reverse curriculum reinforcement learning. \url{https://arxiv.org/abs/2402.05808}.
 \bibitem{deepseekprover15} H.~Xin et al. DeepSeek-Prover-V1.5: Harnessing proof assistant feedback for reinforcement learning and Monte-Carlo tree search. \url{https://arxiv.org/abs/2408.08152}.
+\bibitem{copra} An in-context learning agent for formal theorem-proving (COPRA). \url{https://arxiv.org/abs/2310.04353}.
+\bibitem{internlm} Z.~Wu et al. InternLM2.5-StepProver: Advancing automated theorem proving via critic-guided search. \url{https://arxiv.org/abs/2410.15700}.
+\bibitem{alphaproof} T.~Hubert et al. Olympiad-level formal mathematical reasoning with reinforcement learning. \emph{Nature}, 2025. \url{https://www.nature.com/articles/s41586-025-09833-y}.
 \bibitem{deepseekprover2} Z.~Z.~Ren et al. DeepSeek-Prover-V2: Advancing formal mathematical reasoning via reinforcement learning for subgoal decomposition. \url{https://arxiv.org/abs/2504.21801v1}.
 \bibitem{lakebaroni2018} B.~Lake and M.~Baroni. Generalization without systematicity: On the compositional skills of sequence-to-sequence recurrent networks. \emph{ICML}, 2018. \url{https://proceedings.mlr.press/v80/lake18a.html}.
 \bibitem{kimina} AI-MO. Kimina-Prover-Distill-0.6B model card; the probe used revision \code{332e8a5}. \url{https://huggingface.co/AI-MO/Kimina-Prover-Distill-0.6B}.

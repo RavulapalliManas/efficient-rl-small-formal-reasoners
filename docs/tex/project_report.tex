@@ -49,6 +49,7 @@ Section~\ref{sec:curriculum-generalization} adds the prospective study designed 
 Appendix~\ref{app:evaluation-questions} describes every DEV and TEST theorem from the 17 October review pack.
 Section~\ref{sec:oct19-results} adds the EXP-028 and main-run results of 18 and 19 October 2026.
 Section~\ref{sec:oct20-why} adds a read-only analysis of those results from 20 October 2026, and Section~\ref{sec:oct20-not-run} records two follow-up designs that did not run.
+Section~\ref{sec:oct21-analyses} records the post-hoc analyses of 20 and 21 October 2026.
 Current execution status remains in the README; dated protocols and evidence remain in \pth{docs/EXPERIMENTS.md}.
 
 \begin{abstract}
@@ -1645,6 +1646,416 @@ S proves 1 of 163 selection theorems and 0 of 8 DEV theorems.
 The promotion rule needs a paired gain of at least 5 points, so a smaller held-out gain cannot pass it.
 At the observed rates and 164 theorems, an exact sign test has a power of 0.001 to 0.006 (Section~\ref{sec:oct20-why}).
 No detected gain does not show that RL gives no transfer.
+
+%======================================================================
+\section{Post-hoc analyses of 20 and 21 October 2026}
+\label{sec:oct21-analyses}
+
+This section records every post-hoc analysis of the runs of 18 to 20 October that was done on 20 and 21 October 2026.
+No analysis used new Lean, model or GPU runs.
+Each one reads the saved run records of Section~\ref{sec:oct19-results}.
+The section asks three questions: what RL changed, what it harmed, and what went well.
+It does not repeat the results of Sections~\ref{sec:oct19-results} and~\ref{sec:oct20-why}; it cites them.
+The scripts and their outputs are in the private recount directory \pth{.private/ops/report_recount_20261019_v1/}, in \pth{scripts/} and \pth{out/}.
+Every number below comes from a JSON file in \pth{out/}.
+
+%----------------------------------------------------------------------
+\subsection{How to read this section}
+\label{sec:oct21-read}
+
+\begin{itemize}
+\item Every result is exploratory and a postdiction. None is a registered metric.
+\item Each arm is one training run with one seed. Section~\ref{sec:oct21-sure} shows that seed noise on the selection set is not small.
+\item A \emph{valid step} is an action in which Lean applies at least one tactic. A \emph{valid attempt} is an attempt with at least one valid step. A valid step is partial progress. It is not a proof.
+\item A \emph{visit} is one group of 4 attempts on one TRAIN theorem (Section~\ref{sec:oct20-why}). A \emph{decile} or \emph{quarter} is one tenth or one quarter of a run's 1,012 groups, in training order.
+\item On the selection set, E0 is S, E5 is S with SFT seed 2, E6 is \code{RL\_filtered} and E7 is R (Table~\ref{tab:oct19-runs}).
+\item An \emph{unknown-name error} is a Lean error that reports an unknown identifier or constant. Section~\ref{sec:oct21-harms} counts how many of these names are invented lemma names.
+\item The \emph{template} is a first action that starts with \code{simp\_all} and a lemma list (Section~\ref{sec:oct20-why}).
+\end{itemize}
+
+Section~\ref{sec:oct21-sure} states which tests survive a correction for multiple tests.
+It uses two families from \pth{out/p8_findings.json}.
+The \emph{headline family} holds 11 tests, one primary test per finding.
+The \emph{278-test family} holds every test in that file.
+Results from the later scripts \pth{p9_*}, \pth{p10_*}, \pth{p11_regressions} and \pth{p12_positives} are outside both families.
+
+%----------------------------------------------------------------------
+\subsection{What RL changed: the short version}
+\label{sec:oct21-short}
+
+RL raised acceptance on the TRAIN theorems it trained on (Sections~\ref{sec:oct19-rl-filtered} and~\ref{sec:oct19-curriculum}).
+The rise came with one short action template.
+No arm shows a detected gain in proved held-out theorems (Section~\ref{sec:oct19-heldout}).
+Table~\ref{tab:oct21-scorecard} lists the measured changes that this section adds.
+
+\begin{table}[!htbp]
+\centering
+\small
+\caption{Scorecard of the post-hoc analyses. ``Before'' is S, or the start of training. ``After'' is the RL model, or the end of training. All entries are exploratory and come from one run per arm. Files are in \pth{out/}.}
+\label{tab:oct21-scorecard}
+\begin{tabularx}{\textwidth}{@{}P{1.3cm}YP{2.0cm}P{2.3cm}P{3.4cm}@{}}
+\toprule
+Change & Measure & Before & After & n, test and file \\
+\midrule
+Better & Selection theorems with a valid step, S against \code{RL\_filtered} & 84 & 116 & 163 paired; McNemar 55 gains, 23 losses, $p = 0.00038$; \pth{p11_regressions} \\
+Better & Next visit repeats the winning first action, \code{RL\_filtered} & loser 0.023 & winner 0.286 & 51 theorems; sign-flip $p = 1.0 \times 10^{-10}$; \pth{p9_update_follow} \\
+Better & TRAIN theorems proved where S had no accepted attempt; R and C had 8 attempts, S had 4 & S 0 & R 29; C 54 & 443 theorems; \pth{p12_positives} \\
+Worse & \code{RL\_filtered} TRAIN theorems proved, early half to late half & 50 & 40 & 62; McNemar 1 against 11, $p = 0.0063$; \pth{p6_coverage} \\
+Worse & R TRAIN theorems proved, S against R's first visit, 4 attempts each & 63 & 46 & 506; McNemar 20 gains, 37 losses, $p = 0.033$; \pth{p11_regressions} \\
+Worse & Unknown-name first errors per 100 selection actions & S 23.91 & \code{RL\_filtered} 45.02 & 1,953 and 1,948 actions; \pth{p10_remedies} \\
+Worse & Identical repeat after an error, C, quarter 1 to quarter 4 & 72 of 4,557 & 1,872 of 4,190 & error actions; \pth{p7_feedback} \\
+Worse & \code{RL\_filtered} actions with a comment, quarter 1 to quarter 4 & 208 of 4,480 & 0 of 3,149 & actions; \pth{p7_feedback} \\
+Worse & C distinct first actions, decile 1 to decile 10 & 403 of 408 & 84 of 404 & first actions; \pth{p5_diversity} \\
+Worse & Jensen-Shannon distance of tactic heads to Kimina & S 0.477 & R 0.814; \code{RL\_filtered} 0.918 & 1,953; 1,963; 1,948 action texts; \pth{p7_heldout} \\
+Same & R TRAIN theorems proved, S with 4 attempts against R with 8 & 63 & 63 & 506; 29 gains, 29 losses, $p = 1.0$; \pth{p11_regressions} \\
+Same & Accepted TRAIN proofs equal to an SFT reference & S 1 of 84 & \code{RL\_filtered} 0 of 2,082 & accepted attempts; \pth{p5_recall} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+%----------------------------------------------------------------------
+\subsection{What went wrong}
+\label{sec:oct21-harms}
+
+\paragraph{The learning signal is rare.}
+A group gives a learning signal only if its 4 attempts get different returns.
+Of 1,012 groups, R has 81 mixed groups and 920 groups in which all 4 attempts fail.
+C has 103 mixed groups and 886 all-fail groups.
+\code{RL\_filtered} has 207 mixed groups and 398 all-fail groups.
+Groups with a nonzero advantage are 91 for R, 122 for C and 319 for \code{RL\_filtered} (\pth{p6_signal}, \code{A.*.total}).
+In all three runs, the last decile has fewer such groups than the first: R 11 against 6, C 25 against 0, and \code{RL\_filtered} 61 against 21 (Figure~\ref{fig:oct21-signal}). The fall is not monotone, and it has no test.
+This rare signal is consistent with the missing held-out gain. No run changes the reward or the start model, so this cause is not tested.
+
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=0.8\textwidth]{fig_oct21_learning_signal}
+\caption{Groups with a nonzero advantage, as a percentage of the groups in each training decile. x-axis: training decile, groups in training order in 10 equal parts. y-axis: percentage of groups with a nonzero advantage. n: 1,012 groups per run, about 101 per decile. Totals: R 91, C 122, \code{RL\_filtered} 319 of 1,012. No error bars. Source: \pth{p6_signal}, \code{A.*.deciles}.}
+\label{fig:oct21-signal}
+\end{figure}
+
+\paragraph{The action limits cut off real proofs.}
+Section~\ref{sec:oct20-why} shows that the token and tactic limits cause most format errors.
+A greedy split of each proof into actions also shows how many known proofs fit the limits (Figure~\ref{fig:oct21-limits}).
+Under the current limits, 314 of 516 TRAIN reference proofs fit.
+Under relaxed limits of 12 actions, 8 tactics and 384 tokens, 416 of 516 fit.
+For Kimina's accepted proofs, 118 of 180 fit the current limits and 166 of 180 fit the relaxed limits (\pth{p6_limits}).
+The greedy split does not show that a model would find these proofs under relaxed limits.
+
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=0.75\textwidth]{fig_oct21_action_limits}
+\caption{Proofs that fit the action limits after a greedy split into actions. x-axis: proof source, TRAIN SFT reference proofs ($n = 516$) and Kimina accepted proofs ($n = 180$). y-axis: percentage of proofs that fit. Bars: current limits (6 actions, 4 tactics, 192 tokens) and relaxed limits (12 actions, 8 tactics, 384 tokens). Counts: 314 and 416 of 516; 118 and 166 of 180. No test. Source: \pth{p6_limits}.}
+\label{fig:oct21-limits}
+\end{figure}
+
+\paragraph{The updates reinforced 1-action attempts.}
+In quarter~1 of \code{RL\_filtered}, the feature ``1 action'' gets an advantage mass of $+46.96$.
+The feature ``6 actions'' gets $-100.84$, and ``0 tactics applied'' gets $-52.18$ (\pth{p7_reinforced}).
+The mean closing action of accepted attempts falls from 2.08 in quarter~1 to 1.14 in quarter~4, over 404 and 602 accepted attempts.
+After a mixed group, the next visit of \code{RL\_filtered} repeats the winning first action in a mean share of 0.286 of its first actions, and the losing one in 0.023.
+Of 51 theorems, 37 are positive and 1 is negative (sign-flip $p = 1.0 \times 10^{-10}$; \pth{p9_update_follow}).
+R (46 theorems, $p = 1.0$) and C (71 theorems, $p = 0.3125$) show no detected effect of this kind (Figure~\ref{fig:oct21-update-follow}).
+Updates from other theorems happen between two visits, so this result is an association, not an isolated effect of one update.
+
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=\textwidth]{fig_oct21_update_follow}
+\caption{Does the next visit repeat the winner of a mixed group? Each pair is a group with unequal returns and the next visit to the same theorem. x-axis: run, with R ($n = 46$ theorems), C ($n = 71$) and \code{RL\_filtered} ($n = 51$). y-axis: percentage of next-visit first actions that match the winning action (solid) or the losing action (hatched). Gray bars: S's samples on the same theorems. Left: exact first action. Right: first tactic head. $p$: exact sign-flip test on per-theorem means, winner against loser. No correction. Source: \pth{p9_update_follow}.}
+\label{fig:oct21-update-follow}
+\end{figure}
+
+\paragraph{One template took over.}
+Section~\ref{sec:oct20-why} reports the template on the selection set.
+During training, its share of \code{RL\_filtered}'s first actions rises from 0.252 in decile~1 to 1.000 in decile~10 (Figure~\ref{fig:oct21-template}; \pth{p5_diversity}).
+On a theorem, the template first becomes the majority of first actions after the first accepted visit on 33 theorems, and before it on 3 (binomial $p = 2.3 \times 10^{-7}$; \pth{p7_spillover}). The test leaves out 15 theorems where both happen in the same visit and 11 theorems with no accepted attempt.
+Of 1,935 accepted attempts with a \code{simp\_all} lemma list, 1,380 use a list that also occurs in an accepted attempt on another theorem, earlier or later in training.
+The most used list closes 814 attempts on 22 theorems (\pth{p10_lemmas}).
+C changes too, on theorems that gave it no signal.
+On 423 such TRAIN theorems, the share of C's first actions that are one automation tactic rises from 0.031 at visit~1 to 0.517 at visit~2, against 0.0006 for S on the same theorems (sign-flip $p = 2.8 \times 10^{-91}$; Figure~\ref{fig:oct21-spillover}).
+The learner has no KL or entropy term (Table~\ref{tab:mdp-v22}). No run adds one, so we cannot say that the missing term caused the collapse.
+
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=0.8\textwidth]{fig_oct21_template_takeover}
+\caption{The template in \code{RL\_filtered} training. x-axis: training decile, groups in order in 10 equal parts. y-axis: percentage of first actions. Orange: first actions that start with \code{simp\_all} and a lemma list. Blue: accepted attempts. n: 4,048 attempts (one first action each) in 1,012 groups. No error bars. Source: \pth{p5_diversity}, \code{runs.RL\_filtered.deciles}.}
+\label{fig:oct21-template}
+\end{figure}
+
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=0.8\textwidth]{fig_oct21_spillover}
+\caption{C moves to one automation tactic on theorems with and without a learning signal. A signal theorem had unequal returns in some visit ($n = 83$ theorems, 332 first actions per visit). A no-signal theorem never had unequal returns ($n = 423$, 1,692 first actions per visit). x-axis: theorem class. y-axis: percentage of first actions that are one automation tactic. Bars: S on the same theorems, C visit~1 and C visit~2. $p$: exact paired sign-flip test per theorem, visit~2 against visit~1. Source: \pth{p7_spillover}, \code{part1.C}.}
+\label{fig:oct21-spillover}
+\end{figure}
+
+\paragraph{\code{RL\_filtered} proves its usual theorems more often but proves fewer theorems.}
+From the early half to the late half of training, the mean pass@1 per theorem rises from 0.446 to 0.583 (36 theorems higher, 14 lower, sign test $p = 0.0026$).
+Here pass@1 is the chance that one attempt is accepted.
+Theorems proved fall from 50 to 40 of 62 (McNemar 1 against 11, $p = 0.0063$; Figure~\ref{fig:oct21-sharpening}).
+Each half mixes policies, so pass@$k$ here is an approximation.
+A rule fixed before the results sorts the 62 theorems into 27 learned, 11 lost, 13 stable and 11 never proved (Figure~\ref{fig:oct21-trajectories}; \pth{p10_trajectories}).
+``Lost'' means proved in visits 1 to 8 and never in visits 9 to 16.
+For the 11 lost theorems (\pth{p11_regressions}, \code{B\_rl\_filtered\_lost}):
+\begin{itemize}
+\item S's 14 accepted attempts on them include 0 that start with the template. 13 of the 14 use a tactic other than \code{simp\_all} or \code{omega}, mostly \code{have} and \code{interval\_cases}.
+\item The template's mean share of first actions on these theorems rises from 0.724 in visits 1 to 8 to 0.991 in visits 9 to 16.
+\end{itemize}
+This pattern is consistent with the template pushing out the \code{have} and \code{interval\_cases} proofs, but no test isolates that.
+
+R and C also lose TRAIN theorems that S proves (\pth{p11_regressions}, \code{A\_train}).
+With 4 attempts each, R's first visit loses 37 S-proved theorems and gains 20 ($p = 0.033$).
+C's first visit loses 29 and gains 38 ($p = 0.33$).
+16 of the 63 S-proved theorems are proved by neither R nor C in 8 attempts.
+S proves each of these 16 in only 1 of its 4 attempts, so they can be sampling noise. No count separates noise from forgetting.
+
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=0.8\textwidth]{fig_oct21_sharpening_vs_coverage}
+\caption{\code{RL\_filtered} on its 62 TRAIN theorems, early half against late half of training. Left: y-axis is the mean pass@1 per theorem (\%); 44.6\% against 58.3\%; sign test $p = 0.0026$. Right: y-axis is the number of theorems proved at least once; 50 against 40; McNemar $p = 0.0063$, 11 lost and 1 gained. $n = 62$ theorems. Each half mixes policies, so pass@1 is an approximation. Source: \pth{p6_coverage}, \code{B}.}
+\label{fig:oct21-sharpening}
+\end{figure}
+
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=0.75\textwidth]{fig_oct21_trajectory_matrix}
+\caption{Accepted attempts of 4 at each visit, for each of the 62 \code{RL\_filtered} theorems. x-axis: visit to the theorem (one group of 4 attempts), visits 1 to 16. y-axis: theorems sorted by group. Color: accepted attempts of 4. Groups follow a rule fixed before the results: learned (27), lost (11), stable (13) and never proved (11). The text beside each block gives S's and \code{RL\_filtered}'s accepted attempts of all attempts on those theorems. Source: \pth{p10_trajectories}, \code{A}.}
+\label{fig:oct21-trajectories}
+\end{figure}
+
+\paragraph{\code{RL\_filtered} and C use Lean's error messages less.}
+In \code{RL\_filtered}, the next action applies a tactic after an error in 662 of 3,260 cases in quarter~1, and in 181 of 2,120 in quarter~4 (\pth{p7_feedback}).
+In C, an identical repeat of the failed action follows an error in 72 of 4,557 cases in quarter~1, and in 1,872 of 4,190 in quarter~4.
+In \code{RL\_filtered}, it rises from 122 of 3,260 to 420 of 2,120 (Figure~\ref{fig:oct21-feedback}).
+After a failed named tactic, \code{RL\_filtered}'s next action starts with the same tactic in 4,663 of 5,953 pairs. After a valid action, the baseline is 213 of 885 (\pth{p10_readerror}).
+After an unknown-name error, \code{RL\_filtered} keeps the same name in 871 of 2,260 next actions, against a baseline of 103 of 808 (Figure~\ref{fig:oct21-error-response}).
+The Fisher tests in Figure~\ref{fig:oct21-error-response} treat pairs inside one attempt as independent. They are not, so these $p$-values are optimistic.
+
+\paragraph{Comments disappear.}
+Actions with a comment fall in all three runs from quarter~1 to quarter~4.
+R falls from 728 of 5,905 to 30 of 5,955, C from 350 of 5,765 to 22 of 5,869, and \code{RL\_filtered} from 208 of 4,480 to 0 of 3,149 (\pth{p7_feedback}).
+Comments do not change what Lean checks. We did not test whether their loss changes proof success.
+
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=\textwidth]{fig_oct21_feedback_use}
+\caption{Feedback use and comments during training. x-axis: training quarter, 253 groups per quarter. Left: y-axis is the percentage of error actions whose next action in the same attempt is identical. Right: y-axis is the percentage of actions that hold a comment. n: R 23,740, C 23,381 and \code{RL\_filtered} 14,707 actions. No error bars and no test. Source: \pth{p7_feedback}, \code{runs.*.quarters}.}
+\label{fig:oct21-feedback}
+\end{figure}
+
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=\textwidth]{fig_oct21_error_response}
+\caption{The next action after three Lean errors, on TRAIN records (S is \code{pass\_rates}). y-axis: percentage of next actions that keep the unknown name (left), start with the failed tactic (middle), or change the first line after a type mismatch (right). Solid bars: after the error. Hatched bars: the baseline, after a valid (\code{changed}) action. n under each run: error pairs. $p$: two-sided Fisher exact test, error against baseline. Pairs inside one attempt are not independent, so the $p$-values are optimistic. Source: \pth{p10_readerror}.}
+\label{fig:oct21-error-response}
+\end{figure}
+
+\paragraph{Invented lemma names on held-out theorems.}
+On the selection set, \code{RL\_filtered} makes an unknown-name first error in 45.02 of every 100 actions. S makes one in 23.91 of every 100 (\pth{p10_remedies}).
+Of \code{RL\_filtered}'s 1,919 failed selection actions, 877 are an unknown-name error and 948 are a failed named tactic, mostly \code{simp\_all} (614) and \code{omega} (298).
+For S, 467 of 1,534 failed actions are an unknown-name error (Figure~\ref{fig:oct21-heldout-errors}; \pth{p5_errors}).
+Of \code{RL\_filtered}'s distinct unknown names, 174 of 274 are wholly invented lemma names.
+For S, it is 88 of 178 (\pth{p10_lemmas}).
+A name counts as wholly invented if its normalized edit distance to the nearest real name is above 0.2, for the full name and for its last component.
+
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=0.8\textwidth]{fig_oct21_heldout_errors}
+\caption{First-error classes of failed actions on the selection set. x-axis: share of failed held-out actions (\%). y-axis: run. Classes: failed named tactic, unknown name, syntax or parse error, and other classes. n: failed actions, S (E0) 1,534, R (E7) 659 and \code{RL\_filtered} (E6) 1,919. No test. Source: \pth{p5_errors}, \code{runs.*.classes}.}
+\label{fig:oct21-heldout-errors}
+\end{figure}
+
+\paragraph{The RL models' tactics are further from Kimina's than S's tactics.}
+Kimina proves 56 of 164 selection theorems with 16 samples each. S proves 1 of 163 (\pth{p6_coverage}).
+The Jensen-Shannon distance of top-level tactic heads to Kimina's is 0.473 for the SFT examples and 0.477 for S.
+It is 0.814 for R and 0.918 for \code{RL\_filtered} (Figure~\ref{fig:oct21-kimina}; \pth{p7_heldout}).
+The distance is 0 for the same distribution and 1 for no overlap.
+Kimina proves theorems with shorter reference proofs: the median difference is $-16.5$ lines ($p = 7.0 \times 10^{-5}$).
+Kimina writes a whole proof in one output, with a larger token budget. The distance compares tactic names only.
+
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=0.75\textwidth]{fig_oct21_tactic_distance_kimina}
+\caption{Jensen-Shannon distance between the top-level tactic heads of each source and those of Kimina's accepted proofs. x-axis: source. y-axis: distance, 0 for the same distribution and 1 for disjoint ones. n: SFT targets 3,802 tactics, S 3,314, R 12,847, \code{RL\_filtered} 4,189 and Kimina 945. No interval. Source: \pth{p7_heldout}, \code{vocabulary.top\_level}.}
+\label{fig:oct21-kimina}
+\end{figure}
+
+\paragraph{C's late acceptance drop is consistent with theorem order.}
+C accepts 39 of 408 attempts in decile~1 and 4 of 404 in decile~10 (\pth{p5_diversity}).
+On about the same theorems, its first pass accepts 16 of 808 attempts and its second pass 9 of 808 (\pth{p11_regressions}).
+These counts are consistent with theorem order as the main source of the decile-10 drop. The same-theorem drop is smaller. Neither comparison has a test.
+
+\paragraph{The dense reward of EXP-030 gives penalized actions a positive weight.}
+EXP-030 did not run (Section~\ref{sec:oct20-not-run}).
+A re-scoring of the recorded actions under its reward (Table~\ref{tab:dense-reward}) finds a design flaw.
+The baseline counts all actions of the other attempts, but the reward-to-go of a late action drops the early penalties of its own attempt.
+A late penalised action can therefore get a positive weight.
+Of R's 22,962 penalised actions, 19,750 get a positive weight. For \code{RL\_filtered}, it is 8,306 of 11,656 (Figure~\ref{fig:oct21-dense}; \pth{p9_counterfactual}).
+The script reproduces the recorded advantages with a maximum absolute difference of 0.0.
+This is an off-policy re-scoring. It gives the direction of the first update only, not the result of a dense-reward run.
+The records do not show that this finding caused the stop of EXP-030.
+
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=\textwidth]{fig_oct21_dense_reward_flaw}
+\caption{Off-policy re-scoring of recorded actions under the EXP-030 dense reward. Left: y-axis is the percentage of groups with a nonzero advantage, under the recorded terminal reward (solid) and the dense reward (hatched); counts of 1,012 groups. Right: y-axis is the percentage of penalised actions with a positive per-action weight; R 19,750 of 22,962 and \code{RL\_filtered} 8,306 of 11,656. x-axis: run. The figure gives the direction of the first update only. Source: \pth{p9_counterfactual}.}
+\label{fig:oct21-dense}
+\end{figure}
+
+%----------------------------------------------------------------------
+\subsection{What went well}
+\label{sec:oct21-positives}
+
+Table~\ref{tab:oct21-positives} lists each positive with its control and its caveat.
+Positives that Section~\ref{sec:oct19-results} already reports, for example the \code{RL\_filtered} TRAIN rise and C against R, appear there with their tests.
+
+\begin{table}[!htbp]
+\centering
+\footnotesize
+\caption{Positives of the post-hoc analyses, each with its control and its caveat. All are exploratory and come from one run per arm. Files are in \pth{out/}.}
+\label{tab:oct21-positives}
+\begin{tabularx}{\textwidth}{@{}P{3.0cm}P{5.6cm}P{2.6cm}Y@{}}
+\toprule
+Positive & Result and test & Control & Caveat \\
+\midrule
+\code{RL\_filtered} held-out valid attempts beat two S models & Against E0: 82 theorems up, 31 down, $p = 1.2 \times 10^{-7}$. Against E5: 76 up, 40 down, $p = 0.00068$. 163 paired theorems; \pth{p12_positives} & E0 and E5. E5 against E0: 50 up, 31 down, $p = 0.030$ & Partial progress, not proofs. E6 proves 2 of 164 \\
+\code{RL\_filtered} has the most valid attempts of E0, E5 and E6 & 63 of the 98 theorems with a unique maximum, of 163; chance gives 32.667; exact $p = 3.8 \times 10^{-10}$ & E0 has the maximum on 12, E5 on 23 & Many valid steps are \code{simp\_all} steps that leave the goal open \\
+The updates follow the winner & Share 0.286 against 0.023; 37 up, 1 down of 51 theorems; $p = 1.0 \times 10^{-10}$; \pth{p9_update_follow} & The loser of the same group & Association. R and C show no detected effect \\
+Learned proofs are new text & 0 of 2,082 accepted attempts equal an SFT reference. On the 27 learned theorems, 69 of 69 late distinct texts differ from the references; \pth{p5_recall}, \pth{p12_positives} & S: 1 of 84 equal a reference & Distinct text is not a distinct method. Most texts are the template \\
+New TRAIN proofs where S had none & Of 443 theorems, R proves 29 and C 54; C has 54 gains, 24 losses, McNemar $p = 0.0009$; \pth{p12_positives}, \pth{p11_regressions} & S with 4 attempts & R and C had 8 attempts, S had 4. R's gains equal its losses (29 and 29) \\
+Task filtering gives more signal & Mixed groups: \code{RL\_filtered} 207, R 81, C 103 of 1,012; \pth{p6_signal} & R and C, same start model and group count & 62 theorems, not 506. No held-out proof gain \\
+Fewer format errors in \code{RL\_filtered} training & 142 of 4,480 actions in quarter~1, 10 of 3,149 in quarter~4; 48 theorems down, 2 up, sign test $p = 2.3 \times 10^{-12}$; \pth{p12_positives} & The same theorems in quarter~1 & TRAIN only. R's format errors rise \\
+Fewer unknown-name errors in C training & Share of non-format actions with an unknown-name error: 0.1514 at visit~1, 0.0549 at visit~2. Sign test on the per-theorem rate over all actions: 374 down, 66 up, $p = 2.7 \times 10^{-53}$ & The same theorems at visit~1 & Comes with the move to automation, which cannot invent a name \\
+Fewer tokens per accepted attempt & \code{RL\_filtered}: 388.2 in quarter~1, 141.4 in quarter~4; \pth{p12_positives} & The same 62 theorems & Shorter outputs are part of the template collapse \\
+Step search raises partial progress & E2 231 against E0 105 valid attempts; 99 up, 6 down, $p = 1.0 \times 10^{-23}$; \pth{p10_remedies} & E0 on the same 163 theorems & E2 proves 1 of 163 \\
+The selection set is provable & Kimina proves 56 of 164 with 16 samples each; \pth{p6_coverage} & S proves 1 of 163 & Not under our action limits \\
+The analysis found the dense-reward flaw before a run & 19,750 of 22,962 penalised R actions get a positive weight; \pth{p9_counterfactual} & Recorded sparse advantages & Off-policy re-scoring \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\paragraph{Held-out partial progress beyond seed noise.}
+Figure~\ref{fig:oct21-partial} shows valid steps on the selection set.
+The control is two S models: E0, and E5, a fresh SFT from B with SFT seed 2.
+Valid attempts are 105 for E0, 130 for E5, 183 for E6 and 146 for E7 (\pth{p12_positives}).
+E6 beats both S models, and E5 against E0 measures the noise of S's seed and sampling.
+R (E7) against E5 gives 58 theorems up and 48 down ($p = 0.27$).
+Held-out theorems similar to the 27 learned theorems do not show more E6 progress.
+Only 6 of 163 are similar (token Jaccard at least 0.5). Their mean E6-minus-E0 difference is 0.0, against 0.4968 for the other 157 (exact permutation $p = 0.34$).
+With 6 similar theorems, this check cannot detect a small effect.
+
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=\textwidth]{fig_oct21_heldout_partial_progress}
+\caption{Valid steps on the selection set, 2 attempts per theorem. x-axis: model, S (E0), R (E7) and \code{RL\_filtered} (E6). Left: y-axis is the percentage of theorems with at least one valid step; S 84/163, R 99/164, \code{RL\_filtered} 116/164; no test. Right: y-axis is the percentage of attempts with a valid step; 105/326, 148/328 and 183/328; paired sign-flip test on valid attempts per theorem over 163 theorems, R against S $p = 0.0025$, \code{RL\_filtered} against S $p = 1.2 \times 10^{-7}$. Source: \pth{p7_heldout}, \code{selection}.}
+\label{fig:oct21-partial}
+\end{figure}
+
+\paragraph{Other fixes during training.}
+These fixes are on TRAIN only.
+In R, the share of non-format actions with an unknown-name error falls from 0.146 at visit~1 to 0.0861 at visit~2. A sign test on the per-theorem rate over all actions gives 296 theorems that fall and 115 that rise ($p = 1.7 \times 10^{-19}$).
+R's format errors rise in the same comparison, from 0.164 to 0.2928 of actions (311 theorems rise, 138 fall, $p = 2.0 \times 10^{-16}$).
+\code{RL\_filtered}'s unknown-name rate is mixed.
+Per action, it rises from 0.1741 to 0.2328 (Fisher $p = 3.4 \times 10^{-10}$). Per theorem, it falls in 40 and rises in 22 ($p = 0.030$).
+On held-out theorems, \code{RL\_filtered} makes more unknown-name errors than S (Section~\ref{sec:oct21-harms}).
+
+\paragraph{Records.}
+The archived inputs match their recorded hashes: 19 of 19 data members, 2 of 2 schedule members and 3 of 3 selection-set members (\pth{.private/ops/abhinav_data_handoff_20261020_v1/member_checks.txt}).
+The file \pth{runtime_order_manifest.json} has no recorded hash.
+One record chunk has an S3 expiry date of 18 November 2026. Without a copy, the records stop being reproducible after that date.
+
+%----------------------------------------------------------------------
+\subsection{How sure we are}
+\label{sec:oct21-sure}
+
+Table~\ref{tab:oct21-holm} lists the corrected tests.
+In the 278-test family, 86 tests survive Holm at 0.05 (\pth{p8_findings}).
+All 11 tests of the headline family survive Holm at 0.05.
+
+\begin{table}[!htbp]
+\centering
+\small
+\caption{Holm-corrected $p$-values for the tests of \pth{out/p8_findings.json}. ``Headline'' is the 11-test family. ``278'' is the family of every test in that file. H1 is not in the 278-test family.}
+\label{tab:oct21-holm}
+\begin{tabularx}{\textwidth}{@{}P{0.6cm}YP{1.6cm}P{1.9cm}P{1.5cm}@{}}
+\toprule
+H & Finding & Raw $p$ & Headline Holm $p$ & 278 Holm $p$ \\
+\midrule
+\multicolumn{5}{@{}l}{\emph{Survives both families}} \\
+8 & \code{RL\_filtered} against S, held-out valid attempts & $1.2 \times 10^{-7}$ & $1.2 \times 10^{-6}$ & $2.9 \times 10^{-5}$ \\
+10 & C, no-signal theorems, single-automation share, visit~2 against visit~1 & $2.8 \times 10^{-91}$ & $3.1 \times 10^{-90}$ & $7.7 \times 10^{-89}$ \\
+11 & \code{RL\_filtered} template before against after the first acceptance & $2.3 \times 10^{-7}$ & $2.0 \times 10^{-6}$ & $5.7 \times 10^{-5}$ \\
+6 & Kimina proves theorems with shorter reference proofs & $7.0 \times 10^{-5}$ & $4.9 \times 10^{-4}$ & 0.014 \\
+\multicolumn{5}{@{}l}{\emph{Survives the headline family only}} \\
+1 & \code{RL\_filtered} TRAIN acceptance, last visit against first & $2.4 \times 10^{-6}$ & $1.9 \times 10^{-5}$ & not in family \\
+2 & C first visit against S & 0.0019 & 0.011 & 0.36 \\
+3 & C second visit against S, where the first visit had a proof & 0.011 & 0.019 & 1 \\
+4 & \code{RL\_filtered} coverage, early half against late half & 0.0063 & 0.019 & 1 \\
+5 & \code{RL\_filtered} pass@1, late half against early half & 0.0026 & 0.013 & 0.47 \\
+7 & C transfer band (direction opposite to transfer) & 0.0072 & 0.019 & 1 \\
+9 & R against S, held-out valid attempts & 0.0025 & 0.013 & 0.47 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+H7 contradicts transfer through similar theorems.
+C's theorems with an earlier accepted similar theorem gain less, not more: a mean of 0.040 against 0.209 (\pth{p6_transfer}).
+
+The following results are outside any correction:
+\begin{itemize}
+\item every result from \pth{p9_*}, \pth{p10_*}, \pth{p11_regressions} and \pth{p12_positives}, which includes the update-follow test, the error responses, the lemma reuse, the remedies, the dense-reward flaw, every per-theorem loss and gain, and the 48 tests of \pth{p12_positives};
+\item the breakdown cells of \pth{p8_breakdown};
+\item every DEV number, because DEV has 8 theorems.
+\end{itemize}
+Every arm is one training run with one seed.
+E5 against E0 gives 50 theorems up and 31 down ($p = 0.030$), so the seed noise of S is not small.
+
+%----------------------------------------------------------------------
+\subsection{Replication in EXP-023}
+\label{sec:oct21-exp023}
+
+EXP-023 is the curriculum run of 13 October (Section~\ref{sec:curriculum}), with a different start model and theorem set.
+Its records allow four of the harms to be checked (\pth{p9_exp023}, first and last decile).
+\begin{itemize}
+\item The diversity loss replicates in a weaker form in arms B and C\_seq, and not in arm A (Figure~\ref{fig:oct21-exp023}). Distinct first actions go from 94 of 120 to 97 of 112 in arm A, 107 of 120 to 93 of 112 in arm B, and 98 of 120 to 68 of 112 in arm C\_seq. The EXP-023 arms lose at most 21 points, against 78 for C and 49 for \code{RL\_filtered}.
+\item More identical repeats after an error replicate in two of three arms. Arm A goes from 20 of 345 to 31 of 301, and arm C\_seq from 38 of 343 to 77 of 215. Arm B falls, from 20 of 452 to 11 of 164.
+\item The comment drop cannot be tested. EXP-023 has no comments in decile~1 (A 0 of 491, B 0 of 615, C\_seq 0 of 503 actions).
+\item Acceptance does not fall late. Arm A goes from 69 of 120 to 63 of 112, arm B from 37 of 120 to 89 of 112, and arm C\_seq from 65 of 120 to 70 of 112.
+\end{itemize}
+The EXP-023 deciles hold about 120 first actions, against about 404 in October. A smaller sample gives a higher distinct share, so only the trends are comparable.
+
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=\textwidth]{fig_oct21_exp023_diversity}
+\caption{Distinct first actions as a percentage of the first actions in each training decile. x-axis: training decile, groups in order in 10 equal parts. Left: the October runs R, C and \code{RL\_filtered}, 404 to 408 first actions per decile. Right: the EXP-023 arms of 13 October, 112 to 120 first actions per decile. The panels have different sample sizes, so compare trends, not levels. No error bars. Source: \pth{p9_exp023} and \pth{p5_diversity}.}
+\label{fig:oct21-exp023}
+\end{figure}
+
+%----------------------------------------------------------------------
+\subsection{Retracted and weakened claims}
+\label{sec:oct21-retracted}
+
+\begin{itemize}
+\item C's late acceptance drop is consistent with theorem order, not with a loss on the same theorems (Section~\ref{sec:oct21-harms}).
+\item Transfer through similar theorems is contradicted. H7 points in the opposite direction ($p = 0.0072$ raw; Table~\ref{tab:oct21-holm}).
+\item Part of the held-out valid-step gain over E0 is seed noise. On the 163 paired theorems, E5, a second S, has a valid step on 94, against 84 for E0 (\pth{p12_positives}).
+\item Lemma retrieval (E3) gives no detected change in unknown-name errors. E3 has 23.87 per 100 actions, against 23.32 for its control E5 ($p = 0.743$; \pth{p10_remedies}).
+\end{itemize}
+
+%----------------------------------------------------------------------
+\subsection{Open questions and the test for each}
+\label{sec:oct21-open}
+
+No new run is planned. Each item names the test that would answer it.
+\begin{enumerate}
+\item Does a KL or entropy term stop the template collapse? Test: rerun \code{RL\_filtered} from S with a KL term to S, with the same theorems, budget and seed. Compare the template share and the late-half coverage.
+\item Is the rare reward the main cause of the missing held-out gain? Test: start RL from a model that proves more TRAIN theorems, or train on theorems that S proves at a higher rate. Measure proved held-out theorems on a larger set.
+\item Would relaxed action limits change what RL reinforces? Test: rerun R under 12 actions, 8 tactics and 384 tokens. Compare format errors and the closing action.
+\item Did the template push out the proofs of the 11 lost theorems? Test: in a KL run, check whether these 11 theorems keep their early proofs.
+\item Are the 16 TRAIN theorems that only S proves forgetting or sampling noise? Test: sample S and R 32 times each on these 16 theorems and compare the per-theorem pass rates.
+\item Would retrieval of real lemma names lower the unknown-name errors after RL? Test: run E3-style retrieval on \code{RL\_filtered} and compare against \code{RL\_filtered} without retrieval.
+\item Is there a held-out gain too small to detect? Test: evaluate S and \code{RL\_filtered} on a held-out set large enough for the observed rates (Section~\ref{sec:oct20-why} gives the power).
+\item Does a corrected dense reward help? Test: first make the baseline count the same actions as the reward-to-go. Then re-score the recorded actions as in \pth{p9_counterfactual} before any run.
+\end{enumerate}
 
 %======================================================================
 \section{Follow-up designs that did not run}

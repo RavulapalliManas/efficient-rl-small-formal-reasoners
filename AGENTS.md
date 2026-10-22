@@ -48,4 +48,4 @@
 - For Markdown edits, run `uv run pre-commit run --files <changed-files>`.
 - For TeX edits, use the established report build. Report unresolved references, build failures, or a stale PDF.
 - Do not commit or push unless the user asks. Use the Git identity configured on this machine.
-- When an AI commit is requested, include `Co-Authored-By` with the agent's model name and attribution address.
+- Do not add Claude, Codex, or other automated tools as commit co-authors. Preserve human authorship and the scientific provenance recorded in the experiment catalogue.

@@ -1,0 +1,295 @@
+{
+  "version": "main-study-reproduction-v1",
+  "source": "docs/EXPERIMENTS.md#7-step-by-step-run-with-this-data-as-the-main-run-did",
+  "recipe_status": "Reconstructed from the documented 18-19 October recipe; not the original private config bytes or a verified rerun.",
+  "software_status": "The training dependency group follows the documented 19 October library combination. Exact main-run package receipts remain external.",
+  "base_model": {
+    "id": "Qwen/Qwen2.5-0.5B-Instruct",
+    "revision": "7ae557604adf67be50417f59c2c2f167def9a775"
+  },
+  "lean": {
+    "toolchain": "leanprover/lean4:v4.10.0-rc1",
+    "mathlib_revision": "29dcec074de168ac2bf835a77ef68bbe069194c5"
+  },
+  "models": {
+    "B": {
+      "meaning": "Unchanged Qwen2.5-0.5B-Instruct",
+      "sha256": "fdf756fa7fcbe7404d5c60e26bff1a0c8b8aa1f72ced49e7dd0210fe288fb7fe"
+    },
+    "S": {
+      "meaning": "B after supervised fine-tuning",
+      "sha256": "a14fdfcbcb58b0c2874b62ed3b3ffc469ea0db1428d1ff9d8ffa3da8f5660227"
+    },
+    "R": {
+      "meaning": "S after RL on shuffled TRAIN theorems",
+      "sha256": "cbd54b16578696aab88e6990e7a6768fd4980c611c8bc9cfa3fc9b83c31fc8ac"
+    },
+    "C": {
+      "meaning": "S after RL in prerequisite-first order",
+      "sha256": "a2e2b41f6f5dc5c92e6c4e4d409b2c9c8a60a7368c0fc4512e438c8b6ec5ddf4"
+    }
+  },
+  "artifacts": [
+    {
+      "path": "data/manifest.json",
+      "sha256": "bc5c8edcbb12cd444bfc04c54361aa0f3dca5996d03313282d7629750274f08e",
+      "stages": [
+        "sft",
+        "dev",
+        "rl-shuffled",
+        "rl-curriculum"
+      ],
+      "meaning": "Identity of the validated_v2 training release"
+    },
+    {
+      "path": "data/sft_action/sft_train.jsonl",
+      "sha256": "0ea68641f35cfeea0fe1706232760c114029ceb53de11bdd666bef5c8f935128",
+      "stages": [
+        "sft"
+      ],
+      "meaning": "Observation/next-action examples for supervised training",
+      "rows": 1880
+    },
+    {
+      "path": "data/sft_action/sft_val.jsonl",
+      "sha256": "2cddd1c585d2990c536be1521916b846b5bf3982126377ab30e0ff0256be52d7",
+      "stages": [
+        "sft"
+      ],
+      "meaning": "TRAIN-only examples for SFT loss monitoring; not DEV",
+      "rows": 125
+    },
+    {
+      "path": "data/actor/train_pool.jsonl",
+      "sha256": "713484ee7ef5c9988fdeee2550a460bb5791ffa9cbe53014517654c654d0dede",
+      "stages": [
+        "rl-shuffled",
+        "rl-curriculum"
+      ],
+      "meaning": "TRAIN statements for RL",
+      "rows": 506
+    },
+    {
+      "path": "data/actor/train_tasks.jsonl",
+      "sha256": "3ae371f547be1a5130ad21465998f4e8b1a237beddc5aef7583d71f0389bf8eb",
+      "stages": [
+        "rl-shuffled",
+        "rl-curriculum"
+      ],
+      "meaning": "Whole-theorem RL starts",
+      "rows": 506
+    },
+    {
+      "path": "data/actor/exclude_names.txt",
+      "sha256": "fc3e26a771cf2d8a60f5fd58c1091e90078fe361b372ed8285ff7df990c5357d",
+      "stages": [
+        "dev",
+        "rl-shuffled",
+        "rl-curriculum"
+      ],
+      "meaning": "Names excluded from training",
+      "rows": 245
+    },
+    {
+      "path": "runtime/inputs/dev_pool.jsonl",
+      "sha256": "d0b1202e933ad1b6a86bcfb99efc7f4794d53e1c8d30c6b63c2d3fbe1fda1bac",
+      "stages": [
+        "dev"
+      ],
+      "meaning": "DEV statements, with no evaluation proofs",
+      "rows": 8
+    },
+    {
+      "path": "runtime/inputs/dev_names.txt",
+      "sha256": "10fc89b47351aab5c0e06bb1416bbd825e9f6a6ea8e87a39caeca096901fe001",
+      "stages": [
+        "dev"
+      ],
+      "meaning": "The fixed DEV theorem names",
+      "rows": 8
+    },
+    {
+      "path": "runtime/inputs/checker.py",
+      "sha256": "60a581b84f517cfe3da0acab46a2d7abea0f329fa3e8f141c465cdb9803471c7",
+      "stages": [
+        "dev",
+        "rl-shuffled",
+        "rl-curriculum"
+      ],
+      "meaning": "Lean checker source"
+    },
+    {
+      "path": "runtime/inputs/repl",
+      "sha256": "1081fe3cca3a8c95533c16ffaf224ed0b6a57260658eaeb37c66e9a0349a41c1",
+      "stages": [
+        "dev",
+        "rl-shuffled",
+        "rl-curriculum"
+      ],
+      "meaning": "Compiled Lean REPL"
+    },
+    {
+      "path": "runtime/inputs/mathlib_source_identity.json",
+      "sha256": "8b9b5a83b177d3aa791be60b4b2e1cbe2578213f621079aaaba120cdb3155c4f",
+      "stages": [
+        "dev",
+        "rl-shuffled",
+        "rl-curriculum"
+      ],
+      "meaning": "Lean/mathlib source identity receipt"
+    },
+    {
+      "path": "schedules/order_R_runtime.json",
+      "sha256": "3e7522d083d14bc5f2c2a152eb3da56e9e844c3f20c344d758dbaceeec539202",
+      "stages": [
+        "rl-shuffled"
+      ],
+      "meaning": "Shuffled RL order, including explicit repeats"
+    },
+    {
+      "path": "schedules/order_C_AI_runtime.json",
+      "sha256": "9aed466e1ac73025fd72fb04ccce42dc132bb4dcdd2f22c8760918e65f976dfe",
+      "stages": [
+        "rl-curriculum"
+      ],
+      "meaning": "Prerequisite-first RL order, including explicit repeats"
+    }
+  ],
+  "stages": {
+    "sft": {
+      "experiment_id": "EXP-026",
+      "input_model": "B",
+      "result": "New S checkpoint",
+      "config": {
+        "model_id": "Qwen/Qwen2.5-0.5B-Instruct",
+        "model_revision": "7ae557604adf67be50417f59c2c2f167def9a775",
+        "seed": 20261018,
+        "learning_rate": 1e-05,
+        "warmup_ratio": 0.03,
+        "epochs": 3,
+        "batch_size": 2,
+        "grad_accum": 32,
+        "max_length": 2048,
+        "max_action_tokens": 192,
+        "logging_steps": 1,
+        "eval_steps": 30,
+        "eval_rows": 125,
+        "milestone_steps": [],
+        "gradient_checkpointing": true,
+        "save_strategy": "no",
+        "training_wall_cap_seconds": 3600
+      }
+    },
+    "dev": {
+      "experiment_id": "EXP-026",
+      "input_model": "S",
+      "result": "DEV run.json, steps.jsonl and rollouts.jsonl; no optimizer",
+      "config": {
+        "seed": 20261018,
+        "lean": "leanprover/lean4:v4.10.0-rc1",
+        "mathlib": "29dcec074de168ac2bf835a77ef68bbe069194c5",
+        "group_size": 4,
+        "max_episode_steps": 6,
+        "max_prompt_tokens": 2048,
+        "max_action_tokens": 192,
+        "max_chunk_tactics": 4,
+        "environment_version": 2,
+        "discount": 0.95,
+        "reward_mode": "goal_change_v1",
+        "backtrack_owner": "harness",
+        "harness_backtrack_after": 2,
+        "learning_rate": 1e-06,
+        "lean_timeout_seconds": 20,
+        "lean_setup_timeout_seconds": 120,
+        "task_sampler": "fixed",
+        "exploration_bonus": 0.0,
+        "curriculum_max_lines_remaining": 64,
+        "cpu_threads": 4,
+        "max_repair_attempts": 0,
+        "gradient_checkpointing": true,
+        "checkpoint_every": 0,
+        "max_groups": 8,
+        "max_wall_seconds": 1800,
+        "max_generated_tokens": 36864,
+        "max_lean_calls": 992
+      }
+    },
+    "rl-shuffled": {
+      "experiment_id": "EXP-026",
+      "input_model": "S",
+      "result": "New R checkpoint",
+      "config": {
+        "seed": 20261018,
+        "lean": "leanprover/lean4:v4.10.0-rc1",
+        "mathlib": "29dcec074de168ac2bf835a77ef68bbe069194c5",
+        "group_size": 4,
+        "max_episode_steps": 6,
+        "max_prompt_tokens": 2048,
+        "max_action_tokens": 192,
+        "max_chunk_tactics": 4,
+        "environment_version": 2,
+        "discount": 0.95,
+        "reward_mode": "goal_change_v1",
+        "backtrack_owner": "harness",
+        "harness_backtrack_after": 2,
+        "learning_rate": 1e-06,
+        "lean_timeout_seconds": 20,
+        "lean_setup_timeout_seconds": 120,
+        "task_sampler": "fixed",
+        "exploration_bonus": 0.0,
+        "curriculum_max_lines_remaining": 64,
+        "cpu_threads": 4,
+        "max_repair_attempts": 0,
+        "gradient_checkpointing": true,
+        "checkpoint_every": 0,
+        "max_groups": 1012,
+        "max_wall_seconds": 43200,
+        "max_generated_tokens": 4663296,
+        "max_lean_calls": 125488
+      }
+    },
+    "rl-curriculum": {
+      "experiment_id": "EXP-027",
+      "input_model": "S",
+      "result": "New C checkpoint",
+      "config": {
+        "seed": 20261018,
+        "lean": "leanprover/lean4:v4.10.0-rc1",
+        "mathlib": "29dcec074de168ac2bf835a77ef68bbe069194c5",
+        "group_size": 4,
+        "max_episode_steps": 6,
+        "max_prompt_tokens": 2048,
+        "max_action_tokens": 192,
+        "max_chunk_tactics": 4,
+        "environment_version": 2,
+        "discount": 0.95,
+        "reward_mode": "goal_change_v1",
+        "backtrack_owner": "harness",
+        "harness_backtrack_after": 2,
+        "learning_rate": 1e-06,
+        "lean_timeout_seconds": 20,
+        "lean_setup_timeout_seconds": 120,
+        "task_sampler": "fixed",
+        "exploration_bonus": 0.0,
+        "curriculum_max_lines_remaining": 64,
+        "cpu_threads": 4,
+        "max_repair_attempts": 0,
+        "gradient_checkpointing": true,
+        "checkpoint_every": 0,
+        "max_groups": 1012,
+        "max_wall_seconds": 43200,
+        "max_generated_tokens": 4663296,
+        "max_lean_calls": 125488
+      }
+    }
+  },
+  "access": "Request the frozen data, runtime and model directories from the project owner; later-study weights are not in the older GitHub checkpoint releases.",
+  "exclusions": "TEST is not staged, inspected or selected by this helper. The EXP-028 selection set is a separate exploratory set.",
+  "execution": "Plans do not launch jobs. Training requires the managed runner, resource caps, a registered run and approval of the quoted GPU cost.",
+  "reference_packages": {
+    "torch": "2.8.0",
+    "transformers": "4.57.1",
+    "trl": "0.24.0"
+  },
+  "reserved_test_theorems": 21
+}

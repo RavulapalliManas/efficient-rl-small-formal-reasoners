@@ -44,13 +44,26 @@
 \begin{document}
 \maketitle
 
-\noindent\textit{Reading dates.} Historical sections retain their original reporting cutoff.
-Section~\ref{sec:curriculum-generalization} adds the prospective study designed on 16 October 2026.
-Appendix~\ref{app:evaluation-questions} describes every DEV and TEST theorem from the 17 October review pack.
-Section~\ref{sec:oct19-results} adds the EXP-028 and main-run results of 18 and 19 October 2026.
-Section~\ref{sec:oct20-why} adds a read-only analysis of those results from 20 October 2026, and Section~\ref{sec:oct20-not-run} records two follow-up designs that did not run.
-Section~\ref{sec:oct21-analyses} records the post-hoc analyses of 20 and 21 October 2026.
-Current execution status remains in the README; dated protocols and evidence remain in \pth{docs/EXPERIMENTS.md}.
+\noindent\textit{Reading guide.} This report follows the studies over time. Use the following sections as entry points:
+\begin{itemize}
+\item \textbf{Later findings.} Section~\ref{sec:oct19-results} reports the runs of 18 and 19 October. Sections~\ref{sec:oct20-why} and~\ref{sec:oct21-analyses} analyze their saved records. These analyses are exploratory, with one training run per arm.
+\item \textbf{Proof interaction.} Section~\ref{sec:problem} introduces tactics and goals. Section~\ref{sec:mdp} defines the learning problem; Section~\ref{sec:oct19-setup} gives the environment used by the later runs.
+\item \textbf{Earlier studies.} Section~\ref{sec:experiments} traces the earlier experiments. Section~\ref{sec:next} records the plan of 13 October; Section~\ref{sec:curriculum-generalization} records the study designed on 16 October.
+\item \textbf{Unrun follow-ups.} Section~\ref{sec:oct20-not-run} records the two follow-up designs that did not run.
+\item \textbf{Evaluation statements.} Appendix~\ref{app:evaluation-questions} describes the DEV and TEST theorems from the 17 October review pack.
+\end{itemize}
+Historical sections retain their reporting cutoff. Current execution status is in the README; protocols and evidence links are in \pth{docs/EXPERIMENTS.md}.
+
+\paragraph{Names in the later results.}
+B is the unchanged model; S is B after supervised fine-tuning (SFT).
+R is S after reinforcement learning (RL) on shuffled training theorems; C is S after RL in prerequisite-first order.
+These names refer to the 18 and 19 October study. Earlier experiments define their own model letters.
+
+TRAIN supplies learning examples, DEV supports choices, and TEST is reserved for final evaluation.
+The separate EXP-028 selection set supports exploratory comparisons.
+
+An \emph{action} is one model response containing Lean tactics; an \emph{attempt} is a sequence of actions on one theorem.
+An accepted attempt contains a complete proof that Lean accepts. A proved theorem has at least one accepted attempt.
 
 \begin{abstract}
 This report asks whether reinforcement learning (RL) can teach a small language model, \code{Qwen2.5-0.5B-Instruct}, to write Lean~4 proofs of elementary number theory.
@@ -2260,6 +2273,23 @@ No record shows what that penalty would change; this is an inference, not a resu
 \item The EXP-028 selection set and the 8 DEV theorems sit near the measurement floor: S proves 1 of 163 selection theorems and 0 of 8 DEV theorems. The promotion rule needs a paired gain of at least 5 points, so a smaller held-out gain cannot pass it.
 \item Section~\ref{sec:oct20-why} is a postdiction from one training run per arm. No run tests its account of the missing held-out gain.
 \end{itemize}
+
+\paragraph{Reproduction.}
+The README gives an entry path for a new reader, including the model sequence, data roles and local checks.
+\pth{scripts/reproduce.py} checks supplied files against recorded hashes and prepares SFT, DEV and RL command plans using \pth{configs/reproduction_v1.json}.
+The settings are reconstructed from the documented recipe of 18--19 October; they are not the original private config files or evidence of a rerun.
+The locked training dependency group follows the documented 19 October library combination, while the original main-run package receipts remain external.
+Full reproduction still requires the archived data, later-study weights and Linux Lean runtime, and several dataset builders remain private.
+The helper does not execute a model or Lean, and its file checks do not establish tokenizer equivalence.
+
+\paragraph{Public dataset rebuilding.}
+\pth{scripts/data/rebuild_nt_dataset.py} adds source fetching, corpus assembly, verifier identity receipts and task-order construction.
+\pth{configs/data/nt_sources_v1.json} pins public files by full revision and SHA-256.
+The corpus retains proof candidates without claiming Lean verification; the existing benchmark stages assign duplicate-aware splits, replay references, screen fixed tactics and export full-proof SFT and RL inputs.
+The strict screen excludes forbidden tactics, including \code{exact?}; old selections containing unsupported screen tactics require a new selection.
+New orders preserve task multiplicities, and prerequisite order requires explicit annotations.
+These commands produce a new exploratory dataset, not the historical filtered release or its interactive action examples.
+The recorded local checks use synthetic JSON and Parquet data and scripted verifier outcomes; they establish neither a full public-corpus rebuild nor real Lean admission.
 
 \paragraph{Sources.}
 Each experiment has a record in \pth{docs/EXPERIMENTS.md}.

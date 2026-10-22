@@ -9,9 +9,13 @@ import time
 
 from probe_nt_pool import states
 from single_tactic_baseline import TACTICS
+from probe_start_depth import FORBIDDEN
 from verify_external_proofs import check_batch
 from .artifacts import BenchmarkExporter
+from .identity import check_repositories
 from .storage import file_sha256, rows, source_hashes
+
+SCREEN_TACTICS = [tactic for tactic in TACTICS if not FORBIDDEN.search(tactic)]
 
 
 class LeanVerifier:
@@ -57,6 +61,10 @@ class LeanVerifier:
                                          capture_output=True, text=True, check=True).stdout
             if live_changes:
                 raise ValueError('Live mathlib worktree differs from registered identity')
+            registered = {repository['name']: repository['revision'] for repository in identity['repositories']}
+            live = {repository['name']: repository['revision'] for repository in check_repositories(environment, config)}
+            if len(registered) != len(identity['repositories']) or registered != live:
+                raise ValueError('Live dependency revisions differ from registered identity')
             self.live_mathlib_revision = live_revision
             self.mathlib_identity_source = 'live_git_revision_and_clean_worktree'
         if (environment / 'mathlib/lean-toolchain').read_text().strip() != identity['toolchain']:
@@ -89,6 +97,9 @@ class BenchmarkVerifier:
         candidates_path = package / 'private/candidates.jsonl'
         if file_sha256(candidates_path) != manifest['candidates_sha256']:
             raise ValueError('Frozen candidate file changed')
+        screen_tactics = manifest.get('screen_tactics', SCREEN_TACTICS)
+        if not screen_tactics or any(FORBIDDEN.search(tactic) for tactic in screen_tactics):
+            raise ValueError('Selection contains unsupported screen tactics; create a new selection with the current builder')
         backend = LeanVerifier(config, environment, identity_path)
         output.mkdir(parents=True, exist_ok=False)
         (output / 'private').mkdir()
@@ -119,7 +130,7 @@ class BenchmarkVerifier:
                 if len(goal_states) != len(pending):
                     raise RuntimeError('Verifier returned incomplete goal states')
                 screens = [[] for _ in pending]
-                for tactic in TACTICS:
+                for tactic in screen_tactics:
                     screen, _ = backend.check(output / 'private/screen_batch.lean',
                         [dict(text=r['header'] + ' := by\n  ' + tactic) for r in pending])
                     counts['lean_process_calls'] += 1
@@ -150,7 +161,10 @@ class BenchmarkVerifier:
             admitted_ids = {row['instance_id'] for row in admitted}
             excluded = [r['name'] for r in frozen if r['split'] != 'train' or r['instance_id'] not in admitted_ids]
             (output / 'data/excluded_from_training.txt').write_text(''.join(name + '\n' for name in sorted(excluded)))
+            summary['data_sha256'] = {str(path.relative_to(output / 'data')): file_sha256(path)
+                                      for path in sorted((output / 'data').rglob('*')) if path.is_file()}
         summary.update(status='exploratory_verified', config=config, counts=dict(counts), lean_version=backend.version,
+                       screen_tactics=screen_tactics,
                        builder_sha256=source_hashes()['build_nt_benchmark.py'], source_sha256=source_hashes(),
                        identity_sha256=file_sha256(identity_path),
                        selection_manifest_sha256=file_sha256(package / 'manifest.json'),

@@ -73,7 +73,10 @@ def main():
     args = parser.parse_args()
     import torch
     from transformers import AutoModelForCausalLM, AutoTokenizer, GenerationConfig, set_seed
-    from run_tactic_rl import HFGenerator, VLLMGenerator, action_logprob, generation_record, render_observation, stop_trimmed
+    from run_tactic_rl import action_logprob, render_observation
+    from rl_components.generation import (
+        HFGenerator, VLLMGenerator, generation_record, pad_left, stop_trimmed, vllm_action_ids,
+    )
     args.output.mkdir(parents=True, exist_ok=False)
     prompts, seen = [], set()
     if args.tasks:
@@ -120,7 +123,6 @@ def main():
     # Greedy: HF backends via do_sample=False; vLLM via temperature 0 in a dedicated call.
     greedy = {'hf_single': [g[0]['action_ids'] for g in single(prompts, 1, seeds, greedy=True)]}
     with torch.no_grad(), autocast():
-        from run_tactic_rl import pad_left
         ids, mask, width = pad_left(prompts, tokenizer.pad_token_id)
         # Explicit settings: the checkpoint's generation_config carries repetition_penalty 1.1 (first Lease 3 run).
         rows = model.generate(input_ids=torch.tensor(ids, device=device), attention_mask=torch.tensor(mask, device=device),
@@ -131,7 +133,6 @@ def main():
         from vllm import SamplingParams
         outputs = backends['vllm'].llm.generate([dict(prompt_token_ids=p) for p in prompts], SamplingParams(
             temperature=0.0, max_tokens=args.max_new_tokens, stop_token_ids=stops, detokenize=False), use_tqdm=False)
-        from run_tactic_rl import vllm_action_ids
         greedy['vllm'] = [stop_trimmed(vllm_action_ids(o.outputs[0], stops), stops) for o in outputs]
     def first_divergence(a, b):
         return next((i for i, (x, y) in enumerate(zip(a, b)) if x != y), min(len(a), len(b)))

@@ -31,7 +31,8 @@ def file_sha256(path):
 def source_hashes():
     """Record every module after splitting the original builder."""
     package = Path(__file__).resolve().parent
-    paths = [package.parent / 'build_nt_benchmark.py', *sorted(package.glob('*.py'))]
+    paths = [package.parent / 'build_nt_benchmark.py', package.parent / 'rebuild_nt_dataset.py',
+             *sorted(package.glob('*.py'))]
     result = {}
     for path in paths:
         result[path.name] = file_sha256(path)

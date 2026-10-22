@@ -33,7 +33,8 @@ import textwrap
 sys.path[:0] = [str(Path(__file__).resolve().parents[1] / d) for d in ('train', 'data')]
 from build_nt_sft_data import body_of, strip_comments  # noqa: E402
 from build_proof_tasks import top_level_steps  # noqa: E402
-from run_tactic_rl import parse_action, render_observation  # noqa: E402
+from run_tactic_rl import render_observation  # noqa: E402
+from rl_components.actions import parse_action  # noqa: E402
 from rl_components.sft import chat_token_lengths  # noqa: E402
 
 AUTOMATION = re.compile(r'(aesop|simp_all|omega|tauto|norm_num|simp|nlinarith|linarith|rfl|ring_nf|decide|'

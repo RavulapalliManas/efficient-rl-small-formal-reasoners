@@ -106,6 +106,12 @@ class ComponentsTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             objective.advantages([[1]])
 
+    def test_equal_returns_preserve_step_credit_for_intermediate_rewards(self):
+        objective = self.components().LeaveOneOutObjective(gamma=1.0)
+        # Both attempts return -1, but only the first has a penalty before its last step.
+        self.assertEqual(objective.advantages([[-1, 0], [0, -1]]),
+                         [[0.0, 1.0], [0.0, 0.0]])
+
     def updater(self, module, values, finite=True):
         events = []
 

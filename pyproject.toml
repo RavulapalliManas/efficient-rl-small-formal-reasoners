@@ -8,8 +8,20 @@ dependencies = ["ijson>=3.4,<4"]
 
 [dependency-groups]
 dev = ["pre-commit>=4,<5"]
+data = ["pyarrow>=25.0.1"]
+training = [
+    "torch==2.8.0",
+    "transformers==4.57.1",
+    "trl==0.24.0",
+    "tensorboardX>=2.6,<3",
+]
 local-probe = [
     "math-verify[antlr4-13-2]>=0.9.0",
     "mlx-lm==0.32.0",
     "pyarrow>=25.0.1",
+]
+
+[tool.uv]
+conflicts = [
+    [{ group = "training" }, { group = "local-probe" }],
 ]

@@ -20,7 +20,7 @@ import torch
 
 def checked_generate(generate, tokenizer, observe, model, queries, pad_token_id, generation_config):
     """Record decode work before TRL padding and stop before an ambiguous likelihood update."""
-    from run_tactic_rl import generation_record
+    from rl_components.generation import generation_record
     result = generate(model, queries, pad_token_id, generation_config)
     sequences, logits = result
     responses = sequences[:, queries.shape[1]:]

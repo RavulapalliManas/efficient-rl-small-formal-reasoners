@@ -1,0 +1,168 @@
+{
+  "version": "nt_sources_v1",
+  "purpose": "Public source snapshots for a new dataset rebuild; not a reconstruction of private historical snapshots.",
+  "metadata_checked_utc": "2026-10-21",
+  "documentation": "https://huggingface.co/docs/huggingface_hub/guides/download",
+  "sources": {
+    "lean_workbook": {
+      "repo": "internlm/Lean-Workbook",
+      "revision": "2e066e310b2c6d2c27616927ae131f82901c8f1c",
+      "revision_basis": "Pinned public snapshot checked on 21 October; historical revision not recorded.",
+      "files": [
+        {
+          "path": "lean_workbook.json",
+          "bytes": 94484955,
+          "sha256": "577430f83caf094f1d9b99c9a3d18d92130fa21e74939d1b528b39c1927a7b0c"
+        }
+      ]
+    },
+    "goedel_workbook": {
+      "repo": "Goedel-LM/Lean-workbook-proofs",
+      "revision": "b731852af8d8ab11498fda27bce9020738c01c59",
+      "revision_basis": "Pinned public snapshot checked on 21 October; historical revision not recorded.",
+      "files": [
+        {
+          "path": "data/train-00000-of-00001.parquet",
+          "bytes": 16165753,
+          "sha256": "24fcb50eecc2ccbcc52a58c6412c6d10edbeaa9483a97d30e207fb20ef6e2677"
+        }
+      ]
+    },
+    "goedel_pset_v1": {
+      "repo": "Goedel-LM/Goedel-Pset-v1",
+      "revision": "79fc4fbe87b4c694a941bc63ad92dc38d39d41db",
+      "revision_basis": "Resolved recorded prefix 79fc4fbe",
+      "files": [
+        {
+          "path": "data/train-00000-of-00004.parquet",
+          "bytes": 206936100,
+          "sha256": "d6f58be1d73185feb1715c28f66d2d216f1f299e8174e40f63ad028d46d78b06"
+        },
+        {
+          "path": "data/train-00001-of-00004.parquet",
+          "bytes": 206876344,
+          "sha256": "a197e27820ac61e264ea52c02845fcd8f9169972fa267acab25134a94c0684f6"
+        },
+        {
+          "path": "data/train-00002-of-00004.parquet",
+          "bytes": 206705860,
+          "sha256": "1b4cd10d5fa24cefc81c61cbb39fef81f3bc50ce7a787c1c395ea4b8ac814ccc"
+        },
+        {
+          "path": "data/train-00003-of-00004.parquet",
+          "bytes": 206944306,
+          "sha256": "5f2a105c03ccb580966b7c03f051a4db8133e7b1deffd05495a0628830fb6ac7"
+        }
+      ]
+    },
+    "goedel_v2_sft": {
+      "repo": "Goedel-LM/SFT_dataset_v2",
+      "revision": "da71b450f771880ea314a8860532ee26bf494753",
+      "revision_basis": "Resolved recorded prefix da71b450",
+      "files": [
+        {
+          "path": "data/train-00000-of-00054.parquet",
+          "bytes": 123957052,
+          "sha256": "80ad267b0662380d4801254db7becd49b118bd99bdb2dcef019ac2a35f3472d1"
+        },
+        {
+          "path": "data/train-00006-of-00054.parquet",
+          "bytes": 124260468,
+          "sha256": "968063e2671e2a5fd6bb0484d863e09d1e01a1b042b34ab2ed8e52575348f4ec"
+        },
+        {
+          "path": "data/train-00012-of-00054.parquet",
+          "bytes": 124600537,
+          "sha256": "6de733ba1c3b8883bcdaf7eef520dbe7ec2c0a2213a5ad10027e6f6d40a4712c"
+        },
+        {
+          "path": "data/train-00018-of-00054.parquet",
+          "bytes": 123119675,
+          "sha256": "17cbca4d24c805036d17323b764d36313fc70ab0a48bba98a1455e5135d3b193"
+        },
+        {
+          "path": "data/train-00024-of-00054.parquet",
+          "bytes": 124074569,
+          "sha256": "7fab2997bebdd6eec59c6aa90c36e6f6ea6f52b1877436a1c3f6f9fb7416a769"
+        },
+        {
+          "path": "data/train-00030-of-00054.parquet",
+          "bytes": 101662092,
+          "sha256": "79a687ac747c32cb81626134eb50df00f4c667044b286d38a4f964afe7d20f61"
+        },
+        {
+          "path": "data/train-00036-of-00054.parquet",
+          "bytes": 102109482,
+          "sha256": "94368a3a59b018d948b2e839b93b4bb1760189fa2b43b20683a668bce9f21434"
+        },
+        {
+          "path": "data/train-00042-of-00054.parquet",
+          "bytes": 101720946,
+          "sha256": "095887eb7e405c615b81b78682670879d9491fe3fa9fe31986944fa48436fbbb"
+        },
+        {
+          "path": "data/train-00048-of-00054.parquet",
+          "bytes": 101247355,
+          "sha256": "da07112264e6d00c281d61e5e47845a9c56b2c24a0fb5f7940401f7d41bef960"
+        }
+      ]
+    },
+    "stp": {
+      "repo": "kfdong/STP_Lean_0320",
+      "revision": "8759699c72a373a49497cde1341a4a94c3845b2f",
+      "revision_basis": "Resolved recorded prefix 8759699c",
+      "files": [
+        {
+          "path": "data/train-00000-of-00010.parquet",
+          "bytes": 174005046,
+          "sha256": "c8d4fcbae10e693720156163ee01e549a6b7469194cbeabd5352fcd96f81de0d"
+        },
+        {
+          "path": "data/train-00001-of-00010.parquet",
+          "bytes": 172573838,
+          "sha256": "ffb42fc89ac2365dde6d12079ba9669a8c452933e62cf688865d3aaa96cb94de"
+        },
+        {
+          "path": "data/train-00002-of-00010.parquet",
+          "bytes": 173596093,
+          "sha256": "23bbd8a34465e302495e3fbccecdb5b54aaa062e1b4b4c56dfc36013862fd7f7"
+        },
+        {
+          "path": "data/train-00003-of-00010.parquet",
+          "bytes": 175577724,
+          "sha256": "933a33c80c5cc7f1bb7b579f670c81faa5fe230decabdb85dcd6d9e82f97a40b"
+        },
+        {
+          "path": "data/train-00004-of-00010.parquet",
+          "bytes": 172219366,
+          "sha256": "f7cf37d342fd44ab38b6dcb3b1e0c9464c4eeb411fcda6f9e7712530f0f7af3e"
+        },
+        {
+          "path": "data/train-00005-of-00010.parquet",
+          "bytes": 175900775,
+          "sha256": "8d53a56c90d6fd0d2340853e1a920c49eaaf197021e4983cb3291df0cdd9aa6b"
+        },
+        {
+          "path": "data/train-00006-of-00010.parquet",
+          "bytes": 174364642,
+          "sha256": "f7d4cb4265d3940842cec96578fc19b589e2a570f4e3a84c9b0407650db36348"
+        },
+        {
+          "path": "data/train-00007-of-00010.parquet",
+          "bytes": 175428843,
+          "sha256": "fa0eb8acd0a55ca7ef05df00909d12ee285d7ab7f26068446527dfa4ab20be55"
+        },
+        {
+          "path": "data/train-00008-of-00010.parquet",
+          "bytes": 173299028,
+          "sha256": "58247ef5045698929ffef987e492b29ecdfe875cd424b8c500c5d09d0758cc69"
+        },
+        {
+          "path": "data/train-00009-of-00010.parquet",
+          "bytes": 174375362,
+          "sha256": "ac2deb4f151112fe5fe6fc38dcf186a18835ba33bed9ae74c77922b63e143f93"
+        }
+      ]
+    }
+  }
+}

@@ -2,11 +2,10 @@
 from collections import Counter
 import json
 
-from single_tactic_baseline import TACTICS
 from verify_external_proofs import HEADER
 from .selection import BenchmarkSelector
 from .storage import file_sha256, rows, source_hashes, write_rows
-from .verification import BenchmarkVerifier
+from .verification import BenchmarkVerifier, SCREEN_TACTICS
 
 
 class BenchmarkPipeline:
@@ -56,21 +55,32 @@ class BenchmarkPipeline:
 
     def select(self, paths, output, max_input_bytes=512 * 1024**2):
         config = self.config
+        if sum(path.stat().st_size for path in paths) > max_input_bytes:
+            raise ValueError('Input bytes exceed the configured cap')
+        inputs = []
+        for index, path in enumerate(paths):
+            receipt = dict(index=index, name=path.name, bytes=path.stat().st_size, sha256=file_sha256(path))
+            manifest_path = path.parent / 'manifest.json'
+            if path.name == 'corpus.jsonl' and manifest_path.is_file():
+                manifest = json.loads(manifest_path.read_text())
+                if 'corpus_sha256' in manifest:
+                    if manifest['status'] != 'candidates_not_verified' or manifest['corpus_sha256'] != receipt['sha256']:
+                        raise ValueError('Corpus differs from its completed build manifest')
+                    receipt['manifest_sha256'] = file_sha256(manifest_path)
+            inputs.append(receipt)
         candidates, counts = self.selector.select(paths, max_input_bytes)
         candidates, audit = self.selector.partition(candidates)
         output.mkdir(parents=True, exist_ok=False)
         (output / 'private').mkdir()
         write_rows(output / 'private/candidates.jsonl', candidates)
         write_rows(output / 'duplicate_audit.jsonl', audit)
-        inputs = [dict(index=i, name=p.name, bytes=p.stat().st_size,
-                       sha256=file_sha256(p)) for i, p in enumerate(paths)]
         manifest = dict(status='frozen_pending_verification', config=config, inputs=inputs, counts=counts,
                         protected_inputs=self.protected_inputs,
                         selected=len(candidates), by_topic=dict(Counter(r['topic'] for r in candidates)),
                         by_split=dict(Counter(r['split'] for r in candidates)),
                         candidates_sha256=file_sha256(output / 'private/candidates.jsonl'),
                         grouping='binder-normalized numeric templates and transitive token-Jaccard components',
-                        imports=HEADER, screen_tactics=TACTICS,
+                        imports=HEADER, screen_tactics=SCREEN_TACTICS,
                         builder_sha256=source_hashes()['build_nt_benchmark.py'], source_sha256=source_hashes())
         (output / 'manifest.json').write_text(json.dumps(manifest, indent=2) + '\n')
         print(json.dumps(manifest), flush=True)

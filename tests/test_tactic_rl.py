@@ -21,6 +21,72 @@ class TacticRLTest(unittest.TestCase):
     def setUp(self):
         self.assertTrue(PATH.exists(), 'Interactive tactic trainer is missing')
 
+    def test_group_budget_reserves_candidates_fallbacks_and_native_setup(self):
+        config = dict(group_size=4, max_episode_steps=6, step_candidates=3,
+                      max_action_tokens=192, environment_version=2, max_chunk_tactics=4,
+                      automation_fallback=['omega', 'simp'], max_generated_tokens=13831,
+                      max_lean_calls=357)
+        counts = dict(generated_tokens=7, lean_calls=11)
+        self.rl.check_group_budget(config, counts, native_bank=False)
+        self.assertEqual(counts, dict(generated_tokens=7, lean_calls=11))
+        with self.assertRaisesRegex(self.rl.BudgetReached, 'token_cap'):
+            self.rl.check_group_budget(config, dict(counts, generated_tokens=8), native_bank=False)
+        with self.assertRaisesRegex(self.rl.BudgetReached, 'lean_call_cap'):
+            self.rl.check_group_budget(config, dict(counts, lean_calls=12), native_bank=False)
+        # Native roots require one additional setup call for every attempt.
+        with self.assertRaisesRegex(self.rl.BudgetReached, 'lean_call_cap'):
+            self.rl.check_group_budget(config, counts, native_bank=True)
+        self.rl.check_group_budget(dict(config, max_lean_calls=361), counts, native_bank=True)
+
+    def checkpoint_writers(self):
+        def save_model(path):
+            path.mkdir(parents=True, exist_ok=True)
+            (path / 'model.safetensors').write_text('new weights')
+
+        def save_tokenizer(path):
+            (path / 'tokenizer.json').write_text('{}')
+
+        model = SimpleNamespace(save_pretrained=save_model)
+        tokenizer = SimpleNamespace(save_pretrained=save_tokenizer)
+        optimizer = SimpleNamespace(state_dict=lambda: dict(step=9))
+        torch = SimpleNamespace(save=lambda state, path: path.write_text(json.dumps(state)))
+        return model, tokenizer, optimizer, torch
+
+    def test_periodic_checkpoint_replaces_only_the_rolling_snapshot(self):
+        with TemporaryDirectory() as directory:
+            output = Path(directory)
+            (output / 'checkpoint').mkdir()
+            (output / 'checkpoint/old').write_text('old snapshot')
+            (output / 'checkpoint_g1').mkdir()
+            (output / 'checkpoint_g1/keep').write_text('retained snapshot')
+            model, tokenizer, optimizer, torch = self.checkpoint_writers()
+            self.rl.save_periodic_checkpoint(
+                output, model, tokenizer, optimizer, torch, group=3,
+                counts=dict(groups=4, optimizer_updates=2))
+            checkpoint = output / 'checkpoint'
+            self.assertEqual(set(path.name for path in checkpoint.iterdir()),
+                             {'model.safetensors', 'tokenizer.json', 'optimizer.pt', 'checkpoint.json'})
+            self.assertEqual(json.loads((checkpoint / 'optimizer.pt').read_text()), dict(step=9))
+            self.assertEqual(json.loads((checkpoint / 'checkpoint.json').read_text()),
+                             dict(groups=4, group=3, optimizer_updates=2))
+            self.assertEqual((output / 'checkpoint_g1/keep').read_text(), 'retained snapshot')
+            self.assertFalse((output / 'checkpoint.tmp').exists())
+
+    def test_retained_checkpoint_omits_optimizer_and_refuses_replacement(self):
+        with TemporaryDirectory() as directory:
+            output = Path(directory)
+            model, tokenizer, _, _ = self.checkpoint_writers()
+            counts = dict(groups=4, optimizer_updates=2)
+            name = self.rl.save_retained_checkpoint(output, model, tokenizer, group=3, counts=counts)
+            checkpoint = output / name
+            self.assertEqual(name, 'checkpoint_g4')
+            self.assertEqual(set(path.name for path in checkpoint.iterdir()),
+                             {'model.safetensors', 'tokenizer.json', 'checkpoint.json'})
+            metadata = (checkpoint / 'checkpoint.json').read_bytes()
+            with self.assertRaises(OSError):
+                self.rl.save_retained_checkpoint(output, model, tokenizer, group=99, counts=counts)
+            self.assertEqual((checkpoint / 'checkpoint.json').read_bytes(), metadata)
+
     def test_generation_record_preserves_terminal_probability_and_physical_tokens(self):
         self.assertTrue(hasattr(self.rl, 'generation_record'), 'Shared generation boundary is missing')
         for raw, retained, violation in (([1, 0, 0], [1], False),

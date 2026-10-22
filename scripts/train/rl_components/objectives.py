@@ -12,7 +12,9 @@ class LeaveOneOutObjective:
     """Discounted reward-to-go with each trajectory excluded from its baseline.
 
     Both rewards and baselines are discounted from step zero. gamma=1 retains
-    the original undiscounted estimator. Equal returns have zero advantage.
+    the original undiscounted estimator. Equal terminal-only returns have
+    zero advantage. Intermediate rewards can give later steps different
+    advantages even when the total returns are equal.
     """
 
     def __init__(self, gamma=1.0):
@@ -21,16 +23,22 @@ class LeaveOneOutObjective:
     def advantages(self, rewards):
         if len(rewards) < 2:
             raise ValueError('Leave-one-out requires at least two trajectories')
-        totals = [sum(reward * self.gamma ** k for k, reward in enumerate(row)) for row in rewards]
-        result = []
-        for index, row in enumerate(rewards):
-            baseline = sum(totals[:index] + totals[index + 1:]) / (len(rewards) - 1)
-            future, values = 0.0, []
-            for k in range(len(row) - 1, -1, -1):
-                future += row[k] * self.gamma ** k
-                values.append(future - baseline)
-            result.append(list(reversed(values)))
-        return result
+        discounted_returns = [
+            sum(reward * self.gamma ** step for step, reward in enumerate(trajectory))
+            for trajectory in rewards
+        ]
+        all_advantages = []
+        for trajectory_index, trajectory in enumerate(rewards):
+            other_returns = discounted_returns[:trajectory_index] + discounted_returns[trajectory_index + 1:]
+            baseline = sum(other_returns) / (len(rewards) - 1)
+            reward_to_go = 0.0
+            reversed_advantages = []
+            for step in range(len(trajectory) - 1, -1, -1):
+                # Discount both the return and baseline from the start of the attempt.
+                reward_to_go += trajectory[step] * self.gamma ** step
+                reversed_advantages.append(reward_to_go - baseline)
+            all_advantages.append(list(reversed(reversed_advantages)))
+        return all_advantages
 
 
 class PolicyGradientUpdater:
@@ -49,19 +57,22 @@ class PolicyGradientUpdater:
         self.action_logprob = action_logprob
 
     def update(self, trajectories, checkpointing=False):
-        values = self.advantages([[step['reward'] for step in path] for path in trajectories])
+        trajectory_rewards = [[step['reward'] for step in path] for path in trajectories]
+        values = self.advantages(trajectory_rewards)
         self.optimizer.zero_grad(set_to_none=True)
         loss_value, informative = 0.0, False
         if checkpointing:
             self.model.train()
         try:
-            for path, adv in zip(trajectories, values):
-                for step, value in zip(path, adv):
-                    if not value:
+            for path, trajectory_advantages in zip(trajectories, values):
+                for step, advantage in zip(path, trajectory_advantages):
+                    if not advantage:
                         continue
                     informative = True
                     with self.autocast():
-                        loss = -value * self.action_logprob(self.model, step['prompt_ids'], step['action_ids'], self.torch) / len(trajectories)
+                        log_probability = self.action_logprob(
+                            self.model, step['prompt_ids'], step['action_ids'], self.torch)
+                        loss = -advantage * log_probability / len(trajectories)
                     if not self.torch.isfinite(loss):
                         raise RuntimeError('Non-finite policy loss')
                     loss.backward()

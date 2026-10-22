@@ -1,53 +1,23 @@
 """On-policy tactic RL with Lean transitions and a leave-one-out baseline.
 
-One group samples independent trajectories from the same training root. One
-Adam update uses undiscounted reward-to-go, subtracting the other trajectories'
-mean total return. Sum action-token log probabilities; average over trajectories.
-Sampling and differentiable replay use the same unwarped policy, with dropout
-disabled. No off-policy replay, PPO epochs, reference model, or SFT updates.
+This command runs training, DEV evaluation, and frozen-task assessment.
+Training samples independent attempts on a theorem and updates the policy
+with discounted reward-to-go and a leave-one-out baseline.
 
-Reward: 1 for existing verify_group whole-proof/axiom acceptance. Changed goal
-text gets heuristic credit totaling at most exploration_bonus per episode.
-The opt-in error_feedback_v1 mode replaces that bonus with diagnostic penalties:
--0.2 for format, syntax, forbidden code or unresolved names; -0.1 for type or
-tactic failures; zero for valid unfinished steps and unclassified/infra errors.
-These weights and diagnostic classes are heuristic, not proof-progress scores.
-In environment v2 the same mode charges one penalty per action, because errors do
-not end a v2 episode: unchanged goals, repeated states and unclassified Lean
-rejections also cost -0.1, so repeating an action that changes nothing cannot
-avoid the penalties. Only an accepted complete proof earns positive reward.
-Repeated displayed states stop an episode. An optional single error repair uses
-the last verified state and a bounded Lean diagnostic, within the same caps.
-An action is one bounded tactic block, possibly containing nested tactics.
-This does not replicate AST/first-token process GRPO in arXiv:2606.20068.
+A complete proof earns reward 1 only after replay through verify_group.
+Goal-text bonuses and diagnostic error penalties are heuristic rewards.
+Environment version 2 keeps valid tactic transitions, records failed actions,
+and applies the configured backtracking rules. A timeout ends the attempt;
+a verifier crash censors the group.
 
-Environment v2 (config environment_version 2), aligned with DeepSeek-Prover-V1.5
-truncate-and-resume (arXiv:2408.08152) and COPRA failure memory (arXiv:2310.04353).
-State: theorem header, supplied proof lines, the policy's accepted tactics,
-current goals, tactics that already failed at the current state, last action
-result and actions remaining. The observation renders it as a Lean file with a
-"/- tactic state: ... -/" comment, hiding the oldest policy steps only when the
-prompt cap requires it. Action: up to max_chunk_tactics top-level tactics, each
-optionally preceded by "--" comment lines; in the policy-backtrack ablation arm,
-"backtrack k" alone also returns to the state after step k. Lean runs the
-tactics in order and keeps the valid prefix; the first error, unchanged goals or
-cycle on the current path stops the action and enters the observation. An
-action that applies no tactic is a self-loop; so are malformed or forbidden
-actions and invalid backtracks. Each action uses one step. In the default
-harness-backtrack arm, once harness_backtrack_after distinct tactics fail at a
-state, the harness reverts the last step and records it as failed at the parent.
-Closed goals end the episode with the full-proof replay; a Lean timeout ends it
-with reward 0; a REPL crash censors the group. The default reward is terminal
-and Lean-verified only; error_feedback_v1 adds the heuristic per-action penalties
-above. Returns use the configured discount; supplied lines earn
-full reward but stay visible and labelled, and every record keeps the task kind.
+Reusable code is organized under rl_components:
+- actions: tactic parsing and diagnostic formatting.
+- generation: sampling backends and token records.
+- configuration: run validation and mode restrictions.
+- tasks and objectives: task schedules and policy updates.
 
-Peak: P x 16 bytes for FP32 weights, gradients and Adam moments (<8 GiB for
-0.5B), one microbatch logits <=1088 x 152064 x 4 bytes (<0.7 GiB), activations
-reserved 6 GiB, and at most two Lean REPLs x 4 GiB. Run under 24 GiB host cap.
-CUDA uses FP32 master weights/moments and BF16 compute, one action at a time.
-No dataset/proof/model artifacts belong on the Mac. Managed runner must upload
-incremental JSONL records and checkpoints and enforce the resource/wall cap.
+LeanEpisode owns proof interaction. main() owns the command, run records,
+resource limits, sampling loop, and checkpoint export.
 """
 import argparse
 from collections import Counter
@@ -78,90 +48,19 @@ from run_lean_grpo import task_units  # noqa: E402
 from search_tactics import STEP  # noqa: E402
 from verify_external_proofs import HEADER  # noqa: E402
 from rl_components import LeaveOneOutObjective, PolicyGradientUpdater, TaskCurriculum, TaskSchedule, component_fingerprints  # noqa: E402
+from rl_components.actions import (  # noqa: E402
+    BACKTRACK, BACKTRACK_V2, CHAR_LITERAL, CONTINUATION, DECLARATION, FENCE,
+    INSTRUCTION_V2, RAW_STRING, action_positions, cap_message, lex_lines, parse_action,
+)
+from rl_components.configuration import (  # noqa: E402
+    REQUIRED_KEYS, V2_KEYS, check_mode_settings, validate_config as validate_run_config,
+    validate_environment_settings,
+)
+from rl_components.generation import (  # noqa: E402
+    HFGenerator, VLLMGenerator, generation_record, pad_left, step_seed,
+    stop_trimmed, vllm_action_ids,
+)
 from rl_components.proofs import tactic_block  # noqa: E402
-
-
-def generation_record(ids, eos_token_id, pad_token_id):
-    """Keep EOS in the action likelihood; distinguish retained tokens from decode work."""
-    stops = eos_token_id if isinstance(eos_token_id, list) else [eos_token_id]
-    end = next((i + 1 for i, token in enumerate(ids) if token in stops), len(ids))
-    action = ids[:end]
-    return dict(raw_response_ids=ids, action_ids=action, generated_tokens=len(ids),
-                retained_tokens=len(action), pad_before_eos=any(
-                    token == pad_token_id and token not in stops for token in action))
-
-
-def stop_trimmed(ids, stops):
-    """Cut batch padding after the first stop token; one unpadded sample is unchanged."""
-    end = next((i + 1 for i, token in enumerate(ids) if token in stops), len(ids))
-    return ids[:end]
-
-
-def pad_left(prompts, pad_id):
-    """Left-pad token lists for one batched generate call; the attention mask hides every pad."""
-    width = max(len(p) for p in prompts)
-    return ([[pad_id] * (width - len(p)) + list(p) for p in prompts],
-            [[0] * (width - len(p)) + [1] * len(p) for p in prompts], width)
-
-
-def vllm_action_ids(completion, stops):
-    """Token ids of one vLLM completion with its terminating stop token kept, as the HF path keeps it."""
-    ids = list(completion.token_ids)
-    if completion.finish_reason == 'stop' and (not ids or ids[-1] not in stops):
-        reason = completion.stop_reason
-        ids.append(reason if isinstance(reason, int) and reason in stops else stops[0])
-    return ids
-
-
-def step_seed(seed, task_id, visit, sample, step):
-    """Reproducible sampling stream per (task visit, sample, step) for lockstep rollouts."""
-    return int(hashlib.sha256(f'{seed}|{task_id}|{visit}|{sample}|{step}'.encode()).hexdigest()[:8], 16)
-
-
-class HFGenerator:
-    """Batched sampling from the live training model: several prompts, n samples each, one generate call.
-
-    Uses the trainer's untruncated temperature-1 policy. Rows share one random stream seeded from the
-    batch's per-sample seeds, so a sample is reproducible for the same active set, not for any batch."""
-
-    def __init__(self, model, tokenizer, torch, autocast, device, stops, max_new_tokens, set_seed):
-        self.model, self.tokenizer, self.torch, self.autocast, self.device = model, tokenizer, torch, autocast, device
-        self.stops, self.max_new_tokens, self.set_seed = stops, max_new_tokens, set_seed
-
-    def __call__(self, prompts, n, seeds):
-        torch = self.torch
-        self.set_seed(int(hashlib.sha256(repr(list(seeds)).encode()).hexdigest()[:8], 16))
-        ids, mask, width = pad_left(prompts, self.tokenizer.pad_token_id)
-        with torch.no_grad(), self.autocast():
-            rows = self.model.generate(
-                input_ids=torch.tensor(ids, device=self.device), attention_mask=torch.tensor(mask, device=self.device),
-                do_sample=True, temperature=1.0, top_p=1.0, top_k=0, repetition_penalty=1.0,
-                max_new_tokens=self.max_new_tokens, pad_token_id=self.tokenizer.eos_token_id,
-                num_return_sequences=n)[:, width:].tolist()
-        return [[generation_record(stop_trimmed(rows[i * n + j], self.stops), self.stops, self.tokenizer.pad_token_id)
-                 for j in range(n)] for i in range(len(prompts))]
-
-
-class VLLMGenerator:
-    """Evaluation-only sampling through vLLM with the same untruncated temperature-1 policy.
-
-    Each prompt carries its own request seed, so a sample does not depend on the rest of the batch.
-    vLLM samples in bfloat16; check_rollout_backends.py must pass before its results count."""
-
-    def __init__(self, model_path, stops, pad_id, max_new_tokens, memory_fraction, seed):
-        from vllm import LLM
-        self.llm = LLM(model=str(model_path), dtype='bfloat16', seed=seed, gpu_memory_utilization=memory_fraction,
-                       enable_prefix_caching=True)
-        self.stops, self.pad_id, self.max_new_tokens = stops, pad_id, max_new_tokens
-
-    def __call__(self, prompts, n, seeds):
-        from vllm import SamplingParams
-        params = [SamplingParams(n=n, temperature=1.0, top_p=1.0, top_k=-1, repetition_penalty=1.0, seed=s,
-                                 max_tokens=self.max_new_tokens, stop_token_ids=list(self.stops), detokenize=False)
-                  for s in seeds]
-        outputs = self.llm.generate([dict(prompt_token_ids=list(p)) for p in prompts], params, use_tqdm=False)
-        return [[generation_record(stop_trimmed(vllm_action_ids(c, self.stops), self.stops), self.stops, self.pad_id)
-                 for c in output.outputs] for output in outputs]
 
 
 def state_key(goals):
@@ -196,148 +95,9 @@ def finish(result, replay):
                 reward=float(accepted), accepted=accepted, replay=replay)
 
 
-BACKTRACK = re.compile(r'backtrack[ \t]+(\d+)')
-DECLARATION = re.compile(r'(theorem|lemma|example)\b')
-INSTRUCTION_V2 = ('Complete the following Lean 4 proof. Write the next action: up to {n} tactics, each optionally '
-                  'preceded by "-- " comment lines. Lean runs them in order and stops at the first error.')
-BACKTRACK_V2 = ' Or write only "backtrack k" to return to the state after your step k (0 = before your first step).'
-
-
-# A Lean char literal such as '"' and a raw string such as r"\" confuse a comment stripper that knows only
-# ordinary strings. lex_lines below knows both. An identifier character before ' is a prime, not a literal.
-CHAR_LITERAL = re.compile(r"'(?:\\(?:x[0-9a-fA-F]{2}|u[0-9a-fA-F]{4}|.)|[^\\'\n])'")
-RAW_STRING = re.compile(r'r(#*)"')
-# A line that starts with one of these continues the tactic above it, even at the same indentation
-# (checked with real Lean: induction/match alternatives, a <;> chain, else, a calc step "_ = ...", "with").
-CONTINUATION = re.compile(r'(\||<;>|else\b|with\b|_(\s|$))')
-FENCE = re.compile(r'```(?:lean4?)[ \t]*\r?\n(.*?)\r?\n```', re.S | re.I)
-
-
-def lex_lines(lines):
-    """Split lines into logical lines and strip comments the way Lean reads them.
-
-    A line that starts inside a block comment, a string or an open bracket continues the line above it.
-    Returns (groups, code): each group is dict(lines=[...], code=bool); code is the text without comments,
-    with string literals kept, for the forbidden-construct filter."""
-    groups, out = [], []
-    depth, in_string, raw, brackets = 0, False, None, 0
-    for line in lines:
-        if groups and (depth or in_string or raw is not None or brackets):
-            group = groups[-1]
-        else:
-            group = dict(lines=[], code=False)
-            groups.append(group)
-        group['lines'].append(line)
-        i = 0
-        while i < len(line):
-            ch, two = line[i], line[i:i + 2]
-            before = line[i - 1] if i else ' '
-            ident = before.isalnum() or before in "_'!?"
-            if depth:
-                depth += (two == '/-') - (two == '-/')
-                i += 2 if two in ('/-', '-/') else 1
-                continue
-            if raw is not None:
-                out.append(ch)
-                if line.startswith('"' + '#' * raw, i):
-                    out.append('#' * raw)
-                    i, raw = i + 1 + raw, None
-                else:
-                    i += 1
-                continue
-            if in_string:
-                out.append(line[i:i + 2] if ch == '\\' else ch)
-                in_string = ch == '\\' or ch != '"'
-                i += 2 if ch == '\\' else 1
-                continue
-            if two == '/-':
-                depth, i = 1, i + 2
-                continue
-            if two == '--':
-                break
-            group['code'] = group['code'] or not ch.isspace()
-            match = None if ident else (RAW_STRING.match(line, i) if ch == 'r' else CHAR_LITERAL.match(line, i) if ch == "'" else None)
-            if match and ch == 'r':
-                out.append(match.group())
-                raw, i = len(match.group(1)), match.end()
-            elif match:
-                out.append(match.group())
-                i = match.end()
-            else:
-                in_string = ch == '"'
-                brackets = max(brackets + (ch in '([{⟨') - (ch in ')]}⟩'), 0)
-                out.append(ch)
-                i += 1
-        out.append('\n')
-    return groups, ''.join(out)
-
-
 def forbidden(text):
     """True when the code of an action uses a forbidden construct; comments are ignored."""
     return bool(FORBIDDEN.search(text) or FORBIDDEN_CODE.search(lex_lines(text.splitlines())[1]))
-
-
-def action_positions(text):
-    """Lean positions refer to the "first |" wrapper: one extra line above and two columns of indentation."""
-    return re.sub(r'<input>:(\d+):(\d+)', lambda m: f'<input>:{max(int(m[1]) - 1, 1)}:{max(int(m[2]) - 2, 0)}', text)
-
-
-def cap_message(prefix, message, note='', limit=600):
-    """Shorten the message, never the note: the note tells the policy that the harness changed its state."""
-    return prefix + message[:max(limit - len(prefix) - len(note), 0)] + note
-
-
-def parse_action(text, max_tactics=4, allow_backtrack=False):
-    """v2 action: up to max_tactics top-level tactics with leading comments, or "backtrack k".
-
-    Accepted fence labels: lean and lean4, in any letter case. An unlabelled fence, any other label, prose
-    around the fence, and more than one fence are format errors. Leading tabs become two spaces, because Lean
-    rejects tabs."""
-    # SFT emits code fences. Accept one complete block without repairing code.
-    fenced = FENCE.fullmatch(text.strip())
-    body = fenced.group(1) if fenced else text  # Keep first-line indentation for dedent.
-    if not body.strip() or '```' in body:
-        return dict(kind='malformed')
-    body = '\n'.join(re.sub(r'^[ \t]*', lambda m: m.group().replace('\t', '  '), line) for line in body.splitlines())
-    lines = [line for line in textwrap.dedent(body).splitlines() if line.strip()]
-    # SFT proof targets restate the declaration; drop it through its ":= by", never executing it.
-    first = next((i for i, line in enumerate(lines) if not line.lstrip().startswith(('--', '/-'))), None)
-    if first is not None and DECLARATION.match(lines[first].lstrip()):
-        end = next((i for i in range(first, len(lines)) if lines[i].rstrip().endswith(':= by')), None)
-        if end is None:
-            return dict(kind='malformed', reason='a restated theorem header must end with ":= by".')
-        lines = lines[:first] + lines[end + 1:]
-    groups, _ = lex_lines(lines)
-    code = [group for group in groups if group['code']]
-    if not code:
-        return dict(kind='malformed')
-    head = lambda group: group['lines'][0].lstrip()
-    indent = lambda group: len(group['lines'][0]) - len(head(group))
-    jump = BACKTRACK.fullmatch(head(code[0]).strip()) if len(code) == 1 and len(code[0]['lines']) == 1 else None
-    if jump:
-        if not allow_backtrack:
-            return dict(kind='malformed', reason='backtrack is not an action here; the harness backtracks.')
-        return dict(kind='backtrack', step=int(jump.group(1)))
-    # A tactic starts at the shallowest code indentation; deeper lines and continuation lines extend it.
-    base = min(indent(group) for group in (code if all(CONTINUATION.match(head(g)) for g in code) else
-                                           [g for g in code if not CONTINUATION.match(head(g))]))
-    tactics, pending = [], []
-    for group in groups:
-        top = indent(group) <= base and not CONTINUATION.match(head(group))
-        if not group['code'] and (top or not tactics):
-            pending += group['lines']
-        elif top or not tactics:
-            tactics.append(pending + group['lines'])
-            pending = []
-        else:
-            tactics[-1] += pending + group['lines']
-            pending = []
-    tactics[-1] += pending
-    if len(tactics) > max_tactics:
-        return dict(kind='malformed', reason=f'write at most {max_tactics} tactics per action.')
-    # Remove the base indentation; shallower comment lines lose all of theirs.
-    strip = lambda line: line[base:] if not line[:base].strip() else line.lstrip()
-    return dict(kind='tactics', tactics=['\n'.join(strip(line) for line in t) for t in tactics])
 
 
 def local_feedback(result):
@@ -404,7 +164,7 @@ def advantages(rewards, gamma=1.0):
 
     Step t gets sum_{k>=t} gamma^k r_k minus the other trajectories' mean discounted return from the
     start, so both terms are measured from step 0. This is the exact gradient of the discounted
-    objective; groups with equal returns give zero advantage. gamma = 1 reproduces the old values."""
+    objective. Groups with no rewards give zero advantage. gamma = 1 reproduces the old values."""
     return LeaveOneOutObjective(gamma).advantages(rewards)
 
 
@@ -587,6 +347,12 @@ COUNTS_LOCK = threading.Lock()
 
 
 class LeanEpisode:
+    """Maintain the verified proof path and the state used by the next action.
+
+    The replay path contains accepted tactic blocks. Displayed tactics and
+    saved frames support observations and backtracking. Rejected tactics stay
+    outside that path; rollout records retain every attempted action.
+    """
     def __init__(self, ctx, task, output, counts, reward_mode='goal_change_v1', max_repair_attempts=0,
                  version=1, horizon=None, max_tactics=4, backtrack_owner='harness', backtrack_after=2, premises=None,
                  repl_log='episodes.log'):
@@ -836,6 +602,24 @@ class LeanEpisode:
                 for key in ('lean_calls', 'lean_seconds', 'lean_cpu_seconds'):
                     self.counts[key] += record.get(key, 0)
 
+    def _replay_path(self):
+        """Replay the accepted tactic path against the original proof target."""
+        body = '\n'.join('  ' + line for block in self.path for line in block.splitlines()) + '\n'
+        unit = self.task if self.task['kind'] == 'bank' else lean_unit(self.task)
+        return body, self._verify(unit, body)
+
+    def _transition_error(self, response):
+        """Classify a rejected, unchanged, or cyclic Lean transition."""
+        error_code, message = repl_output(response)
+        next_state = state_key(response.get('goals', []))
+        if error_code or response.get('sorries') or 'goals' not in response:
+            return 'rejected', action_positions(message) or 'Lean returned no proof state.'
+        if response['goals'] and next_state == self.frames[-1][2]:
+            return 'no_progress', 'the goals are unchanged.'
+        if response['goals'] and next_state in {frame[2] for frame in self.frames}:
+            return 'cycle', 'the goals repeat an earlier state on your current proof path.'
+        return None
+
     def _step(self, tactic, bonus):
         raw_tactic = tactic
         # SFT emits code fences. Parse one complete block without repairing code.
@@ -858,10 +642,7 @@ class LeanEpisode:
         self.path.append(tactic)
         self.state, self.goals = response['proofState'], response['goals']
         if result['status'] == 'needs_replay':
-            # Every line gets the outer proof indentation. Preserve nested blocks.
-            body = '\n'.join('  ' + line for block in self.path for line in block.splitlines()) + '\n'
-            unit = self.task if self.task['kind'] == 'bank' else lean_unit(self.task)
-            replay = self._verify(unit, body)
+            _, replay = self._replay_path()
             result = finish(result, replay)
             return dict(result, censored=True) if replay['status'] == 'crash' else result
         self.seen.add(result.pop('state_key'))
@@ -911,27 +692,20 @@ class LeanEpisode:
                 return dict(status='timeout', reward=0.0, done=True, accepted=False, tactics_applied=applied)
             except EOFError:
                 return dict(status='crash', reward=0.0, done=True, accepted=False, censored=True)
-            code, output = repl_output(response)
-            key = state_key(response.get('goals', []))
-            if code or response.get('sorries') or 'goals' not in response:
-                failure = ('rejected', action_positions(output) or 'Lean returned no proof state.')
-            elif response['goals'] and key == self.frames[-1][2]:
-                failure = ('no_progress', 'the goals are unchanged.')
-            elif response['goals'] and key in {frame[2] for frame in self.frames}:
-                failure = ('cycle', 'the goals repeat an earlier state on your current proof path.')
+            failure = self._transition_error(response)
             if failure:
-                failure += (tactic,)
+                failed_tactic = tactic
                 break
             applied += 1
             self.path.append(block)
             self.shown.append(tactic)
             self.state, self.goals = response['proofState'], response['goals']
-            self.frames.append((self.state, list(self.goals), key))
+            self.frames.append((self.state, list(self.goals), state_key(self.goals)))
             if not self.goals:
                 break  # First-error truncation also drops tactics after the proof closes.
         if failure:
-            status, message, tactic = failure
-            reverted = self._fail(tactic)
+            status, message = failure
+            reverted = self._fail(failed_tactic)
             note = ' The harness reverted your last step.' if reverted else ''
             if applied:
                 self.last_error = cap_message(f'{applied} tactic(s) applied, then {status}: ', message, note)
@@ -940,10 +714,7 @@ class LeanEpisode:
             return dict(self._loop(status, message, note), tactics_applied=0, harness_backtrack=reverted)
         if self.goals:
             return dict(status='changed', reward=0.0, done=False, accepted=False, tactics_applied=applied)
-        # Every line gets the outer proof indentation. Preserve nested blocks.
-        body = '\n'.join('  ' + line for block in self.path for line in block.splitlines()) + '\n'
-        unit = self.task if self.task['kind'] == 'bank' else lean_unit(self.task)
-        replay = self._verify(unit, body)
+        body, replay = self._replay_path()
         result = finish(dict(status='needs_replay', reward=0.0, done=True, accepted=False,
                              tactics_applied=applied, proof_body=body), replay)
         # A replay crash is an infrastructure failure, not a failed proof: censor the group.
@@ -1011,8 +782,12 @@ def lockstep_group(envs, generate, decode, observe, pool, *, depth, candidates, 
                               accepted=False, done=True, censored=True, **generation))
                     raise RuntimeError('Sampled PAD before EOS; refuse an unmatched training update')
             texts[i] = [decode(g['action_ids']) for g in generations]
-        act = (lambda i: envs[i].step(texts[i][0], bonus)) if candidates == 1 else (lambda i: envs[i].search_step(texts[i]))
-        futures = {i: pool.submit(act, i) for i in active}
+        def apply_action(index):
+            if candidates == 1:
+                return envs[index].step(texts[index][0], bonus)
+            return envs[index].search_step(texts[index])
+
+        futures = {i: pool.submit(apply_action, i) for i in active}
         wait(futures.values())
         finished, censored = [], None
         for i, ids, generations in zip(active, prompts, batches):
@@ -1097,89 +872,9 @@ def update(model, optimizer, trajectories, torch, autocast, gamma=1.0, checkpoin
     return updater.update(trajectories, checkpointing)
 
 
-REQUIRED_KEYS = ('run_id', 'seed', 'lean', 'mathlib', 'group_size', 'max_groups', 'max_episode_steps',
-                 'max_prompt_tokens', 'max_action_tokens', 'exploration_bonus', 'learning_rate', 'cpu_threads',
-                 'lean_timeout_seconds', 'lean_setup_timeout_seconds', 'max_wall_seconds', 'max_generated_tokens',
-                 'max_lean_calls', 'curriculum_max_lines_remaining')
-V2_KEYS = ('discount', 'max_chunk_tactics', 'backtrack_owner', 'harness_backtrack_after')
-
-
 def validate_config(config):
-    """Reject a bad config before any output directory or model load."""
-    missing = [key for key in REQUIRED_KEYS if key not in config]
-    if missing:
-        raise ValueError('Config misses keys: ' + ', '.join(missing))
-    version = config.get('environment_version', 1)
-    if version == 1 and any(key in config for key in V2_KEYS):
-        raise ValueError('Environment v1 config contains v2-only keys')
-    if version == 2:
-        if 'discount' not in config:
-            raise ValueError('Environment v2 requires an explicit discount')
-        for key in ('max_chunk_tactics', 'harness_backtrack_after'):
-            value = config.get(key, 1)
-            if isinstance(value, bool) or not isinstance(value, int) or value < 1:
-                raise ValueError(key + ' must be an integer of at least 1')
-        if config.get('backtrack_owner', 'harness') not in ('harness', 'policy'):
-            raise ValueError('backtrack_owner must be harness or policy')
-    every = config.get('checkpoint_every', 0)
-    if not isinstance(every, int) or every < 0:
-        raise ValueError('checkpoint_every must be a non-negative integer')
-    if not isinstance(config.get('gradient_checkpointing', False), bool):
-        raise ValueError('gradient_checkpointing must be true or false')
-    keep = config.get('checkpoint_keep', [])
-    if not isinstance(keep, list) or any(isinstance(g, bool) or not isinstance(g, int) or g < 1 for g in keep):
-        raise ValueError('checkpoint_keep must be a list of positive group counts')
-    if config.get('task_sampler', 'fixed') not in ('fixed', 'band'):
-        raise ValueError('task_sampler must be fixed or band')
-    cap = config.get('band_cap_ratio', 1.5)
-    if isinstance(cap, bool) or not isinstance(cap, (int, float)) or cap < 1:
-        raise ValueError('band_cap_ratio must be a number of at least 1')
-    candidates = config.get('step_candidates', 1)
-    if isinstance(candidates, bool) or not isinstance(candidates, int) or candidates < 1:
-        raise ValueError('step_candidates must be an integer of at least 1')
-    automation = config.get('automation_fallback', [])
-    if not isinstance(automation, list) or any(
-            not isinstance(t, str) or forbidden(t) or parse_action(t, 1)['kind'] != 'tactics' for t in automation):
-        raise ValueError('automation_fallback must be a list of single allowed tactics')
-    if (candidates > 1 or automation) and version != 2:
-        raise ValueError('Step search and automation fallback require environment v2')
-    spec = config.get('task_filter')
-    if spec is not None:
-        if not isinstance(spec, dict) or set(spec) != {'pass_rates_from', 'min_exclusive', 'max_inclusive'}:
-            raise ValueError('task_filter needs exactly pass_rates_from, min_exclusive and max_inclusive')
-        low, high = spec['min_exclusive'], spec['max_inclusive']
-        if (any(isinstance(v, bool) or not isinstance(v, (int, float)) for v in (low, high))
-                or not 0 <= low < high <= 1):
-            raise ValueError('task_filter needs 0 <= min_exclusive < max_inclusive <= 1')
-    rollout = config.get('rollout', 'sequential')
-    if rollout not in ('sequential', 'lockstep') or (rollout == 'lockstep' and version != 2):
-        raise ValueError('rollout must be sequential, or lockstep with environment v2')
-    workers = config.get('lean_workers', config['group_size'])
-    if isinstance(workers, bool) or not isinstance(workers, int) or workers < 1:
-        raise ValueError('lean_workers must be an integer of at least 1')
-    backend = config.get('generation_backend', 'hf')
-    if backend not in ('hf', 'vllm') or (backend == 'vllm' and rollout != 'lockstep'):
-        raise ValueError('generation_backend must be hf, or vllm with lockstep rollout')
-    fraction = config.get('vllm_memory_fraction', 0.4)
-    if isinstance(fraction, bool) or not isinstance(fraction, (int, float)) or not 0.05 <= fraction <= 0.9:
-        raise ValueError('vllm_memory_fraction must lie in [0.05, 0.9]')
-    retrieval = config.get('premise_retrieval')
-    if retrieval is not None:
-        if (version != 2 or not isinstance(retrieval, dict) or set(retrieval) != {'corpus', 'k'}
-                or isinstance(retrieval['k'], bool) or not isinstance(retrieval['k'], int) or not 1 <= retrieval['k'] <= 16):
-            raise ValueError('premise_retrieval needs environment v2, a corpus path and 1 <= k <= 16')
-
-
-def check_mode_settings(config, evaluating):
-    """Keep search, automation and task filtering in the mode where their measurement stays valid."""
-    if not evaluating and (config.get('step_candidates', 1) > 1 or config.get('automation_fallback')):
-        raise ValueError('Step search and automation fallback are evaluation and data-collection settings; '
-                         'a selected or automation-completed action is not an on-policy REINFORCE sample')
-    if evaluating and config.get('task_filter'):
-        raise ValueError('task_filter selects training tasks; evaluation populations stay fixed')
-    if not evaluating and config.get('generation_backend', 'hf') == 'vllm':
-        raise ValueError('vLLM sampling is evaluation-only until a weight-sync path is validated on a GPU; '
-                         'training samples must come from the live policy')
+    """Validate settings with the shared parser and the existing scorer rules."""
+    return validate_run_config(config, forbidden=forbidden)
 
 
 def lean_reservation(size, depth, per_action, setup_calls, replay_calls):
@@ -1197,7 +892,8 @@ def file_sha256(path):
     return hashlib.sha256(path.read_bytes()).hexdigest() if path.is_file() else None
 
 
-def main():
+def parse_arguments():
+    """Parse the command and reject incompatible data or evaluation modes."""
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ('config', 'model', 'checker', 'environment',
                  'mathlib-identity', 'repl', 'output'):
@@ -1227,23 +923,70 @@ def main():
         parser.error('Give --pool, --exclude-names and exclusively --tasks or --evaluation-names')
     if args.evaluation_names and (args.assessment_only or args.task_order):
         parser.error('DEV evaluation cannot use training assessment or task schedules')
+    return args
+
+
+def check_group_budget(config, counts, *, native_bank):
+    """Check the worst-case cost of a whole group before sampling it."""
+    group_size = config['group_size']
+    episode_steps = config['max_episode_steps']
+    candidates = config.get('step_candidates', 1)
+    token_reservation = group_size * episode_steps * candidates * config['max_action_tokens']
+    if counts['generated_tokens'] + token_reservation > config['max_generated_tokens']:
+        raise BudgetReached('token_cap')
+
+    setup_calls = 6 if native_bank else 5
+    if config.get('environment_version', 1) == 2:
+        calls_per_action = config.get('max_chunk_tactics', 4)
+        replay_calls = 2
+    else:
+        calls_per_action = 1
+        replay_calls = 0
+
+    policy_calls = lean_reservation(
+        group_size, episode_steps * candidates, calls_per_action, setup_calls, replay_calls)
+    # Probe each fallback once at the root and once per attempt, including replay.
+    automation = config.get('automation_fallback', [])
+    automation_calls = (group_size + 1) * len(automation) * (1 + replay_calls)
+    if counts['lean_calls'] + policy_calls + automation_calls > config['max_lean_calls']:
+        raise BudgetReached('lean_call_cap')
+
+
+def save_periodic_checkpoint(output, model, tokenizer, optimizer, torch, *, group, counts):
+    """Replace the rolling checkpoint after saving its weights and optimizer."""
+    staging = output / 'checkpoint.tmp'
+    model.save_pretrained(staging)
+    tokenizer.save_pretrained(staging)
+    torch.save(optimizer.state_dict(), staging / 'optimizer.pt')
+    metadata = dict(groups=counts['groups'], group=group, optimizer_updates=counts['optimizer_updates'])
+    (staging / 'checkpoint.json').write_text(json.dumps(metadata) + '\n')
+    checkpoint = output / 'checkpoint'
+    if checkpoint.exists():
+        shutil.rmtree(checkpoint)
+    staging.rename(checkpoint)
+
+
+def save_retained_checkpoint(output, model, tokenizer, *, group, counts):
+    """Keep a named weights/tokenizer snapshot without optimizer state."""
+    checkpoint = output / f"checkpoint_g{counts['groups']}"
+    staging = checkpoint.with_name(checkpoint.name + '.tmp')
+    model.save_pretrained(staging)
+    tokenizer.save_pretrained(staging)
+    metadata = dict(groups=counts['groups'], group=group, optimizer_updates=counts['optimizer_updates'])
+    (staging / 'checkpoint.json').write_text(json.dumps(metadata) + '\n')
+    staging.rename(checkpoint)
+    return checkpoint.name
+
+
+def main():
+    args = parse_arguments()
     config = json.loads(args.config.read_text())
     validate_config(config)
+    validate_environment_settings(config)
     reward_mode = config.get('reward_mode', 'goal_change_v1')
     max_repair_attempts = config.get('max_repair_attempts', 0)
-    if max_repair_attempts not in (0, 1):
-        raise ValueError('Error repair allows zero or one retry per trajectory')
-    if reward_mode not in ('goal_change_v1', 'error_feedback_v1'):
-        raise ValueError('Unknown tactic reward mode')
-    if reward_mode == 'error_feedback_v1' and config['exploration_bonus'] != 0:
-        raise ValueError('Local verifier feedback requires zero goal-text exploration bonus')
-    if config['group_size'] < 2 or not 0 <= config['exploration_bonus'] < 1 or config['max_episode_steps'] < 1:
-        raise ValueError('Invalid group, episode, or shaping bound')
-    version, gamma = config.get('environment_version', 1), config.get('discount', 1.0)
-    if version not in (1, 2) or not 0 < gamma <= 1:  # validate_config already rejects a v1 discount.
-        raise ValueError('Unknown environment version or invalid discount')
-    if version == 2 and (config['exploration_bonus'] or max_repair_attempts):
-        raise ValueError('Environment v2 has no goal-text bonus and no repair attempt')
+    version = config.get('environment_version', 1)
+    gamma = config.get('discount', 1.0)
     chunk = dict(max_tactics=config.get('max_chunk_tactics', 4), backtrack_owner=config.get('backtrack_owner', 'harness'),
                  backtrack_after=config.get('harness_backtrack_after', 2)) if version == 2 else {}
     args.output.mkdir(parents=True, exist_ok=False)
@@ -1459,134 +1202,126 @@ def main():
             visits = {}
             for group in range(groups):
                 size, depth = config['group_size'], config['max_episode_steps']
-                # Reserve the whole group so later trajectories keep identical caps.
-                if counts['generated_tokens'] + size * depth * candidates * config['max_action_tokens'] > config['max_generated_tokens']:
-                    raise BudgetReached('token_cap')
-                setup_calls = 6 if args.bank else 5  # Bank prefixes use one additional tactic-mode call.
-                per_action, replay_calls = (chunk['max_tactics'], 2) if version == 2 else (1, 0)
-                # Automation tries each tactic once per trajectory and once at the root, each with a replay.
-                automation_calls = (size + 1) * len(automation) * (1 + replay_calls)
-                if counts['lean_calls'] + lean_reservation(size, depth * candidates, per_action, setup_calls,
-                                                           replay_calls) + automation_calls > config['max_lean_calls']:
-                    raise BudgetReached('lean_call_cap')
+                check_group_budget(config, counts, native_bank=bool(args.bank))
                 task = sampler.next_task() if sampler else next(order)
                 visit = visits.get(task['task_id'], 0)
                 visits[task['task_id']] = visit + 1
-                env = LeanEpisode(ctx, task, args.output, counts, reward_mode=reward_mode,
-                                  max_repair_attempts=max_repair_attempts, version=version, horizon=depth,
-                                  premises=premise_index, **chunk)
                 trajectories, censored = [], False
                 root_automation, automation_done = None, []
                 run['phase'] = 'sampling'
-                try:
-                    for sample in (() if lockstep else range(size)):
-                        set_seed(trajectory_seed(config['seed'], task['task_id'], visit, sample))
-                        try:
-                            state, trajectory = env.reset(), []
-                        except (TimeoutError, EOFError, OSError, RuntimeError) as exc:
-                            censored = True  # Setup failure is infrastructure or data, never a policy outcome.
-                            run['last_censor_reason'] = 'setup_failure: ' + str(exc)[:200]
-                            break
-                        if automation and sample == 0:
-                            # Automation alone at the root is the baseline for automation-completed proofs.
-                            root_automation = env.try_automation(automation, commit=False)
-                            if root_automation and root_automation['result'].get('censored'):
-                                censored = True  # A crashed REPL is infrastructure.
-                                run['last_censor_reason'] = 'automation_root_' + root_automation['result']['status']
+                if not lockstep:
+                    env = LeanEpisode(ctx, task, args.output, counts, reward_mode=reward_mode,
+                                      max_repair_attempts=max_repair_attempts, version=version, horizon=depth,
+                                      premises=premise_index, **chunk)
+                    try:
+                        for sample in range(size):
+                            set_seed(trajectory_seed(config['seed'], task['task_id'], visit, sample))
+                            try:
+                                state, trajectory = env.reset(), []
+                            except (TimeoutError, EOFError, OSError, RuntimeError) as exc:
+                                censored = True  # Setup failure is infrastructure or data, never a policy outcome.
+                                run['last_censor_reason'] = 'setup_failure: ' + str(exc)[:200]
                                 break
-                            if root_automation and not root_automation['result']['accepted']:
-                                # A timed-out probe is a failed automation outcome. Its REPL closed, so rebuild the root.
-                                try:
-                                    state = env.reset()
-                                except (TimeoutError, EOFError, OSError, RuntimeError) as exc:
-                                    censored = True
-                                    run['last_censor_reason'] = 'setup_failure: ' + str(exc)[:200]
+                            if automation and sample == 0:
+                                # Automation alone at the root is the baseline for automation-completed proofs.
+                                root_automation = env.try_automation(automation, commit=False)
+                                if root_automation and root_automation['result'].get('censored'):
+                                    censored = True  # A crashed REPL is infrastructure.
+                                    run['last_censor_reason'] = 'automation_root_' + root_automation['result']['status']
                                     break
-                            elif root_automation:
-                                counts['automation_root_solved'] += 1
-                        pending = None
-                        for step in range(depth):
-                            prompt_ids = pending or observe(env)
+                                if root_automation and not root_automation['result']['accepted']:
+                                    # A timed-out probe is a failed automation outcome. Its REPL closed, so rebuild the root.
+                                    try:
+                                        state = env.reset()
+                                    except (TimeoutError, EOFError, OSError, RuntimeError) as exc:
+                                        censored = True
+                                        run['last_censor_reason'] = 'setup_failure: ' + str(exc)[:200]
+                                        break
+                                elif root_automation:
+                                    counts['automation_root_solved'] += 1
                             pending = None
-                            if len(prompt_ids) > config['max_prompt_tokens']:
-                                censored = True
-                                run['last_censor_reason'] = 'prompt_cap'
-                                break
-                            inputs = torch.tensor(prompt_ids, device=device)[None]
-                            with torch.no_grad(), autocast():
-                                rows = model.generate(input_ids=inputs, attention_mask=torch.ones_like(inputs),
-                                    do_sample=True, temperature=1.0, top_p=1.0, top_k=0, repetition_penalty=1.0,
-                                    max_new_tokens=config['max_action_tokens'], pad_token_id=tokenizer.eos_token_id,
-                                    num_return_sequences=candidates)
-                            generations = [generation_record(stop_trimmed(row[len(prompt_ids):].tolist(), stops),
-                                                             stops, tokenizer.pad_token_id) for row in rows]
-                            for generation in generations:
-                                for key in ('generated_tokens', 'retained_tokens'):
-                                    counts[key] += generation[key]
-                                if generation['pad_before_eos']:
-                                    stream.write(json.dumps(dict(group=group, sample=sample, step=step,
-                                        task_id=task['task_id'], kind=task['kind'], prompt_ids=prompt_ids,
-                                        status='generation_contract_violation', reward=None, accepted=False,
-                                        done=True, censored=True, **generation)) + '\n')
-                                    stream.flush()
-                                    save()
-                                    raise RuntimeError('Sampled PAD before EOS; refuse an unmatched training update')
-                            texts = [tokenizer.decode(g['action_ids'], skip_special_tokens=True) for g in generations]
-                            if candidates == 1:
-                                search, generation, tactic = None, generations[0], texts[0]
-                                result = env.step(tactic, config['exploration_bonus'] / depth)
-                            else:
-                                search = env.search_step(texts)
-                                generation, tactic = generations[search['chosen']], texts[search['chosen']]
-                                result = search['result']
-                            if not result['done']:
-                                pending = observe(env)
-                                result = bound_state(result, len(pending), config['max_prompt_tokens'])
-                                if result['status'] == 'prompt_cap':
-                                    counts['prompt_cap_ends'] += 1  # Truncation scored 0, counted separately.
-                            item = dict(prompt_ids=prompt_ids, **generation, tactic=tactic, state=state, **result)
-                            if search:
-                                item.update(chosen=search['chosen'], candidates=[
-                                    dict(probe, tactic=texts[probe['index']],
-                                         generated_tokens=generations[probe['index']]['generated_tokens'])
-                                    for probe in search['probes']])
-                            trajectory.append(item)
-                            if result['accepted']:
-                                counts['accepted'] += 1
-                                if task['name'] not in run['solved_names']:
-                                    run['solved_names'].append(task['name'])
-                            stream.write(json.dumps(dict(group=group, sample=sample, step=step, task_id=task['task_id'],
-                                                         kind=task['kind'], **item), ensure_ascii=False) + '\n')
-                            stream.flush()
-                            save()
-                            if result.get('censored'):
-                                censored = True
-                                run['last_censor_reason'] = result['status']
-                            if result['done']:
-                                break
-                            state = env.prompt_state()
-                        automated = None
-                        if automation and not censored and trajectory and not trajectory[-1]['done']:
-                            automated = env.try_automation(automation)
-                            if automated:
-                                stream.write(json.dumps(dict(group=group, sample=sample, step=len(trajectory),
-                                    task_id=task['task_id'], kind=task['kind'], automation=True,
-                                    tactic=automated['tactic'], **automated['result']), ensure_ascii=False) + '\n')
-                                stream.flush()
-                                if automated['result'].get('censored'):
+                            for step in range(depth):
+                                prompt_ids = pending or observe(env)
+                                pending = None
+                                if len(prompt_ids) > config['max_prompt_tokens']:
                                     censored = True
-                                    run['last_censor_reason'] = 'automation_' + automated['result']['status']
-                                elif automated['result']['accepted']:
-                                    counts['automation_accepted'] += 1
-                        trajectories.append(trajectory)
-                        automation_done.append(bool(automated and automated['result']['accepted']))
-                        if trajectory:
-                            counts['trajectories'] += 1
-                        if censored:
-                            break
-                finally:
-                    env.close()
-                if lockstep:
+                                    run['last_censor_reason'] = 'prompt_cap'
+                                    break
+                                inputs = torch.tensor(prompt_ids, device=device)[None]
+                                with torch.no_grad(), autocast():
+                                    rows = model.generate(input_ids=inputs, attention_mask=torch.ones_like(inputs),
+                                        do_sample=True, temperature=1.0, top_p=1.0, top_k=0, repetition_penalty=1.0,
+                                        max_new_tokens=config['max_action_tokens'], pad_token_id=tokenizer.eos_token_id,
+                                        num_return_sequences=candidates)
+                                generations = [generation_record(stop_trimmed(row[len(prompt_ids):].tolist(), stops),
+                                                                 stops, tokenizer.pad_token_id) for row in rows]
+                                for generation in generations:
+                                    for key in ('generated_tokens', 'retained_tokens'):
+                                        counts[key] += generation[key]
+                                    if generation['pad_before_eos']:
+                                        stream.write(json.dumps(dict(group=group, sample=sample, step=step,
+                                            task_id=task['task_id'], kind=task['kind'], prompt_ids=prompt_ids,
+                                            status='generation_contract_violation', reward=None, accepted=False,
+                                            done=True, censored=True, **generation)) + '\n')
+                                        stream.flush()
+                                        save()
+                                        raise RuntimeError('Sampled PAD before EOS; refuse an unmatched training update')
+                                texts = [tokenizer.decode(g['action_ids'], skip_special_tokens=True) for g in generations]
+                                if candidates == 1:
+                                    search, generation, tactic = None, generations[0], texts[0]
+                                    result = env.step(tactic, config['exploration_bonus'] / depth)
+                                else:
+                                    search = env.search_step(texts)
+                                    generation, tactic = generations[search['chosen']], texts[search['chosen']]
+                                    result = search['result']
+                                if not result['done']:
+                                    pending = observe(env)
+                                    result = bound_state(result, len(pending), config['max_prompt_tokens'])
+                                    if result['status'] == 'prompt_cap':
+                                        counts['prompt_cap_ends'] += 1  # Truncation scored 0, counted separately.
+                                item = dict(prompt_ids=prompt_ids, **generation, tactic=tactic, state=state, **result)
+                                if search:
+                                    item.update(chosen=search['chosen'], candidates=[
+                                        dict(probe, tactic=texts[probe['index']],
+                                             generated_tokens=generations[probe['index']]['generated_tokens'])
+                                        for probe in search['probes']])
+                                trajectory.append(item)
+                                if result['accepted']:
+                                    counts['accepted'] += 1
+                                    if task['name'] not in run['solved_names']:
+                                        run['solved_names'].append(task['name'])
+                                stream.write(json.dumps(dict(group=group, sample=sample, step=step, task_id=task['task_id'],
+                                                             kind=task['kind'], **item), ensure_ascii=False) + '\n')
+                                stream.flush()
+                                save()
+                                if result.get('censored'):
+                                    censored = True
+                                    run['last_censor_reason'] = result['status']
+                                if result['done']:
+                                    break
+                                state = env.prompt_state()
+                            automated = None
+                            if automation and not censored and trajectory and not trajectory[-1]['done']:
+                                automated = env.try_automation(automation)
+                                if automated:
+                                    stream.write(json.dumps(dict(group=group, sample=sample, step=len(trajectory),
+                                        task_id=task['task_id'], kind=task['kind'], automation=True,
+                                        tactic=automated['tactic'], **automated['result']), ensure_ascii=False) + '\n')
+                                    stream.flush()
+                                    if automated['result'].get('censored'):
+                                        censored = True
+                                        run['last_censor_reason'] = 'automation_' + automated['result']['status']
+                                    elif automated['result']['accepted']:
+                                        counts['automation_accepted'] += 1
+                            trajectories.append(trajectory)
+                            automation_done.append(bool(automated and automated['result']['accepted']))
+                            if trajectory:
+                                counts['trajectories'] += 1
+                            if censored:
+                                break
+                    finally:
+                        env.close()
+                else:
                     envs = [LeanEpisode(ctx, task, args.output, counts, reward_mode=reward_mode,
                                         max_repair_attempts=max_repair_attempts, version=version, horizon=depth,
                                         premises=premise_index, repl_log=f'episodes_s{i}.log', **chunk) for i in range(size)]
@@ -1639,27 +1374,14 @@ def main():
                 every = config.get('checkpoint_every', 0)
                 if every and not evaluating and counts['groups'] % every == 0:
                     run['phase'] = 'checkpoint'
-                    staging = args.output / 'checkpoint.tmp'
-                    model.save_pretrained(staging)
-                    tokenizer.save_pretrained(staging)
-                    torch.save(optimizer.state_dict(), staging / 'optimizer.pt')
-                    (staging / 'checkpoint.json').write_text(json.dumps(dict(groups=counts['groups'], group=group,
-                        optimizer_updates=counts['optimizer_updates'])) + '\n')
-                    if (args.output / 'checkpoint').exists():
-                        shutil.rmtree(args.output / 'checkpoint')
-                    staging.rename(args.output / 'checkpoint')
+                    save_periodic_checkpoint(args.output, model, tokenizer, optimizer, torch,
+                                             group=group, counts=counts)
                     run.update(phase='idle', last_checkpoint_groups=counts['groups'])
                 if not evaluating and counts['groups'] in config.get('checkpoint_keep', []):
                     # Kept snapshots (for example the midpoint) are never deleted; weights and tokenizer only.
                     run['phase'] = 'checkpoint'
-                    kept = args.output / f"checkpoint_g{counts['groups']}"
-                    staging = kept.with_name(kept.name + '.tmp')
-                    model.save_pretrained(staging)
-                    tokenizer.save_pretrained(staging)
-                    (staging / 'checkpoint.json').write_text(json.dumps(dict(groups=counts['groups'], group=group,
-                        optimizer_updates=counts['optimizer_updates'])) + '\n')
-                    staging.rename(kept)
-                    run.setdefault('kept_checkpoints', []).append(kept.name)
+                    name = save_retained_checkpoint(args.output, model, tokenizer, group=group, counts=counts)
+                    run.setdefault('kept_checkpoints', []).append(name)
                     run['phase'] = 'idle'
                 save()
         run['status'] = 'completed'

@@ -1,24 +1,57 @@
 # Configs
 
-Each config holds the frozen settings of one data build, evaluation or training run.
-Changed settings go into a new versioned file, for example `qwen_05b_interleaved_training_v1.json` to `_v3.json`.
-[scripts/README.md](../scripts/README.md) describes the scripts that read these files.
+Each config records settings for a data build, evaluation or training run.
+Treat run settings as frozen: changed settings belong in a new versioned file.
+The [script guide](../scripts/README.md#primary-workflow) explains which commands read them.
 
-The run configs of the 18 and 19 October leases (EXP-026 to EXP-028) are private launch inputs, not files in this folder.
-[Section 7 of the data handoff](../docs/EXPERIMENTS.md#7-step-by-step-run-with-this-data-as-the-main-run-did) lists the settings of the main-run configs.
-[`checkpoints.json`](checkpoints.json) is the download index of the published checkpoints. See [Checkpoints](../README.md#checkpoints).
+<a id="choose-a-config"></a>
 
-## Every config
+## Configuration selection
 
-Purpose is the first sentence of the config's `purpose` field, or a dash when the config has none. Where that sentence uses an older name for a thing in the names table on the start page in docs/EXPERIMENTS.md, Purpose uses the current name.
-Experiment comes from the source that the Source column names, in this order of preference:
+1. Find the experiment in the [register](../docs/EXPERIMENTS.md#experiment-register).
+2. Read its protocol and the corresponding row below. The index includes prepared configurations; check [README status](../README.md#status).
+3. Match the config to its data release, starting checkpoint and Lean/mathlib revisions. Similar filenames can belong to different studies.
 
-1. The config's own `experiment_id` or `experiment` field.
-2. The prefix of its `run_id` field, for example `exp019-` for EXP-019.
-3. A catalogue entry or a README status row that names the config. A catalogue line counts for the ID in its entry heading, or for the one ID on the line when the heading names none.
-4. A pattern in such an entry or row, for example `configs/rl/qwen_05b_prerequisite_grpo*.json`. A pattern counts only for the configs that Git tracked when the pattern was written.
+The 18–19 October runs (EXP-026 to EXP-028) used private configs under `.private/ops/`.
+The [main-run guide](../docs/EXPERIMENTS.md#7-step-by-step-run-with-this-data-as-the-main-run-did) gives their commands and settings; ask Manas for the actual files.
+Public EXP-026 configs below include separate pilots, so they are not substitutes for the main-run configs.
+[`reproduction_v1.json`](reproduction_v1.json) is a versioned specification for the [reproduction workflow](../README.md#reproduce-the-main-study).
+It records model and data identities and reconstructs SFT, DEV, shuffled-RL and curriculum-RL settings from that guide.
+The helper generates a separate runner config from each selected stage. This specification is not an original config or evidence of a rerun.
 
-`not recorded` means that no record names an experiment for the config.
+| Folder | Settings for |
+| --- | --- |
+| [data/](#data) | Dataset builds, splits and selections |
+| [eval/](#eval) | Evaluation, calibration and grading |
+| [pretrain/](#pretrain) | RLP training on number-theory text |
+| [midtrain/](#midtrain) | SFT, RLP and alternating training stages |
+| [rl/](#rl) | RL runs and candidate-action policies |
+
+SFT means supervised fine-tuning. RLP rewards reasoning that makes a hidden answer more likely; it does not verify correctness.
+[`checkpoints.json`](checkpoints.json) is a download index for published weights, rather than a run config. See [Checkpoints](../README.md#checkpoints).
+
+<a id="every-config"></a>
+
+## Configuration index
+
+**Purpose** summarizes the config's `purpose` field. A dash means the field is absent.
+Older terms use the names in the [handoff terminology table](../docs/EXPERIMENTS.md#start-here-one-page-for-abhinav).
+**Source** explains the experiment assignment. Prefer the first available source:
+
+1. The config's `experiment_id` or `experiment` field.
+2. Its `run_id` prefix, such as `exp019-` for EXP-019.
+3. A catalogue entry or README status row that names it.
+4. A filename pattern in that entry or row, restricted to files tracked when the pattern was written.
+
+`not recorded` means no source names an experiment for that config.
+A catalogue line uses the experiment in its heading, or the one explicit ID on the line when the heading names none.
+
+### Repository-level files
+
+| Config | Purpose | Experiment | Source |
+| --- | --- | --- | --- |
+| [`reproduction_v1.json`](reproduction_v1.json) | File identities and reconstructed main-study recipes for `scripts/reproduce.py` | EXP-026, EXP-027 | declared stage `experiment_id` fields; 21 October reproduction decision |
+| [`checkpoints.json`](checkpoints.json) | Download index for earlier published checkpoint releases | several earlier studies | release names in the index |
 
 ### data/
 
@@ -35,6 +68,8 @@ Inputs of dataset builds and selections.
 | [`data/nt_benchmark_v1.json`](data/nt_benchmark_v1.json) | Bounded exploratory benchmark build from the existing broader corpus. | EXP-025 | declared `experiment` |
 | [`data/nt_benchmark_v2.json`](data/nt_benchmark_v2.json) | Expanded exploratory SFT/RL dataset from the existing broader corpus. | EXP-025 | declared `experiment` |
 | [`data/nt_expanded_tactic_v1.json`](data/nt_expanded_tactic_v1.json) | Freeze broader TRAIN-source theorems and separate DEV theorems before model sampling. | EXP-023 | declared `experiment_id` |
+| [`data/nt_rebuild_v1.json`](data/nt_rebuild_v1.json) | New exploratory dataset from pinned public candidates; historical reviews and split membership are not reproduced. | EXP-025 | declared `experiment`; 21 October rebuild decision |
+| [`data/nt_sources_v1.json`](data/nt_sources_v1.json) | Immutable upstream file identities for the public dataset rebuild | EXP-025 | 21 October rebuild decision |
 | [`data/nt_sft_recovery_v1.json`](data/nt_sft_recovery_v1.json) | Separate recovery-augmented action dataset; no active pilot change or model launch. | not recorded | not recorded |
 | [`data/nt_validation_v1.json`](data/nt_validation_v1.json) | Held-out selection set for EXP-028 screening. | EXP-028 | declared `experiment` |
 | [`data/undergrad_nt_v1.json`](data/undergrad_nt_v1.json) | – | EXP-024 | declared `experiment` |

@@ -10,7 +10,6 @@ import platform
 import re
 import shlex
 import subprocess
-import sys
 
 REPOSITORY = Path(__file__).resolve().parents[1]
 CONTRACT = REPOSITORY / 'configs/reproduction_v1.json'

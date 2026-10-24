@@ -241,15 +241,17 @@ class NearIndex:
 
 def references(pool_path, workbook_path, minif2f_path, counts):
     import pyarrow.parquet as pq
-    pool = [json.loads(line) for line in open(pool_path)]
+    with open(pool_path) as input_stream:
+        pool = [json.loads(line) for line in input_stream]
     by_key = {r["key"]: (r["split"], r["name"]) for r in pool}
     duplicate_split = {d: r["split"] for r in pool for d in r["duplicates"]}
     refs = [(tokens(statement(r["formal_statement"])), ("pool_" + r["split"], r["name"])) for r in pool]
-    for r in json.load(open(workbook_path)):
-        found = re.search(r"theorem\s+(\S+)", r["formal_statement"])
-        if found and found[1] in duplicate_split:
-            refs.append((tokens(statement(r["formal_statement"])), ("pool_" + duplicate_split[found[1]], found[1])))
-            by_key.setdefault(key(statement(r["formal_statement"])), (duplicate_split[found[1]], found[1]))
+    with open(workbook_path) as _input_stream:
+        for r in json.load(_input_stream):
+            found = re.search(r"theorem\s+(\S+)", r["formal_statement"])
+            if found and found[1] in duplicate_split:
+                refs.append((tokens(statement(r["formal_statement"])), ("pool_" + duplicate_split[found[1]], found[1])))
+                by_key.setdefault(key(statement(r["formal_statement"])), (duplicate_split[found[1]], found[1]))
     minif2f_keys = {}
     for row in pq.read_table(minif2f_path).to_pylist():
         parts = split_declaration(row["formal_statement"])
@@ -337,8 +339,10 @@ def extract(args):
 
 def check_statements(args):
     from verify_external_proofs import check_batch
-    rows = [json.loads(line) for line in open(args.extract / "statements.jsonl")]
-    with_proofs = {json.loads(line)["key"] for line in open(args.extract / "proof_candidates.jsonl")}
+    with open(args.extract / "statements.jsonl") as input_stream:
+        rows = [json.loads(line) for line in input_stream]
+    with open(args.extract / "proof_candidates.jsonl") as input_stream:
+        with_proofs = {json.loads(line)["key"] for line in input_stream}
     # New statements always; pool-train duplicates only when a proof candidate needs them.
     todo = [r for r in rows if not r["pool_train_duplicate_of"] or r["forbidden_reason"] or r["key"] in with_proofs]
     index, count = map(int, args.shard.split("/"))
@@ -347,10 +351,12 @@ def check_statements(args):
     # the text, the pin, and the header.
     known = {}
     for old_extract, old_checks in zip(args.reuse_extract or [], args.reuse_checks or []):
-        text = {r["name"]: r["formal_statement"] for r in map(json.loads, open(old_extract / "statements.jsonl"))}
+        with open(old_extract / "statements.jsonl") as input_stream:
+            text = {r["name"]: r["formal_statement"] for r in map(json.loads, input_stream)}
         for path in old_checks.split(","):
-            for r in map(json.loads, open(Path(path) / "results.jsonl")):
-                known[re.sub(r"^theorem\s+\S+", "theorem _", text[r["name"]])] = r
+            with open(Path(path) / "results.jsonl") as input_stream:
+                for r in map(json.loads, input_stream):
+                    known[re.sub(r"^theorem\s+\S+", "theorem _", text[r["name"]])] = r
     env_root = args.environment.resolve()
     lean = env_root / "lean-4.10.0-rc1-linux/bin/lean"
     libs = [env_root / "mathlib/.lake/build/lib"] + sorted((env_root / "mathlib/.lake/packages").glob("*/.lake/build/lib"))
@@ -384,9 +390,10 @@ def check_statements(args):
 def elaborated(paths):
     status = {}
     for path in paths:
-        for line in open(path / "results.jsonl"):
-            r = json.loads(line)
-            status[r["name"]] = r["status"]
+        with open(path / "results.jsonl") as input_stream:
+            for line in input_stream:
+                r = json.loads(line)
+                status[r["name"]] = r["status"]
     return status
 
 
@@ -406,23 +413,25 @@ def select_proofs(args):
     args.output.mkdir(parents=True, exist_ok=False)
     FORBIDDEN = use_scorer(args.scorer_root, args.output)[1].FORBIDDEN
     statements = {}
-    for line in open(args.extract / "statements.jsonl"):
-        r = json.loads(line)
-        statements[r["key"]] = r
+    with open(args.extract / "statements.jsonl") as input_stream:
+        for line in input_stream:
+            r = json.loads(line)
+            statements[r["key"]] = r
     status = elaborated(args.statement_checks)
     counts, by_source = Counter(), defaultdict(list)
     per_statement = defaultdict(list)
-    for line in open(args.extract / "proof_candidates.jsonl"):
-        p = json.loads(line)
-        s = statements[p["key"]]
-        tag = p["source"] + ":"
-        counts[tag + "candidates"] += 1
-        if s["forbidden_reason"]:
-            counts[tag + "statement_forbidden"] += 1
-        elif status.get(s["name"]) != "sorry_only":
-            counts[tag + "statement_does_not_elaborate"] += 1
-        else:
-            per_statement[(p["source"], p["key"])].append(p)
+    with open(args.extract / "proof_candidates.jsonl") as _input_stream:
+        for line in _input_stream:
+            p = json.loads(line)
+            s = statements[p["key"]]
+            tag = p["source"] + ":"
+            counts[tag + "candidates"] += 1
+            if s["forbidden_reason"]:
+                counts[tag + "statement_forbidden"] += 1
+            elif status.get(s["name"]) != "sorry_only":
+                counts[tag + "statement_does_not_elaborate"] += 1
+            else:
+                per_statement[(p["source"], p["key"])].append(p)
     for (source, k), group in per_statement.items():
         group.sort(key=lambda p: p["id"])
         counts[source + ":over_2_per_statement"] += max(len(group) - 2, 0)
@@ -462,7 +471,8 @@ def select_proofs(args):
 
 
 def check_proofs(args):
-    rows = [json.loads(line) for line in open(args.selection / "selection.jsonl")]
+    with open(args.selection / "selection.jsonl") as input_stream:
+        rows = [json.loads(line) for line in input_stream]
     args.output.mkdir(parents=True, exist_ok=args.resume)
     scorer = use_scorer(args.scorer_root, args.output)[0]
     repl_context, verify_group = scorer.repl_context, scorer.verify_group
@@ -506,14 +516,17 @@ def file_sha(path):
 
 
 def finalize(args):
-    statements = [json.loads(line) for line in open(args.extract / "statements.jsonl")]
+    with open(args.extract / "statements.jsonl") as input_stream:
+        statements = [json.loads(line) for line in input_stream]
     status = elaborated(args.statement_checks)
-    selection = {r["id"]: r for r in map(json.loads, open(args.selection / "selection.jsonl"))}
+    with open(args.selection / "selection.jsonl") as input_stream:
+        selection = {r["id"]: r for r in map(json.loads, input_stream)}
     checked = {}
     for path in args.proof_checks:
-        for line in open(path / "checked.jsonl"):
-            r = json.loads(line)
-            checked[r["id"]] = r
+        with open(path / "checked.jsonl") as _input_stream:
+            for line in _input_stream:
+                r = json.loads(line)
+                checked[r["id"]] = r
     counts = Counter()
     for s in statements:
         tag = s["source"] + ":"

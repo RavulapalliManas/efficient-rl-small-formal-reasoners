@@ -78,7 +78,8 @@ def main():
     counts, tally = defaultdict(float), Counter()
     with (args.output / 'rejected.jsonl').open('x') as rejected:
         for split in ('train', 'val'):
-            rows = [json.loads(line) for line in (args.data / f'sft_{split}.jsonl').open()][:args.limit]
+            with (args.data / f'sft_{split}.jsonl').open() as input_stream:
+                rows = [json.loads(line) for line in input_stream][:args.limit]
             rows = [r for i, r in enumerate(rows) if i % shards == index]
             with ThreadPoolExecutor(args.workers) as pool, (args.output / f'sft_{split}.jsonl').open('x') as out:
                 for example, (updated, reason) in zip(rows, pool.map(lambda r: retrace_safe(ctx, args.output, counts, r), rows)):

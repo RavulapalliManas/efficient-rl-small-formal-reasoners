@@ -9,7 +9,7 @@ For each prior, the output says whether it is itself a random/train theorem with
 Memory: streams train.json twice with ijson; keeps per-premise counters (<200 MiB).
 """
 import argparse
-from collections import Counter, defaultdict
+from collections import Counter
 import json
 from pathlib import Path
 import re
@@ -41,9 +41,10 @@ def main():
     eval_files, eval_names = set(), set()
     for path in args.eval:
         with zipfile.ZipFile(path) as archive:
-            for line in archive.open(archive.namelist()[0]):
-                r = json.loads(line)
-                eval_files.add(r["file_path"]); eval_names.add(r["full_name"])
+            with archive.open(archive.namelist()[0]) as input_stream:
+                for line in input_stream:
+                    r = json.loads(line)
+                    eval_files.add(r["file_path"]); eval_names.add(r["full_name"])
     pooled = set()
     for path in args.pools:
         source = zipfile.ZipFile(path).open("train.jsonl") if path.suffix == ".zip" else path.open("rb")

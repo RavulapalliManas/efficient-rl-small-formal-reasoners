@@ -55,7 +55,10 @@ LOCK = threading.Lock()
 
 def sample_tasks(paths, count, seed):
     """Accepted tasks with more than DEPTH steps, every cut checked, and a reference suffix FORBIDDEN passes."""
-    rows = [json.loads(line) for path in paths for line in path.open()]
+    rows = []
+    for path in paths:
+        with path.open() as input_stream:
+            rows.extend(json.loads(line) for line in input_stream)
     pool = sorted((r for r in rows if r["status"] == "accepted" and len(r["steps"]) > DEPTH
                    and all(c["ok"] for c in r["cuts"]) and not FORBIDDEN.search("\n".join(r["steps"][-DEPTH:]))),
                   key=lambda r: r["theorem_id"])
@@ -522,8 +525,10 @@ def stats(values):
 
 
 def summarize(output, workers_projected, group):
-    rows = [json.loads(line) for line in (output / "attempts.jsonl").open()]
-    tasks = [json.loads(line) for line in (output / "tasks.jsonl").open()]
+    with (output / "attempts.jsonl").open() as input_stream:
+        rows = [json.loads(line) for line in input_stream]
+    with (output / "tasks.jsonl").open() as input_stream:
+        tasks = [json.loads(line) for line in input_stream]
     gib = 1024 ** 2
     summary = {"attempts": len(rows), "tasks": len(tasks), "depth": DEPTH, "forbidden": sum(r["forbidden"] for r in rows),
                "variants": dict(Counter(r["variant"] for r in rows)),
@@ -623,9 +628,10 @@ def main():
     eval_spans = defaultdict(list)
     for path in args.eval:
         with zipfile.ZipFile(path) as archive:
-            for line in archive.open(archive.namelist()[0]):
-                r = json.loads(line)
-                eval_spans[r["file_path"]].append((r["start"][0], r["end"][0], r["declaration_header"]))
+            with archive.open(archive.namelist()[0]) as input_stream:
+                for line in input_stream:
+                    r = json.loads(line)
+                    eval_spans[r["file_path"]].append((r["start"][0], r["end"][0], r["declaration_header"]))
     wanted = {t["theorem_id"] for t in tasks}
     rows = {r["theorem_id"]: r for r in load(args.train) if r["theorem_id"] in wanted}
     ctx.questions, sources = {}, {}

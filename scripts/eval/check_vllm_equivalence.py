@@ -37,7 +37,8 @@ def main():
     from transformers import AutoModelForCausalLM, AutoTokenizer
     from vllm import LLM, SamplingParams
     args.output.mkdir(parents=True, exist_ok=False)
-    pool = {r["name"]: r for r in map(json.loads, args.pool.open())}
+    with args.pool.open() as input_stream:
+        pool = {r["name"]: r for r in map(json.loads, input_stream)}
     goal = {r["name"]: r["state"] for r in read(args.cpu_dir / "states.jsonl") if r["state"]}
     names = sorted(goal)
     tokenizer = AutoTokenizer.from_pretrained(args.model)

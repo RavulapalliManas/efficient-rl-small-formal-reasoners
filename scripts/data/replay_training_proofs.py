@@ -58,8 +58,10 @@ def direct_lean_call(checker, environment, timeout=20):
 def load(path):
     if path.suffix == ".zip":
         with zipfile.ZipFile(path) as archive:
-            return [json.loads(line) for line in archive.open("train.jsonl")]
-    return [json.loads(line) for line in path.open()]
+            with archive.open("train.jsonl") as input_stream:
+                return [json.loads(line) for line in input_stream]
+    with path.open() as input_stream:
+        return [json.loads(line) for line in input_stream]
 
 
 def proof_body(tactics):
@@ -251,8 +253,12 @@ def main():
     rows = rows[index::count][:args.limit]
     statuses, sources, eval_spans = Counter(), {}, {}
     for path in args.eval:
-        rows_eval = [json.loads(line) for line in zipfile.ZipFile(path).open(zipfile.ZipFile(path).namelist()[0])] \
-            if path.suffix == ".zip" else [json.loads(line) for line in path.open()]
+        if path.suffix == ".zip":
+            with zipfile.ZipFile(path) as archive, archive.open(archive.namelist()[0]) as input_stream:
+                rows_eval = [json.loads(line) for line in input_stream]
+        else:
+            with path.open() as input_stream:
+                rows_eval = [json.loads(line) for line in input_stream]
         for r in rows_eval:
             eval_spans.setdefault(r["file_path"], []).append((r["start"][0], r["end"][0], r["declaration_header"]))
     if args.context == "file" and not args.eval:

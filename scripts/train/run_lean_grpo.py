@@ -148,15 +148,19 @@ def main():
                        config["lean_setup_timeout_seconds"], config["repl_restart_after"])
     for path in args.eval:
         with zipfile.ZipFile(path) as archive:
-            for line in archive.open(archive.namelist()[0]):
-                r = json.loads(line)
-                ctx.eval_spans.setdefault(r["file_path"], []).append((r["start"][0], r["end"][0], r["declaration_header"]))
+            with archive.open(archive.namelist()[0]) as input_stream:
+                for line in input_stream:
+                    r = json.loads(line)
+                    ctx.eval_spans.setdefault(r["file_path"], []).append((r["start"][0], r["end"][0], r["declaration_header"]))
     units, sources_info = [], {}
     if args.bank:
-        excluded = {line.strip() for line in args.exclude_files.open() if line.strip()}
-        bank = [dict(json.loads(line), kind="bank") for line in args.bank.open()]
+        with args.exclude_files.open() as input_stream:
+            excluded = {line.strip() for line in input_stream if line.strip()}
+        with args.bank.open() as input_stream:
+            bank = [dict(json.loads(line), kind="bank") for line in input_stream]
         if args.units:
-            wanted = {line.strip() for line in args.units.open() if line.strip()}
+            with args.units.open() as input_stream:
+                wanted = {line.strip() for line in input_stream if line.strip()}
             bank = [u for u in bank if u["task_id"] in wanted]
         leaks = [u["task_id"] for u in bank if u["file_path"] in excluded or u["file_path"] in ctx.eval_spans]
         if leaks:
@@ -166,18 +170,25 @@ def main():
         units += bank
         sources_info.update(bank=str(args.bank), bank_sha256=hashlib.sha256(args.bank.read_bytes()).hexdigest(),
                             bank_units=len(bank), excluded_files=len(excluded))
-    pool = [json.loads(line) for line in args.pool.open()] if args.pool else []
+    pool = []
     if args.pool:
+        with args.pool.open() as input_stream:
+            pool = [json.loads(line) for line in input_stream]
         sources_info.update(pool=str(args.pool), pool_sha256=hashlib.sha256(args.pool.read_bytes()).hexdigest())
     if args.pool_states:
-        states = {r["name"]: r["state"] for r in map(json.loads, args.pool_states.open())}
-        names = {line.strip() for line in args.pool_names.open() if line.strip()} if args.pool_names else None
+        with args.pool_states.open() as input_stream:
+            states = {r["name"]: r["state"] for r in map(json.loads, input_stream)}
+        names = None
+        if args.pool_names:
+            with args.pool_names.open() as input_stream:
+                names = {line.strip() for line in input_stream if line.strip()}
         statements = train_statements(pool, names)
         kept = [r for r in statements if states.get(r["name"])]
         units += [dict(lean_unit(r), state=states[r["name"]]) for r in kept]
         sources_info.update(pool_statements=len(kept), pool_without_state=len(statements) - len(kept))
     if args.tasks:
-        tasks = [json.loads(line) for line in args.tasks.open()]
+        with args.tasks.open() as input_stream:
+            tasks = [json.loads(line) for line in input_stream]
         if 'curriculum_max_lines_remaining' in config:
             from run_interleaved_training import prefix_curriculum
             tasks = prefix_curriculum(tasks, config['curriculum_max_lines_remaining'],
@@ -187,7 +198,8 @@ def main():
         sources_info.update(tasks=str(args.tasks), tasks_sha256=hashlib.sha256(args.tasks.read_bytes()).hexdigest(),
                             task_kinds={k: sum(t.get("kind") == k for t in tasks) for k in sorted({t.get("kind") for t in tasks})})
     if args.exclude_names:
-        excluded = {line.strip() for line in args.exclude_names.open() if line.strip()}
+        with args.exclude_names.open() as input_stream:
+            excluded = {line.strip() for line in input_stream if line.strip()}
         hits = excluded_names(units, excluded)
         if hits:
             raise RuntimeError(f"{len(hits)} names are in --exclude-names, for example {hits[:3]}")

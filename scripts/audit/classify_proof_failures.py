@@ -90,7 +90,8 @@ def main():
                 out.write(json.dumps(summary, indent=2) + '\n')
         print(json.dumps(summary, indent=2))
         return
-    rows = [json.loads(line) for line in args.verification.open()]
+    with args.verification.open() as input_stream:
+        rows = [json.loads(line) for line in input_stream]
     checked = [row for row in rows if row["status"] != "forbidden_construct"]
     messages = Counter()
     for row in checked:

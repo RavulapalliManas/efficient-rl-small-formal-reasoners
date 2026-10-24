@@ -65,31 +65,33 @@ def main():
     parser.add_argument("--minif2f-jaccard", type=float, default=0.7)
     args = parser.parse_args()
     started = time.monotonic()
-    pool = {r["name"]: r for r in map(json.loads, args.pool.open()) if r["split"] == "train"}
+    with args.pool.open() as input_stream:
+        pool = {r["name"]: r for r in map(json.loads, input_stream) if r["split"] == "train"}
     leak = Leakage(args.pool, args.splits, args.eval, args.minif2f, args.jaccard, args.minif2f_jaccard)
 
     # Comment-free source bodies, one per distinct (problem, body).
     counts, hits, bodies = Counter(), {}, {}
-    for i, line in enumerate(args.sft.open()):
-        r = json.loads(line)
-        name = r["theorem"]
-        counts["rows"] += 1
-        if name not in leak.sft_problems or name in leak.held_out_names or name not in pool:
-            raise RuntimeError(f"row {i}: {name} is not a train-only sft problem")
-        if name not in hits:
-            hits[name] = leak.hits(statement(pool[name]["formal_statement"]))
-        if hits[name]:
-            counts["rows_dropped_leakage"] += 1
-            continue
-        code = r["messages"][1]["content"].removeprefix("```lean\n").removesuffix("\n```")
-        body = body_of(code, header(pool[name]))
-        body = strip_comments(body) if body else None
-        if body is None or FORBIDDEN.search(body) or any(x.strip() and not x[0].isspace() for x in body.split("\n")):
-            counts["rows_skipped_body"] += 1
-        elif (name, body) in bodies:
-            counts["rows_duplicate_after_strip"] += 1
-        else:
-            bodies[name, body] = i
+    with args.sft.open() as input_stream:
+        for i, line in enumerate(input_stream):
+            r = json.loads(line)
+            name = r["theorem"]
+            counts["rows"] += 1
+            if name not in leak.sft_problems or name in leak.held_out_names or name not in pool:
+                raise RuntimeError(f"row {i}: {name} is not a train-only sft problem")
+            if name not in hits:
+                hits[name] = leak.hits(statement(pool[name]["formal_statement"]))
+            if hits[name]:
+                counts["rows_dropped_leakage"] += 1
+                continue
+            code = r["messages"][1]["content"].removeprefix("```lean\n").removesuffix("\n```")
+            body = body_of(code, header(pool[name]))
+            body = strip_comments(body) if body else None
+            if body is None or FORBIDDEN.search(body) or any(x.strip() and not x[0].isspace() for x in body.split("\n")):
+                counts["rows_skipped_body"] += 1
+            elif (name, body) in bodies:
+                counts["rows_duplicate_after_strip"] += 1
+            else:
+                bodies[name, body] = i
     counts["source_bodies"] = len(bodies)
 
     cuts, seen = [], set()
@@ -158,8 +160,10 @@ def main():
         for repl in list(ctx.pool_repls):
             repl.close()
 
-    rows = [json.loads(line) for line in (args.output / "cuts.jsonl").open()]
-    proofs = [json.loads(line) for line in (args.output / "proofs.jsonl").open()]
+    with (args.output / "cuts.jsonl").open() as input_stream:
+        rows = [json.loads(line) for line in input_stream]
+    with (args.output / "proofs.jsonl").open() as input_stream:
+        proofs = [json.loads(line) for line in input_stream]
     done = {(c["name"], c["given"]) for c in planned}
     per_body = []
     for (name, body), _ in bodies.items():

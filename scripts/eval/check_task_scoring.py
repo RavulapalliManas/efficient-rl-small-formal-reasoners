@@ -42,13 +42,16 @@ def main():
     args = parser.parse_args()
     args.output.mkdir(parents=True, exist_ok=False)
     failures, report = [], {}
-    tasks = [json.loads(line) for line in args.tasks.open()]
-    pool = [json.loads(line) for line in args.pool.open()]
+    with args.tasks.open() as input_stream:
+        tasks = [json.loads(line) for line in input_stream]
+    with args.pool.open() as input_stream:
+        pool = [json.loads(line) for line in input_stream]
     units = task_units(tasks, pool)  # raises on any guard failure
     report["tasks"] = len(tasks)
     report["kinds"] = dict(Counter(t["kind"] for t in tasks))
     if args.exclude_names:
-        hits = excluded_names(units, {line.strip() for line in args.exclude_names.open() if line.strip()})
+        with args.exclude_names.open() as input_stream:
+            hits = excluded_names(units, {line.strip() for line in input_stream if line.strip()})
         report["excluded_name_hits"] = hits
         if hits:
             failures.append(f"{len(hits)} task names are in --exclude-names")

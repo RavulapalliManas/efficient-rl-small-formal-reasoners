@@ -33,7 +33,8 @@ def jaccard(a, b):
 
 class Leakage:
     def __init__(self, pool, splits, evals, minif2f, threshold=0.85, minif2f_threshold=0.7):
-        rows = {r["name"]: r for r in map(json.loads, Path(pool).open())}
+        with Path(pool).open() as input_stream:
+            rows = {r["name"]: r for r in map(json.loads, input_stream)}
         names = {f: set((Path(splits) / f"{f}.txt").read_text().split())
                  for f in ("heldout_proof_problems", "dev", "excluded_from_training", "sft_problems")}
         self.sft_problems = names["sft_problems"]
@@ -46,13 +47,15 @@ class Leakage:
         self.eval_names = set()
         for path in evals:
             with zipfile.ZipFile(path) as archive:
-                for line in archive.open(archive.namelist()[0]):
-                    r = json.loads(line)
-                    self.eval_names.add(r["full_name"])
-                    self.targets.append(("leandojo_" + Path(path).stem, r["full_name"],
-                                         tokens(statement_of(r["declaration_header"])), threshold))
-        for r in map(json.loads, Path(minif2f).open()):
-            self.targets.append(("minif2f", r["name"], tokens(statement(r["formal_statement"])), minif2f_threshold))
+                with archive.open(archive.namelist()[0]) as input_stream:
+                    for line in input_stream:
+                        r = json.loads(line)
+                        self.eval_names.add(r["full_name"])
+                        self.targets.append(("leandojo_" + Path(path).stem, r["full_name"],
+                                             tokens(statement_of(r["declaration_header"])), threshold))
+        with Path(minif2f).open() as input_stream:
+            for r in map(json.loads, input_stream):
+                self.targets.append(("minif2f", r["name"], tokens(statement(r["formal_statement"])), minif2f_threshold))
         self.held_out_names = ({n for n, r in rows.items() if r["split"] != "train"} | names["heldout_proof_problems"]
                                | names["dev"] | names["excluded_from_training"] | self.eval_names)
 

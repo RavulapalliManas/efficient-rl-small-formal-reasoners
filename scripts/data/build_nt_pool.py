@@ -55,44 +55,47 @@ def main():
     args = parser.parse_args()
     proved = Counter()
     for path in args.proofs:
-        for line in path.open():
-            r = json.loads(line)
-            proved[r["name"]] += r["status"] == "accepted"
+        with path.open() as input_stream:
+            for line in input_stream:
+                r = json.loads(line)
+                proved[r["name"]] += r["status"] == "accepted"
     eval_statements = []
     for path in args.eval:
         with zipfile.ZipFile(path) as archive:
-            for line in archive.open(archive.namelist()[0]):
-                header = json.loads(line)["declaration_header"]
-                eval_statements.append(re.split(r"\b(?:theorem|lemma)\s+\S+", header, maxsplit=1)[-1].strip())
+            with archive.open(archive.namelist()[0]) as input_stream:
+                for line in input_stream:
+                    header = json.loads(line)["declaration_header"]
+                    eval_statements.append(re.split(r"\b(?:theorem|lemma)\s+\S+", header, maxsplit=1)[-1].strip())
     eval_keys = {key(s) for s in eval_statements}
     eval_tokens = [tokens(s) for s in eval_statements]
     counts, pool = Counter(), {}
     for path in args.statements:
-        for line in path.open():
-            r = json.loads(line)
-            counts["rows"] += 1
-            if r["status"] != "sorry_only":
-                counts["dropped_does_not_elaborate"] += 1
-                continue
-            stmt = statement(r["formal_statement"])
-            if not NUMBER_THEORY.search(stmt):
-                counts["dropped_no_number_theory_content"] += 1
-            elif REAL.search(stmt):
-                counts["dropped_real_or_complex"] += 1
-            elif closed(stmt):
-                counts["dropped_closed_numeric"] += 1
-            else:
-                k = key(stmt)
-                t = tokens(stmt)
-                if k in eval_keys or any(len(t & e) / max(len(t | e), 1) >= 0.8 for e in eval_tokens):
-                    counts["dropped_matches_evaluation"] += 1
-                elif k in pool:
-                    counts["merged_renamed_duplicate"] += 1
-                    pool[k]["duplicates"].append(r["name"])
+        with path.open() as input_stream:
+            for line in input_stream:
+                r = json.loads(line)
+                counts["rows"] += 1
+                if r["status"] != "sorry_only":
+                    counts["dropped_does_not_elaborate"] += 1
+                    continue
+                stmt = statement(r["formal_statement"])
+                if not NUMBER_THEORY.search(stmt):
+                    counts["dropped_no_number_theory_content"] += 1
+                elif REAL.search(stmt):
+                    counts["dropped_real_or_complex"] += 1
+                elif closed(stmt):
+                    counts["dropped_closed_numeric"] += 1
                 else:
-                    pool[k] = {"name": r["name"], "split": split_of(k), "formal_statement": r["formal_statement"],
-                               "natural_language_statement": r["natural_language_statement"], "tags": r["tags"],
-                               "answer": r["answer"], "key": k, "duplicates": []}
+                    k = key(stmt)
+                    t = tokens(stmt)
+                    if k in eval_keys or any(len(t & e) / max(len(t | e), 1) >= 0.8 for e in eval_tokens):
+                        counts["dropped_matches_evaluation"] += 1
+                    elif k in pool:
+                        counts["merged_renamed_duplicate"] += 1
+                        pool[k]["duplicates"].append(r["name"])
+                    else:
+                        pool[k] = {"name": r["name"], "split": split_of(k), "formal_statement": r["formal_statement"],
+                                   "natural_language_statement": r["natural_language_statement"], "tags": r["tags"],
+                                   "answer": r["answer"], "key": k, "duplicates": []}
     for row in pool.values():
         row["checked_proofs"] = sum(proved[n] for n in [row["name"]] + row["duplicates"])
     args.output.mkdir(parents=True, exist_ok=False)

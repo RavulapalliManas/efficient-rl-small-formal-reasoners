@@ -41,7 +41,8 @@ FIXED = ["rfl", "norm_num", "simp", "omega", "linarith", "aesop", "simp_all", "t
 
 def export(path):
     with zipfile.ZipFile(path) as archive:
-        return [json.loads(line) for line in archive.open(archive.namelist()[0])]
+        with archive.open(archive.namelist()[0]) as input_stream:
+            return [json.loads(line) for line in input_stream]
 
 
 def propose(model, tokenizer, torch, goals, k, max_new_tokens):

@@ -90,7 +90,8 @@ def main():
     env = dict(os.environ, LEAN_PATH=os.pathsep.join(map(str, libs)))
     files = sorted(str(p.relative_to(mathlib)) for pattern in PATTERNS for p in mathlib.glob(pattern))[:args.limit_files]
     leak = Leakage(args.pool, args.splits, args.eval, args.minif2f, args.jaccard, args.minif2f_jaccard)
-    minif2f_imo = {(m[1], m[2]): r["name"] for r in map(json.loads, args.minif2f.open()) if (m := IMO_MINIF2F.fullmatch(r["name"]))}
+    with args.minif2f.open() as input_stream:
+        minif2f_imo = {(m[1], m[2]): r["name"] for r in map(json.loads, input_stream) if (m := IMO_MINIF2F.fullmatch(r["name"]))}
     args.output.mkdir(parents=True, exist_ok=False)
     (args.output / "lean").mkdir()
     with ThreadPoolExecutor(args.workers) as threads:

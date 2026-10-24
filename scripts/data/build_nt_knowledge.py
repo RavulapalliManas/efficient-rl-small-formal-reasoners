@@ -227,10 +227,11 @@ def main():
     eval_files, eval_names = set(), []
     for path in args.eval:
         with zipfile.ZipFile(path) as archive:
-            for line in archive.open(archive.namelist()[0]):
-                r = json.loads(line)
-                eval_files.add(r["file_path"])
-                eval_names += [r["full_name"]] + ([r["full_name"][4:]] if r["full_name"].startswith("Nat.") else [])
+            with archive.open(archive.namelist()[0]) as input_stream:
+                for line in input_stream:
+                    r = json.loads(line)
+                    eval_files.add(r["file_path"])
+                    eval_names += [r["full_name"]] + ([r["full_name"][4:]] if r["full_name"].startswith("Nat.") else [])
     cites = re.compile(r"(?<![\w.'])(" + "|".join(map(re.escape, sorted(eval_names, key=len, reverse=True))) + r")(?![\w'])")
     excluded = set(args.exclude_files.read_text().split())
     matched = sorted(str(p.relative_to(mathlib)) for p in (mathlib / "Mathlib").rglob("*.lean") if NUMBER_THEORY.search(str(p.relative_to(mathlib))))

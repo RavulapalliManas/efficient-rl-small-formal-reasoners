@@ -27,7 +27,6 @@ import hashlib
 import importlib.metadata
 import json
 from pathlib import Path
-import re
 import shutil
 import signal
 import subprocess
@@ -503,13 +502,15 @@ def main():
         if args.bank:
             for path in args.eval:
                 with zipfile.ZipFile(path) as archive:
-                    for line in archive.open(archive.namelist()[0]):
-                        row = json.loads(line)
-                        eval_spans.setdefault(row['file_path'], []).append(
-                            (row['start'][0], row['end'][0], row['declaration_header']))
+                    with archive.open(archive.namelist()[0]) as input_stream:
+                        for line in input_stream:
+                            row = json.loads(line)
+                            eval_spans.setdefault(row['file_path'], []).append(
+                                (row['start'][0], row['end'][0], row['declaration_header']))
             rows = [row for path in args.train for row in load(path)]
-            tasks = bank_tasks([json.loads(line) for line in args.bank.open()], rows,
-                               set(args.exclude_files.read_text().split()), eval_spans)
+            with args.bank.open() as input_stream:
+                tasks = bank_tasks([json.loads(line) for line in input_stream], rows,
+                                   set(args.exclude_files.read_text().split()), eval_spans)
             if args.units:
                 wanted = set(args.units.read_text().split())
                 if not wanted <= {task['task_id'] for task in tasks}:

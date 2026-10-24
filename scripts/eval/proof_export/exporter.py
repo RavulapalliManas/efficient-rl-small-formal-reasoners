@@ -52,8 +52,7 @@ class ProofExporter:
             raise RuntimeError('Assessment split differs from the recorded mode')
         cfg = run['config']
         inputs = {name: Path(value['path']) for name, value in run['inputs'].items()}
-        environment = inputs['mathlib_identity'].parent.parent.parent / 'lean_env_full'
-        # The registered source uses the shared environment; derive it from the command record.
+        # Locate the shared runtime relative to the recorded run directory.
         root = self.run.parents[0]
         while not (root / 'lean_env_full').is_dir():
             if root.parent == root:

@@ -19,7 +19,7 @@ from probe_nt_pool import lean_unit  # noqa: E402
 from probe_start_depth import FORBIDDEN, FORBIDDEN_CODE  # noqa: E402
 from replay_training_proofs import proof_body, question  # noqa: E402
 from verify_external_proofs import HEADER  # noqa: E402
-from .actions import BACKTRACK, INSTRUCTION_V2, action_positions, cap_message, lex_lines, parse_action  # noqa: E402
+from .actions import INSTRUCTION_V2, action_positions, cap_message, lex_lines, parse_action  # noqa: E402
 from .observations import render_observation  # noqa: E402
 from .proofs import tactic_block  # noqa: E402
 

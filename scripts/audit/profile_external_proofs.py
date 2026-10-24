@@ -52,14 +52,18 @@ def main():
     parser.add_argument("--eval", type=Path, action="append", required=True)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
-    rows = [json.loads(line) for path in args.results for line in path.open()]
+    rows = []
+    for path in args.results:
+        with path.open() as input_stream:
+            rows.extend(json.loads(line) for line in input_stream)
     eval_headers, eval_names = [], []
     for path in args.eval:
         with zipfile.ZipFile(path) as archive:
-            for line in archive.open(archive.namelist()[0]):
-                row = json.loads(line)
-                eval_headers.append(row["declaration_header"])
-                eval_names += [row["full_name"]] + ([row["full_name"][4:]] if row["full_name"].startswith("Nat.") else [])
+            with archive.open(archive.namelist()[0]) as input_stream:
+                for line in input_stream:
+                    row = json.loads(line)
+                    eval_headers.append(row["declaration_header"])
+                    eval_names += [row["full_name"]] + ([row["full_name"][4:]] if row["full_name"].startswith("Nat.") else [])
     cites = re.compile(r"(?<![\w.'])(" + "|".join(map(re.escape, sorted(eval_names, key=len, reverse=True))) + r")(?![\w'])")
     eval_statements = [re.split(r"\b(?:theorem|lemma)\s+\S+", h, maxsplit=1)[-1].strip() for h in eval_headers]
     eval_tokens = [tokens(s) for s in eval_statements]

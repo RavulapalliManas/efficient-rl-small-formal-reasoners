@@ -131,13 +131,15 @@ def main():
     eval_spans = {}
     for path in args.eval:
         with zipfile.ZipFile(path) as archive:
-            for line in archive.open(archive.namelist()[0]):
-                r = json.loads(line)
-                eval_spans.setdefault(r["file_path"], []).append((r["start"][0], r["end"][0], r["declaration_header"]))
+            with archive.open(archive.namelist()[0]) as input_stream:
+                for line in input_stream:
+                    r = json.loads(line)
+                    eval_spans.setdefault(r["file_path"], []).append((r["start"][0], r["end"][0], r["declaration_header"]))
     rows = sorted((r for r in load(args.train) if r["traced_tactics"]), key=lambda r: r["theorem_id"])[index::count][:args.limit]
     done = set()
     if args.resume and (args.output / "tasks.jsonl").exists():
-        done = {json.loads(line)["theorem_id"] for line in (args.output / "tasks.jsonl").open()}
+        with (args.output / "tasks.jsonl").open() as input_stream:
+            done = {json.loads(line)["theorem_id"] for line in input_stream}
     else:
         args.output.mkdir(parents=True, exist_ok=False)
         (args.output / "lean").mkdir()

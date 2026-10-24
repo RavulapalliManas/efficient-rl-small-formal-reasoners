@@ -152,7 +152,8 @@ def main():
         parser.add_argument('--' + name, type=Path, required=True)
     args = parser.parse_args()
     cfg = json.loads(args.config.read_text())
-    states = [json.loads(line) for line in args.states.open()]
+    with args.states.open() as input_stream:
+        states = [json.loads(line) for line in input_stream]
     if len({s['id'] for s in states}) != len(states):
         raise ValueError('Duplicate state ID')
     for state in states:

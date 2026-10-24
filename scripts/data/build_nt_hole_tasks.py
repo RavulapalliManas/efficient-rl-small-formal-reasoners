@@ -147,7 +147,8 @@ def main():
     parser.add_argument("--workers", type=int, default=8)
     args = parser.parse_args()
     started = time.monotonic()
-    pool = {r["name"]: r for r in map(json.loads, args.pool.open()) if r["split"] == "train"}
+    with args.pool.open() as input_stream:
+        pool = {r["name"]: r for r in map(json.loads, input_stream) if r["split"] == "train"}
     problems, rl_pool = set(args.problems.read_text().split()), sorted(set(args.rl_pool.read_text().split()))
     if not problems <= set(pool) or not set(rl_pool) <= set(pool):
         raise RuntimeError("--problems and --rl-pool must name train statements of the pool")
@@ -158,24 +159,25 @@ def main():
     # Distinct comment-free bodies of accepted proofs, with the filters of build_nt_sft_data.py.
     counts, found = Counter(), {}
     for path in args.proofs:
-        for line in path.open():
-            r = json.loads(line)
-            if r["name"] not in problems:
-                continue
-            counts["proof_rows"] += 1
-            body = body_of(r["text"], header(pool[r["name"]])) if r["status"] == "accepted" else None
-            if r["status"] != "accepted":
-                counts["skipped_not_accepted"] += 1
-            elif body is None:
-                counts["skipped_statement_differs"] += 1
-            elif FORBIDDEN.search(body) or any(x.strip() and not x[0].isspace() for x in body.split("\n")):
-                counts["skipped_forbidden_or_top_level"] += 1
-            elif len(body) > args.max_chars:
-                counts["skipped_too_long"] += 1
-            elif (r["name"], strip_comments(body)) in found:
-                counts["skipped_duplicate_after_strip"] += 1
-            else:
-                found[r["name"], strip_comments(body)] = r["source"].split("_proof")[0]
+        with path.open() as input_stream:
+            for line in input_stream:
+                r = json.loads(line)
+                if r["name"] not in problems:
+                    continue
+                counts["proof_rows"] += 1
+                body = body_of(r["text"], header(pool[r["name"]])) if r["status"] == "accepted" else None
+                if r["status"] != "accepted":
+                    counts["skipped_not_accepted"] += 1
+                elif body is None:
+                    counts["skipped_statement_differs"] += 1
+                elif FORBIDDEN.search(body) or any(x.strip() and not x[0].isspace() for x in body.split("\n")):
+                    counts["skipped_forbidden_or_top_level"] += 1
+                elif len(body) > args.max_chars:
+                    counts["skipped_too_long"] += 1
+                elif (r["name"], strip_comments(body)) in found:
+                    counts["skipped_duplicate_after_strip"] += 1
+                else:
+                    found[r["name"], strip_comments(body)] = r["source"].split("_proof")[0]
     counts["distinct_bodies"] = len(found)
 
     # (1) The reward path on every distinct body; then one accepted proof per problem.
@@ -223,8 +225,15 @@ def main():
             repl.close()
 
     # (4) Near-duplicate states, then the whole-statement tasks.
-    evaluation = [(r["name"], tokens(r["state"])) for path in args.eval_states for r in map(json.loads, path.open()) if r["state"]]
-    eval_without_state = sum(not r["state"] for path in args.eval_states for r in map(json.loads, path.open()))
+    evaluation = []
+    for path in args.eval_states:
+        with path.open() as input_stream:
+            evaluation.extend((row["name"], tokens(row["state"]))
+                              for row in map(json.loads, input_stream) if row["state"])
+    eval_without_state = 0
+    for path in args.eval_states:
+        with path.open() as input_stream:
+            eval_without_state += sum(not row["state"] for row in map(json.loads, input_stream))
     tasks, invalid = [], []
     for cut in cuts:
         if cut["reason"] is None:
@@ -239,7 +248,8 @@ def main():
                           "lines_remaining": len(cut["reference_rest"].split("\n"))})
         else:
             invalid.append({k: cut.get(k) for k in ("task_id", "reason", "eval_jaccard", "eval_match")})
-    states = {r["name"]: r["state"] for r in map(json.loads, args.states.open())}
+    with args.states.open() as input_stream:
+        states = {r["name"]: r["state"] for r in map(json.loads, input_stream)}
     for name in rl_pool:
         if states.get(name):
             tasks.append({"task_id": f"{name}:whole:0", "name": name, "kind": "whole", "header": header(pool[name]),

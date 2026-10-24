@@ -13,7 +13,6 @@ from collections import Counter, defaultdict
 import json
 import os
 from pathlib import Path
-import re
 import sys
 import time
 import zipfile
@@ -30,7 +29,8 @@ INSTRUCTION = ("Prove this Lean 4 theorem. The environment is Lean 4 with mathli
 
 def export(path):
     with zipfile.ZipFile(path) as archive:
-        return [json.loads(line) for line in archive.open(archive.namelist()[0])]
+        with archive.open(archive.namelist()[0]) as input_stream:
+            return [json.loads(line) for line in input_stream]
 
 
 def main():
@@ -84,7 +84,8 @@ def main():
             counts[record["status"]] += 1
             out.write(json.dumps(record, ensure_ascii=False) + "\n")
             out.flush()
-    task_rows = [json.loads(line) for line in (args.output / "tasks.jsonl").open()]
+    with (args.output / "tasks.jsonl").open() as input_stream:
+        task_rows = [json.loads(line) for line in input_stream]
     summary = {"validation_theorems": len(validation), "task_status": dict(counts),
                "empty_proof_accepted": sum(r.get("empty_proof") == "accepted" for r in task_rows), "models": {}}
     if args.model:

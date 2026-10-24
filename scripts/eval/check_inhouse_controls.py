@@ -41,7 +41,8 @@ def main():
     environment = args.environment.resolve()
     checker = load_checker(args.checker, environment, args.output)
     ctx = repl_context(checker, environment, args.repl, args.output, 20, 900, 400)
-    pool = {r["name"]: r for r in map(json.loads, args.pool.open())}
+    with args.pool.open() as input_stream:
+        pool = {r["name"]: r for r in map(json.loads, input_stream)}
     results, failures, observations = [], [], []
 
     def expect(label, got, want):
@@ -50,25 +51,26 @@ def main():
             failures.append(label)
 
     done = 0
-    for line in args.sft.open():
-        r = json.loads(line)
-        code = r["messages"][1]["content"].removeprefix("```lean\n").removesuffix("\n```")
-        body = strip_comments(body_of(code, header(pool[r["theorem"]])))
-        steps, pad = top_level_steps(body)
-        if len(steps) < 3 or "\n" in steps[-1]:
-            continue
-        given, hdr = "\n".join(steps[:-1]) + "\n", header(pool[r["theorem"]])
-        state, reason, _ = state_at(ctx, hdr, given, [len(pad)])
-        unit = {"task_id": "control", "kind": "statement", "name": r["theorem"], "header": hdr, "given": given, "given_steps": []}
-        verdicts = [x["status"] for x in verify_group(ctx, unit, [steps[-1], pad + "skip", pad + "done"])]
-        if given.rstrip().endswith("<;>"):  # build_nt_tactic_aug.py skips this cut
-            observations.append({"proof": r["theorem"], "given_ends_in": "<;>", "state_reason": reason, "last step, skip, done": verdicts})
-            continue
-        expect(f"aug {r['theorem']} state at n-1", reason, None)
-        expect(f"aug {r['theorem']} last step, skip, done", verdicts, ["accepted", "rejected", "rejected"])
-        done += 1
-        if done == args.proofs:
-            break
+    with args.sft.open() as input_stream:
+        for line in input_stream:
+            r = json.loads(line)
+            code = r["messages"][1]["content"].removeprefix("```lean\n").removesuffix("\n```")
+            body = strip_comments(body_of(code, header(pool[r["theorem"]])))
+            steps, pad = top_level_steps(body)
+            if len(steps) < 3 or "\n" in steps[-1]:
+                continue
+            given, hdr = "\n".join(steps[:-1]) + "\n", header(pool[r["theorem"]])
+            state, reason, _ = state_at(ctx, hdr, given, [len(pad)])
+            unit = {"task_id": "control", "kind": "statement", "name": r["theorem"], "header": hdr, "given": given, "given_steps": []}
+            verdicts = [x["status"] for x in verify_group(ctx, unit, [steps[-1], pad + "skip", pad + "done"])]
+            if given.rstrip().endswith("<;>"):  # build_nt_tactic_aug.py skips this cut
+                observations.append({"proof": r["theorem"], "given_ends_in": "<;>", "state_reason": reason, "last step, skip, done": verdicts})
+                continue
+            expect(f"aug {r['theorem']} state at n-1", reason, None)
+            expect(f"aug {r['theorem']} last step, skip, done", verdicts, ["accepted", "rejected", "rejected"])
+            done += 1
+            if done == args.proofs:
+                break
     for repl in list(ctx.pool_repls):
         repl.close()
 

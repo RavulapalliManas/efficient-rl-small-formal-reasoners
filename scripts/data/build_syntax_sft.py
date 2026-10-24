@@ -65,21 +65,24 @@ def main():
         parser.error("Use 1..8 workers and positive data caps")
     started = time.monotonic()
     leak = Leakage(args.pool, args.splits, args.eval, args.minif2f)
-    pool = {r["name"]: r for r in map(json.loads, args.pool.open())}
+    with args.pool.open() as input_stream:
+        pool = {r["name"]: r for r in map(json.loads, input_stream)}
     excluded = set(args.exclude_files.read_text().split())
     evaluation_names, eval_spans = set(), defaultdict(list)
     for path in args.eval:
         with zipfile.ZipFile(path) as archive:
-            for line in archive.open(archive.namelist()[0]):
-                row = json.loads(line)
-                excluded.add(row["file_path"])
-                evaluation_names.add(row["full_name"])
-                eval_spans[row["file_path"]].append((row["start"][0], row["end"][0], row["declaration_header"]))
+            with archive.open(archive.namelist()[0]) as input_stream:
+                for line in input_stream:
+                    row = json.loads(line)
+                    excluded.add(row["file_path"])
+                    evaluation_names.add(row["full_name"])
+                    eval_spans[row["file_path"]].append((row["start"][0], row["end"][0], row["declaration_header"]))
     units, counts = defaultdict(list), Counter()
     allowed_path = re.compile(r"^Mathlib/(?:Logic/|Data/(?:Set/|Finset/|Nat/|Int/|ZMod/)|NumberTheory/)")
-    for line in args.bank.open():
-        unit = json.loads(line)
-        units[unit["theorem_id"]].append(unit)
+    with args.bank.open() as input_stream:
+        for line in input_stream:
+            unit = json.loads(line)
+            units[unit["theorem_id"]].append(unit)
     candidates = []
     for tid, group in sorted(units.items()):
         whole = next(u for u in group if u["k"] == 0)

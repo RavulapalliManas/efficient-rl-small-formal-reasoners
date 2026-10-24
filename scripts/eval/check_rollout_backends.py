@@ -89,13 +89,15 @@ def main():
                 text = tokenizer.apply_chat_template([{'role': 'user', 'content': content}], tokenize=False,
                                                      add_generation_prompt=True)
                 prompts.append(tokenizer(text, add_special_tokens=False)['input_ids'])
-    for line in (args.rollouts.open() if args.rollouts else []):
-        ids = json.loads(line).get('prompt_ids')
-        if ids and tuple(ids) not in seen:
-            seen.add(tuple(ids))
-            prompts.append(ids)
-        if len(prompts) == args.n_prompts:
-            break
+    if args.rollouts:
+        with args.rollouts.open() as input_stream:
+            for line in input_stream:
+                ids = json.loads(line).get('prompt_ids')
+                if ids and tuple(ids) not in seen:
+                    seen.add(tuple(ids))
+                    prompts.append(ids)
+                if len(prompts) == args.n_prompts:
+                    break
     device = args.device
     model = AutoModelForCausalLM.from_pretrained(args.model, torch_dtype=torch.float32).to(device).eval()
     tokenizer = AutoTokenizer.from_pretrained(args.model)

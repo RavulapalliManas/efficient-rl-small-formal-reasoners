@@ -80,9 +80,17 @@ def main():
     parser.add_argument("--max-generated-tokens", type=int, help="generation budget (the GRPO arm's generated_tokens)")
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
-    pool = [json.loads(line) for line in args.pool.open()]
-    units = {row_key(r): r for r in ([json.loads(line) for line in args.tasks.open()] if args.tasks else pool)}
-    excluded = {line.strip() for line in args.exclude_names.open() if line.strip()} if args.exclude_names else set()
+    with args.pool.open() as input_stream:
+        pool = [json.loads(line) for line in input_stream]
+    task_rows = pool
+    if args.tasks:
+        with args.tasks.open() as input_stream:
+            task_rows = [json.loads(line) for line in input_stream]
+    units = {row_key(row): row for row in task_rows}
+    excluded = set()
+    if args.exclude_names:
+        with args.exclude_names.open() as input_stream:
+            excluded = {line.strip() for line in input_stream if line.strip()}
     candidates = [c for d in args.map_dir for c in read(d / "candidates.jsonl")]
     checked = [c for d in args.map_dir for c in read(d / "checked.jsonl")]
     states = {r["name"]: r["state"] for d in args.map_dir for r in read(d / "states.jsonl")}

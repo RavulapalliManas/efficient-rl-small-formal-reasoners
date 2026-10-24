@@ -35,7 +35,8 @@ def main():
     evals = []
     for path in args.eval:
         with zipfile.ZipFile(path) as archive:
-            evals.extend(json.loads(line) for line in archive.open(archive.namelist()[0]))
+            with archive.open(archive.namelist()[0]) as input_stream:
+                evals.extend(json.loads(line) for line in input_stream)
     eval_files = {r["file_path"] for r in evals}
     eval_names = {r["full_name"] for r in evals}
     eval_norm = [normalize(r["declaration_header"]) for r in evals]

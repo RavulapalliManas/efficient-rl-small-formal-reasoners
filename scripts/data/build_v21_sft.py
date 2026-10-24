@@ -160,7 +160,8 @@ def main():
     sources = set(args.sources.split(','))
     if not sources <= {'tasks', 'aug', 'cuts'} or ('cuts' in sources and not (args.cuts and args.sft_train)):
         parser.error('--sources takes tasks, aug, cuts; cuts needs --cuts and --sft-train')
-    pool = {r['name']: r for r in map(json.loads, args.pool.open())}
+    with args.pool.open() as input_stream:
+        pool = {r['name']: r for r in map(json.loads, input_stream)}
     excluded = set((args.splits / 'excluded_from_training.txt').read_text().split())
     excluded |= set((args.splits / 'dev.txt').read_text().split())
     for path in args.exclude_names:
@@ -183,19 +184,20 @@ def main():
         return k > 0 and int(digest, 16) % 100 < args.supplied_share * 100
 
     if 'tasks' in sources:
-        for task in map(json.loads, args.tasks.open()):
-            if task['kind'] != 'prefix_top' or not task['state'] or not task['reference_rest']:
-                counts['task_skipped_kind_or_reference'] += 1
-                continue
-            if not admit(task['name']):
-                continue
-            done = rl_tactics(task['given']) if task['given'].strip() else []
-            rest = rl_tactics(task['reference_rest'])
-            if done is None or not rest or (done and done[-1].rstrip().endswith('<;>')):
-                counts['task_unparsed'] += 1
-                continue
-            add(row(task['name'], task['header'], 'supplied', done, task['given'], task['state'], rest,
-                    args.max_tactics, args.horizon, 'nt_rl_tasks_v3:prefix_top'), 'tasks')
+        with args.tasks.open() as input_stream:
+            for task in map(json.loads, input_stream):
+                if task['kind'] != 'prefix_top' or not task['state'] or not task['reference_rest']:
+                    counts['task_skipped_kind_or_reference'] += 1
+                    continue
+                if not admit(task['name']):
+                    continue
+                done = rl_tactics(task['given']) if task['given'].strip() else []
+                rest = rl_tactics(task['reference_rest'])
+                if done is None or not rest or (done and done[-1].rstrip().endswith('<;>')):
+                    counts['task_unparsed'] += 1
+                    continue
+                add(row(task['name'], task['header'], 'supplied', done, task['given'], task['state'], rest,
+                        args.max_tactics, args.horizon, 'nt_rl_tasks_v3:prefix_top'), 'tasks')
 
     def cut_row(name, steps, k, state, source):
         """steps: top-level steps of a whole proof body; the cut is after the first k of them."""
@@ -209,32 +211,35 @@ def main():
         return row(name, header, mode, done, supplied_text(done), state, rest, args.max_tactics, args.horizon, source)
 
     if 'aug' in sources:
-        for proof in map(json.loads, args.aug.open()):
-            if not admit(proof['name']):
-                continue
-            steps, _ = top_level_steps(proof['text'])
-            if not 0 <= proof['k'] < len(steps):
-                counts['aug_unparsed'] += 1
-                continue
-            if split_tactics(proof['text']) is None or len(split_tactics(proof['text'])) != len(steps):
-                counts['aug_split_disagrees'] += 1
-                continue
-            add(cut_row(proof['name'], steps, proof['k'], proof['state'], 'nt_aug_v1'), 'aug')
+        with args.aug.open() as input_stream:
+            for proof in map(json.loads, input_stream):
+                if not admit(proof['name']):
+                    continue
+                steps, _ = top_level_steps(proof['text'])
+                if not 0 <= proof['k'] < len(steps):
+                    counts['aug_unparsed'] += 1
+                    continue
+                if split_tactics(proof['text']) is None or len(split_tactics(proof['text'])) != len(steps):
+                    counts['aug_split_disagrees'] += 1
+                    continue
+                add(cut_row(proof['name'], steps, proof['k'], proof['state'], 'nt_aug_v1'), 'aug')
     if 'cuts' in sources:
-        bodies = [json.loads(line) for line in args.sft_train.open()]
-        for cut in map(json.loads, args.cuts.open()):
-            if not cut['state'] or not admit(cut['name']):
-                counts['cut_without_state_or_name'] += 1
-                continue
-            record = bodies[cut['source_row']]
-            code = record['messages'][1]['content'].removeprefix('```lean\n').removesuffix('\n```')
-            body = body_of(code, pool_header(pool[cut['name']]['formal_statement']))
-            body = strip_comments(body) if body else None
-            steps = top_level_steps(body)[0] if body else []
-            if record['theorem'] != cut['name'] or len(steps) != cut['steps_source'] or cut['k'] >= len(steps):
-                counts['cut_source_mismatch'] += 1
-                continue
-            add(cut_row(cut['name'], steps, cut['k'], cut['state'], 'nt_aug_v1:source_cut'), 'cuts')
+        with args.sft_train.open() as input_stream:
+            bodies = [json.loads(line) for line in input_stream]
+        with args.cuts.open() as input_stream:
+            for cut in map(json.loads, input_stream):
+                if not cut['state'] or not admit(cut['name']):
+                    counts['cut_without_state_or_name'] += 1
+                    continue
+                record = bodies[cut['source_row']]
+                code = record['messages'][1]['content'].removeprefix('```lean\n').removesuffix('\n```')
+                body = body_of(code, pool_header(pool[cut['name']]['formal_statement']))
+                body = strip_comments(body) if body else None
+                steps = top_level_steps(body)[0] if body else []
+                if record['theorem'] != cut['name'] or len(steps) != cut['steps_source'] or cut['k'] >= len(steps):
+                    counts['cut_source_mismatch'] += 1
+                    continue
+                add(cut_row(cut['name'], steps, cut['k'], cut['state'], 'nt_aug_v1:source_cut'), 'cuts')
 
     rng = random.Random(args.seed)
     tokenizer = None

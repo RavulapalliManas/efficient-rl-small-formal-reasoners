@@ -31,7 +31,8 @@ def main():
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     import pyarrow.parquet as pq
-    pool = {r["name"]: r for r in map(json.loads, args.pool.open())}
+    with args.pool.open() as input_stream:
+        pool = {r["name"]: r for r in map(json.loads, input_stream)}
     lists = {n: set((args.splits / f"{n}.txt").read_text().split()) for n in TRAIN_SIDE + ["excluded_from_training"]}
     train_side = set().union(*(lists[n] for n in TRAIN_SIDE))
     evals = [tokens(statement(r["formal_statement"])) for r in pool.values() if r["split"] in ("validation", "test")]

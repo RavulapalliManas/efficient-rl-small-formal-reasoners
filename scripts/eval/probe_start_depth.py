@@ -130,7 +130,8 @@ def main():
     (args.output / "lean").mkdir()
     checker = load_checker(args.checker, args.environment, args.output)
     checker.lean_call = direct_lean_call(checker, args.environment.resolve())
-    replayed = [json.loads(line) for line in args.replay.open()]
+    with args.replay.open() as input_stream:
+        replayed = [json.loads(line) for line in input_stream]
     rows = load(args.train)
     points = start_points(replayed, rows, [int(d) for d in args.depths.split(",")], args.points, args.seed)
     sources, summary = {}, defaultdict(Counter)

@@ -58,11 +58,12 @@ def proof_rows(paths, augmentations, pool):
     for path in paths:
         yield from map(json.loads, path.open())
     for path in augmentations:
-        for row in map(json.loads, path.open()):
-            if row["name"] not in pool:
-                continue
-            yield {"name": row["name"], "status": "accepted", "source": "tactic_augmentation",
-                   "text": header(pool[row["name"]]) + " := by\n" + row["text"]}
+        with path.open() as input_stream:
+            for row in map(json.loads, input_stream):
+                if row["name"] not in pool:
+                    continue
+                yield {"name": row["name"], "status": "accepted", "source": "tactic_augmentation",
+                       "text": header(pool[row["name"]]) + " := by\n" + row["text"]}
 
 
 METHODS = {
@@ -339,10 +340,12 @@ def main():
     parser.add_argument("--problems", type=Path, help="file of problem names to keep, one per line")
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
-    pool = {r["name"]: r for r in map(json.loads, args.pool.open()) if r["split"] == "train"}
+    with args.pool.open() as input_stream:
+        pool = {r["name"]: r for r in map(json.loads, input_stream) if r["split"] == "train"}
     keep = set(args.problems.read_text().split()) if args.problems else None
     excluded = set(args.excluded_problems.read_text().split()) if args.excluded_problems else set()
-    states = {r["name"]: r["state"] for r in map(json.loads, args.states.open()) if r["state"]}
+    with args.states.open() as input_stream:
+        states = {r["name"]: r["state"] for r in map(json.loads, input_stream) if r["state"]}
     counts, seen = Counter(), set()
     args.output.mkdir(parents=True, exist_ok=False)
     with (args.output / "train.jsonl").open("x") as train, (args.output / "val.jsonl").open("x") as val:
@@ -392,10 +395,11 @@ def main():
             if not (args.syntax / "manifest.json").is_file():
                 raise RuntimeError("Syntax build has no completion manifest")
             for split, out in (("train", train), ("val", val)):
-                for r in map(json.loads, (args.syntax / f"sft_{split}.jsonl").open()):
-                    out.write(json.dumps(r, ensure_ascii=False) + "\n")
-                    counts[f"kept_{split}"] += 1
-                    counts[f"kept_syntax_{split}"] += 1
+                with (args.syntax / f"sft_{split}.jsonl").open() as input_stream:
+                    for r in map(json.loads, input_stream):
+                        out.write(json.dumps(r, ensure_ascii=False) + "\n")
+                        counts[f"kept_{split}"] += 1
+                        counts[f"kept_syntax_{split}"] += 1
     counts["problems"] = len({n for n, _ in seen})
     (args.output / "manifest.json").write_text(json.dumps({"counts": dict(counts), "max_chars": args.max_chars,
                                                            "pool": args.pool.name, "strip_comments": args.strip_comments,

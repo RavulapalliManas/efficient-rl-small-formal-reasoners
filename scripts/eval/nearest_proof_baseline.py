@@ -42,12 +42,13 @@ def proof_library(pool, proof_paths):
     train = {r["name"]: r for r in pool if r["split"] == "train"}
     bodies = defaultdict(list)
     for path in proof_paths:
-        for line in path.open():
-            r = json.loads(line)
-            if r["status"] == "accepted" and r["name"] in train:
-                body = body_of(r["text"], header(train[r["name"]]))
-                if body and body not in bodies[r["name"]]:
-                    bodies[r["name"]].append(body)
+        with path.open() as input_stream:
+            for line in input_stream:
+                r = json.loads(line)
+                if r["status"] == "accepted" and r["name"] in train:
+                    body = body_of(r["text"], header(train[r["name"]]))
+                    if body and body not in bodies[r["name"]]:
+                        bodies[r["name"]].append(body)
     return dict(bodies)
 
 
@@ -74,10 +75,14 @@ def main():
     started = time.monotonic()
     out = args.output
     out.mkdir(parents=True, exist_ok=args.resume)
-    pool = [json.loads(line) for line in args.pool.open()]
+    with args.pool.open() as input_stream:
+        pool = [json.loads(line) for line in input_stream]
     held = [r for r in pool if r["split"] == args.split]
     bodies = proof_library(pool, args.proofs)
-    removed = {line.strip() for line in args.library_exclude.open() if line.strip()} & set(bodies) if args.library_exclude else set()
+    removed = set()
+    if args.library_exclude:
+        with args.library_exclude.open() as input_stream:
+            removed = {line.strip() for line in input_stream if line.strip()} & set(bodies)
     bodies = {name: b for name, b in bodies.items() if name not in removed}
     by_name = {r["name"]: r for r in pool}
     library = {name: tokens(statement(by_name[name]["formal_statement"])) for name in bodies}
@@ -96,7 +101,10 @@ def main():
 
     checked = read(out / "checked.jsonl")
     trivial = {r["name"] for r in read(args.single_tactic_dir / "statements.jsonl") if r.get("single_tactic", 0) > 0}
-    vacuous = {line.strip() for line in args.vacuous.open() if line.strip()} if args.vacuous else set()
+    vacuous = set()
+    if args.vacuous:
+        with args.vacuous.open() as input_stream:
+            vacuous = {line.strip() for line in input_stream if line.strip()}
     names = {r["name"] for r in held}
     subsets = {"all": names, "non_trivial (minus single-tactic solved)": names - trivial}
     if args.vacuous:

@@ -26,7 +26,7 @@ sys.path[:0] = [str(Path(__file__).resolve().parents[1] / d) for d in ("data", "
 from bench_lean_verifier import repl_context, verify_group  # noqa: E402
 from build_nt_sft_data import body_of  # noqa: E402
 from prepare_grpo_pilot import load_checker  # noqa: E402
-from probe_nt_pool import header, lean_unit, read  # noqa: E402
+from probe_nt_pool import lean_unit, read  # noqa: E402
 
 HOLE_TEXT = re.compile(r"depend|run_tac|run_conv|by_elab|run_cmd|run_elab|run_meta|logInfo|\btrace\b|command_elab"
                        r"|^\s*(theorem|lemma|def|namespace|section|end|@\[|elab|macro|syntax|instance|example|abbrev|attribute)\b", re.M)
@@ -45,34 +45,39 @@ def main():
     parser.add_argument("--setup-timeout", type=float, default=120)
     args = parser.parse_args()
     args.output.mkdir(parents=True, exist_ok=False)
-    rows = {r["name"]: r for path in args.pool for r in map(json.loads, path.open())}
+    rows = {}
+    for path in args.pool:
+        with path.open() as input_stream:
+            rows.update((row["name"], row) for row in map(json.loads, input_stream))
     items, counts, patterns = [], Counter(), Counter()
     for d in args.probe_dir:
         for c in read(d / "checked.jsonl"):
             if c["status"] == "accepted":
                 items.append({"source": str(d.name), "name": c["name"], "body": c["continuation"]})
     for path in args.sft:
-        for r in map(json.loads, path.open()):
-            code = r["messages"][1]["content"].removeprefix("```lean\n").removesuffix("\n```")
-            items.append({"source": "sft:" + path.parent.name + "/" + path.name, "name": r["theorem"],
-                          "body": code.split(" := by\n", 1)[1]})
+        with path.open() as input_stream:
+            for r in map(json.loads, input_stream):
+                code = r["messages"][1]["content"].removeprefix("```lean\n").removesuffix("\n```")
+                items.append({"source": "sft:" + path.parent.name + "/" + path.name, "name": r["theorem"],
+                              "body": code.split(" := by\n", 1)[1]})
     for path in args.proofs:
-        for r in map(json.loads, path.open()):
-            if r["status"] != "accepted":
-                continue
-            counts["external_accepted"] += 1
-            stmt = re.sub(r":=\s*(by\s*)?sorry\s*$", "", r["formal_statement"].strip()).rstrip()
-            body = body_of(r["text"], stmt)
-            text = body if body is not None else r["text"]
-            found = {m.group(0).strip() for m in HOLE_TEXT.finditer(text)}
-            patterns.update(found)
-            if found:
-                counts["external_hole_text_matches"] += 1
-                if body is None or r["name"] not in rows:
-                    counts["external_matches_not_rescorable"] += 1
-                else:
-                    items.append({"source": "external:" + path.parent.name, "name": r["name"], "body": body,
-                                  "hole_text": sorted(found)})
+        with path.open() as input_stream:
+            for r in map(json.loads, input_stream):
+                if r["status"] != "accepted":
+                    continue
+                counts["external_accepted"] += 1
+                stmt = re.sub(r":=\s*(by\s*)?sorry\s*$", "", r["formal_statement"].strip()).rstrip()
+                body = body_of(r["text"], stmt)
+                text = body if body is not None else r["text"]
+                found = {m.group(0).strip() for m in HOLE_TEXT.finditer(text)}
+                patterns.update(found)
+                if found:
+                    counts["external_hole_text_matches"] += 1
+                    if body is None or r["name"] not in rows:
+                        counts["external_matches_not_rescorable"] += 1
+                    else:
+                        items.append({"source": "external:" + path.parent.name, "name": r["name"], "body": body,
+                                      "hole_text": sorted(found)})
     missing = sorted({i["name"] for i in items if i["name"] not in rows})
     items = [i for i in items if i["name"] in rows]
     environment = args.environment.resolve()

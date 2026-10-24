@@ -75,14 +75,15 @@ def good_bodies(pool, proof_paths, count, max_lines):
     train = {r["name"]: r for r in pool if r["split"] == "train"}
     best = {}
     for path in proof_paths:
-        for line in path.open():
-            r = json.loads(line)
-            if r["status"] != "accepted" or r["name"] not in train:
-                continue
-            body = body_of(r["text"], header(train[r["name"]]))
-            if (body and "/-" not in body and "--" not in body and not FORBIDDEN.search(body)
-                    and len(body.split("\n")) <= max_lines and (r["name"] not in best or len(body) < len(best[r["name"]]))):
-                best[r["name"]] = body
+        with path.open() as input_stream:
+            for line in input_stream:
+                r = json.loads(line)
+                if r["status"] != "accepted" or r["name"] not in train:
+                    continue
+                body = body_of(r["text"], header(train[r["name"]]))
+                if (body and "/-" not in body and "--" not in body and not FORBIDDEN.search(body)
+                        and len(body.split("\n")) <= max_lines and (r["name"] not in best or len(body) < len(best[r["name"]]))):
+                    best[r["name"]] = body
     return [(train[n], best[n]) for n in sorted(best)[:count]]
 
 
@@ -100,7 +101,8 @@ def main():
     environment = args.environment.resolve()
     checker = load_checker(args.checker, environment, args.output)
     ctx = repl_context(checker, environment, args.repl, args.output, args.lean_timeout, args.setup_timeout, 400)
-    pool = [json.loads(line) for line in args.pool.open()]
+    with args.pool.open() as input_stream:
+        pool = [json.loads(line) for line in input_stream]
     statements = good_bodies(pool, args.proofs, args.count, args.max_lines)
     rows, failures = [], []
     try:

@@ -324,7 +324,8 @@ def main():
     dev = [m["row"] for m in sorted(members.values(), key=lambda m: m["order"])]
     files = sorted({r["file_path"] for r in dev})
     eval_norm = [normalize(r["declaration_header"]) for r in evals]
-    probed = [json.loads(line) for line in (args.output / "probe.jsonl").open()]
+    with (args.output / "probe.jsonl").open() as input_stream:
+        probed = [json.loads(line) for line in input_stream]
     summary = {
         "rule": "eligible " + " and ".join(f"random/{s}" for s in args.splits) + " theorems (>=1 traced tactic, task "
                 "bank v3 prefix, not an evaluation theorem or file), shuffled with the seed, file-context ready probe "

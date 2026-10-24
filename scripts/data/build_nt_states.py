@@ -29,7 +29,8 @@ def main():
     libs = [environment / "mathlib/.lake/build/lib"] + sorted((environment / "mathlib/.lake/packages").glob("*/.lake/build/lib"))
     env = dict(os.environ, LEAN_PATH=os.pathsep.join(map(str, libs)))
     lean = environment / "lean-4.10.0-rc1-linux/bin/lean"
-    rows = [r for r in map(json.loads, args.pool.open()) if r["split"] == args.split]
+    with args.pool.open() as input_stream:
+        rows = [r for r in map(json.loads, input_stream) if r["split"] == args.split]
     found = 0
     with (args.output / "states.jsonl").open("x") as out:
         for b in range(0, len(rows), args.batch):

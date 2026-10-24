@@ -24,8 +24,10 @@ def read_rows(path):
         with zipfile.ZipFile(path) as archive:
             if len(archive.namelist()) != 1:
                 raise ValueError('Expected a single JSONL export in zip')
-            return [json.loads(line) for line in archive.open(archive.namelist()[0])]
-    return [json.loads(line) for line in path.open()]
+            with archive.open(archive.namelist()[0]) as input_stream:
+                return [json.loads(line) for line in input_stream]
+    with path.open() as input_stream:
+        return [json.loads(line) for line in input_stream]
 
 
 def select(bank, rows, excluded_files, config):

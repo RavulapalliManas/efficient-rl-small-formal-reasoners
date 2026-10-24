@@ -37,7 +37,8 @@ def evaluation(paths):
     rows = []
     for path in paths:
         with zipfile.ZipFile(path) as archive:
-            rows.extend(json.loads(line) for line in archive.open(archive.namelist()[0]))
+            with archive.open(archive.namelist()[0]) as input_stream:
+                rows.extend(json.loads(line) for line in input_stream)
     return rows
 
 

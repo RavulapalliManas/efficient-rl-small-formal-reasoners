@@ -65,21 +65,25 @@ def main():
     parser.add_argument("--dev", type=int, default=300)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
-    pool = [json.loads(line) for line in args.pool.open()]
+    with args.pool.open() as input_stream:
+        pool = [json.loads(line) for line in input_stream]
     split = {r["name"]: r["split"] for r in pool}
     names = {s: sorted(n for n, x in split.items() if x == s) for s in ("train", "validation", "test")}
     train = set(names["train"])
     toks = {r["name"]: tokens(statement(r["formal_statement"])) for r in pool}
-    minif2f = [json.loads(line) for line in args.minif2f.open()]
+    with args.minif2f.open() as input_stream:
+        minif2f = [json.loads(line) for line in input_stream]
     targets = {"validation": [(n, toks[n]) for n in names["validation"]], "test": [(n, toks[n]) for n in names["test"]],
                "minif2f": [(r["name"], tokens(statement(r["formal_statement"]))) for r in minif2f]}
 
     reasons = defaultdict(list)
-    check = [json.loads(line) for line in args.minif2f_check.open()]
+    with args.minif2f_check.open() as input_stream:
+        check = [json.loads(line) for line in input_stream]
     minif2f_check = sorted({c["best_pool_name"] for c in check if c["best_pool_split"] == "train" and c["best_pool_jaccard"] >= args.minif2f_check_jaccard})
     for n in minif2f_check:
         reasons[n].append("minif2f_check_jaccard")
-    vacuous = {r["name"]: r for r in map(json.loads, args.vacuous.open())}
+    with args.vacuous.open() as input_stream:
+        vacuous = {r["name"]: r for r in map(json.loads, input_stream)}
     for n in sorted(train & set(vacuous)):
         reasons[n].append("vacuous")
     limit = {"validation": args.jaccard, "test": args.jaccard,
@@ -98,9 +102,13 @@ def main():
             near.append({"name": n, "best": {t: {"name": m, "jaccard": round(j, 3)} for t, (j, m) in best.items()}})
     excluded = set(reasons)
 
-    sft_all = {json.loads(line)["theorem"] for f in ("train.jsonl", "val.jsonl") for line in (args.sft / f).open()}
+    sft_all = set()
+    for filename in ("train.jsonl", "val.jsonl"):
+        with (args.sft / filename).open() as input_stream:
+            sft_all.update(json.loads(line)["theorem"] for line in input_stream)
     single = set(args.train_single_tactic.read_text().split())
-    val_rows = [json.loads(line) for line in args.val_single_tactic.open()]
+    with args.val_single_tactic.open() as input_stream:
+        val_rows = [json.loads(line) for line in input_stream]
     val_single = {r["name"] for r in val_rows if r["single_tactic"] > 0}
     if not (excluded <= train and sft_all <= train and single <= train and {r["name"] for r in val_rows} == set(names["validation"])):
         raise RuntimeError("an input names statements outside the expected split")

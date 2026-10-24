@@ -48,16 +48,18 @@ CULPRITS = {"ends_with_by": "  have h : 0 = 0 := by", "dangling_bullet": "  cons
 def lines(path):
     """JSON rows of a file that another job may still append to: an incomplete last line is skipped."""
     out = []
-    for line in path.open():
-        try:
-            out.append(json.loads(line))
-        except json.JSONDecodeError:
-            pass
+    with path.open() as input_stream:
+        for line in input_stream:
+            try:
+                out.append(json.loads(line))
+            except json.JSONDecodeError:
+                pass
     return out
 
 
 def pool_candidates(args, pool, rng):
-    sft = [json.loads(line) for line in args.sft.open()]
+    with args.sft.open() as input_stream:
+        sft = [json.loads(line) for line in input_stream]
     picked = (rng.sample([r for r in sft if r["has_comments"]], args.good // 2)
               + rng.sample([r for r in sft if not r["has_comments"]], args.good // 2))
     items = []
@@ -111,7 +113,8 @@ def main():
     rng = random.Random(args.seed)
     environment = args.environment.resolve()
     checker = load_checker(args.checker, environment, args.output)
-    pool = {r["name"]: r for r in map(json.loads, args.pool.open())}
+    with args.pool.open() as input_stream:
+        pool = {r["name"]: r for r in map(json.loads, input_stream)}
     items, old, candidates, chosen = pool_candidates(args, pool, rng)
     report, failures, seconds = {}, [], {}
 
@@ -210,7 +213,8 @@ def main():
     hit = sorted(t for t, g in complete.items() if any(s["status"] == "accepted" for s in g))
     rest = sorted(set(complete) - set(hit))
     tasks = hit + rng.sample(rest, min(args.bank_groups, len(rest)))
-    bank = {u["task_id"]: dict(u, kind="bank") for u in map(json.loads, args.bank.open()) if u["task_id"] in set(tasks)}
+    with args.bank.open() as input_stream:
+        bank = {u["task_id"]: dict(u, kind="bank") for u in map(json.loads, input_stream) if u["task_id"] in set(tasks)}
     out = args.output / "bank"
     out.mkdir()
     ctx = repl_context(checker, environment, args.repl, out, args.timeout, 120, 400)
@@ -218,9 +222,10 @@ def main():
     ctx.rows = {r["theorem_id"]: r for path in args.train for r in load(path) if r["theorem_id"] in theorems}
     for path in args.eval:
         with zipfile.ZipFile(path) as archive:
-            for line in archive.open(archive.namelist()[0]):
-                r = json.loads(line)
-                ctx.eval_spans.setdefault(r["file_path"], []).append((r["start"][0], r["end"][0], r["declaration_header"]))
+            with archive.open(archive.namelist()[0]) as input_stream:
+                for line in input_stream:
+                    r = json.loads(line)
+                    ctx.eval_spans.setdefault(r["file_path"], []).append((r["start"][0], r["end"][0], r["declaration_header"]))
     b1 = {t: verify_group(ctx, bank[t], [s["continuation"] for s in complete[t]]) for t in tasks}
     ids = [t for t in tasks for _ in complete[t]]
     with ThreadPoolExecutor(2) as executor:

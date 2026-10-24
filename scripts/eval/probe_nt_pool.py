@@ -264,10 +264,12 @@ def main():
     libs = [env_root / "mathlib/.lake/build/lib"] + sorted((env_root / "mathlib/.lake/packages").glob("*/.lake/build/lib"))
     env = dict(os.environ, LEAN_PATH=os.pathsep.join(map(str, libs)))
     if args.tasks:
-        pool = [json.loads(l) for l in args.tasks.open()]
+        with args.tasks.open() as input_stream:
+            pool = [json.loads(l) for l in input_stream]
         rows = pool[index::count]
     else:
-        pool = [json.loads(l) for l in args.pool.open()]
+        with args.pool.open() as input_stream:
+            pool = [json.loads(l) for l in input_stream]
         rows = random.Random(args.seed).sample([r for r in pool if r["split"] == args.split], args.count)[index::count]
     out = args.output
     out.mkdir(parents=True, exist_ok=args.resume)

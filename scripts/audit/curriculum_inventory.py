@@ -17,8 +17,10 @@ import zipfile
 def load(path):
     if path.suffix == ".zip":
         with zipfile.ZipFile(path) as archive:
-            return [json.loads(line) for line in archive.open("train.jsonl")]
-    return [json.loads(line) for line in path.open()]
+            with archive.open("train.jsonl") as input_stream:
+                return [json.loads(line) for line in input_stream]
+    with path.open() as input_stream:
+        return [json.loads(line) for line in input_stream]
 
 
 def linear(tactics):

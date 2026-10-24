@@ -68,10 +68,15 @@ def main():
     eval_files = set()
     for path in args.eval:
         with zipfile.ZipFile(path) as archive:
-            eval_files |= {json.loads(line)["file_path"] for line in archive.open(archive.namelist()[0])}
+            with archive.open(archive.namelist()[0]) as _input_stream:
+                eval_files |= {json.loads(line)["file_path"] for line in _input_stream}
     excluded = set(args.exclude_files.read_text().split()) if args.exclude_files else set()
-    prior_count = {json.loads(l)["premise"]: json.loads(l)["consumer_proofs"] for l in args.priors.open()}
-    records = [t for path in args.tasks for t in map(json.loads, path.open())]
+    with args.priors.open() as input_stream:
+        prior_count = {row["premise"]: row["consumer_proofs"] for row in map(json.loads, input_stream)}
+    records = []
+    for path in args.tasks:
+        with path.open() as input_stream:
+            records.extend(map(json.loads, input_stream))
     accepted = [t for t in records if t["status"] == "accepted" and t["file_path"] not in eval_files | excluded]
     dropped_eval_file = sum(t["status"] == "accepted" and t["file_path"] in eval_files for t in records)
     dropped_excluded = sum(t["status"] == "accepted" and t["file_path"] in excluded - eval_files for t in records)

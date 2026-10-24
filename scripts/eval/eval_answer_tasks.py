@@ -58,7 +58,8 @@ def main():
     args = parser.parse_args()
     args.output.mkdir(parents=True, exist_ok=False)
     (args.output / "lean").mkdir()
-    rows = [json.loads(line) for line in args.tasks.open()]
+    with args.tasks.open() as input_stream:
+        rows = [json.loads(line) for line in input_stream]
     train = [r for r in rows if r["split"] == "train"]
     tasks, per_family = [], Counter()
     for r in rows:

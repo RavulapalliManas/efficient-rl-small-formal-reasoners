@@ -187,10 +187,12 @@ def main():
                 source = root / stage['data']
                 data = work / 'data'
                 shutil.copytree(source, data)
-                rows = [json.loads(line) for line in (source / 'train.jsonl').open()]
+                with (source / 'train.jsonl').open() as input_stream:
+                    rows = [json.loads(line) for line in input_stream]
                 selected = rlp_curriculum(rows, stage['max_curriculum_stage'], stage['presentations'])
                 selected_ids = {r['id'] for r in selected}
-                refs = [json.loads(line) for line in (source / 'private/train_references.jsonl').open()]
+                with (source / 'private/train_references.jsonl').open() as input_stream:
+                    refs = [json.loads(line) for line in input_stream]
                 (data / 'train.jsonl').write_text(''.join(json.dumps(r) + '\n' for r in selected))
                 (data / 'private/train_references.jsonl').write_text(
                     ''.join(json.dumps(r) + '\n' for r in refs if r['id'] in selected_ids))

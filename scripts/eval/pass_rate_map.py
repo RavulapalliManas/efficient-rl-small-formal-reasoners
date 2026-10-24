@@ -67,11 +67,13 @@ def main():
     eval_spans = defaultdict(list)
     for path in args.eval:
         with zipfile.ZipFile(path) as archive:
-            for line in archive.open(archive.namelist()[0]):
-                r = json.loads(line)
-                eval_spans[r["file_path"]].append((r["start"][0], r["end"][0], r["declaration_header"]))
+            with archive.open(archive.namelist()[0]) as input_stream:
+                for line in input_stream:
+                    r = json.loads(line)
+                    eval_spans[r["file_path"]].append((r["start"][0], r["end"][0], r["declaration_header"]))
     ctx.rows, ctx.eval_spans = rows, eval_spans
-    units = [dict(u, kind="bank") for u in map(json.loads, args.bank.open()) if not args.topic or u["topic"] in args.topic]
+    with args.bank.open() as input_stream:
+        units = [dict(u, kind="bank") for u in map(json.loads, input_stream) if not args.topic or u["topic"] in args.topic]
     rng, sampled = random.Random(args.seed), []
     for name in args.buckets.split(","):
         pool = sorted((u for u in units if bucket(u) == name), key=lambda u: u["task_id"])

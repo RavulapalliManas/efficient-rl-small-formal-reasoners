@@ -6,12 +6,29 @@ Commands and shared code live here. Run commands from the repository root:
 uv run python scripts/data/build_nt_benchmark.py --help
 ```
 
-For dependencies and the external Lean runtime, see [Setup](../README.md#setup).
+For dependencies and the external Lean runtime, see [Runtime and development](#runtime-and-development).
 For the experiment behind a settings file, see the [config guide](../configs/README.md).
-For a first reproduction attempt, follow the [README workflow](../README.md#reproduce-the-main-study).
+For a first reproduction attempt, follow [Main-study reproduction](#main-study-reproduction).
 [`reproduce.py`](reproduce.py) explains the main-study inputs, checks supplied files and prepares commands without launching them.
 
 <a id="start-here"></a>
+
+## Terms
+
+| Term | Meaning |
+| --- | --- |
+| Lean / mathlib | The proof assistant / its mathematics library. Runs use a fixed revision of each |
+| Tactic | One Lean proof instruction |
+| Action | One model response containing tactics |
+| Attempt | A sequence of actions on one theorem |
+| Accepted attempt | An attempt whose complete proof Lean accepts |
+| Proved theorem | A theorem with at least one accepted attempt. Counts of proved theorems and accepted attempts have different denominators |
+| SFT | Supervised fine-tuning: learning from example proof steps |
+| RL / RLVR | Reinforcement learning / RL with verifiable rewards. A Lean-accepted complete proof supplies the proof reward; some experiments add heuristic rewards or penalties |
+| B, S, R, C | In the 18–19 October study: unchanged model, SFT model, SFT + shuffled RL, SFT + prerequisite-first RL |
+
+Model letters are local to each study. Their definitions appear in the corresponding protocol.
+The [handoff terminology table](../docs/EXPERIMENTS.md#start-here-one-page-for-abhinav) maps older names to these terms.
 
 ## Primary workflow
 
@@ -26,10 +43,106 @@ The 18–19 October study (EXP-026 to EXP-028) follows this workflow:
 | Evaluate | [train/run_tactic_rl.py](train/run_tactic_rl.py) | Use `--evaluation-names` for DEV. Use `--assessment-only` to assess tasks without updates; its default split is TRAIN |
 | Draw report figures | [report/make_report_figures.py](report/make_report_figures.py) | Plot recorded counts for the report |
 
+The figure script rebuilds 12 plots from counts recorded in its source. The dense-reward plot preserves the counts from its earlier PDF. The other `fig_oct21_*` PDFs are checked in, but their builders and recount inputs remain in the private directory named in the report.
+
 The [run guide](../docs/EXPERIMENTS.md#7-step-by-step-run-with-this-data-as-the-main-run-did) holds the commands and settings used by the main run.
 The original run configs are private. [`reproduction_v1.json`](../configs/reproduction_v1.json) reconstructs the documented settings for the reproduction helper; it has not been validated by a rerun.
 Other public configs include older experiments and unrun proposals; check their experiment records before use.
 [`data/build_nt_benchmark.py`](data/build_nt_benchmark.py) builds the earlier EXP-025 releases from which the later data derives.
+
+## Main-study reproduction
+
+Start with EXP-026 and EXP-027, the 18–19 October study. Its model sequence is:
+
+```text
+B: unchanged Qwen -> supervised fine-tuning -> S
+S -> RL with shuffled theorem order          -> R
+S -> RL with prerequisite-first order        -> C
+```
+
+All four have the same model architecture. They differ in the training applied to their weights.
+Compare them on the same DEV statements and attempt budget. A model response proposes tactics; Lean decides whether the complete proof is accepted.
+
+### 1. Inspect the project locally
+
+Install Python 3.12 and [uv](https://docs.astral.sh/uv/getting-started/installation/), then run from the repository root:
+
+```bash
+uv sync --locked
+uv run python scripts/reproduce.py overview
+uv run python -m unittest tests.test_reproduction tests.test_rl_components
+```
+
+These commands need no model, Lean installation or GPU. The tests use synthetic inputs and check local code; they do not reproduce a research result.
+Follow [one proof attempt](#proof-execution) to see how the implementation fits together.
+
+### 2. Obtain the frozen inputs
+
+Ask the project owner for the [archived data, runtime and model directories](../docs/EXPERIMENTS.md#6-step-by-step-fetch-and-verify-the-data).
+Some dataset builders and the original main-run configs are private, so a clone alone cannot reproduce the full study.
+The older [GitHub checkpoint releases](../README.md#checkpoints) are separate experiments.
+
+| Input | Meaning and use |
+| --- | --- |
+| `data/actor/train_pool.jsonl` | 506 TRAIN theorem statements: `name`, `formal_statement`, `split` |
+| `data/actor/train_tasks.jsonl` | 506 RL starts: task ID, theorem header, empty supplied proof and initial Lean state |
+| `data/sft_action/sft_train.jsonl` | 1,880 supervised examples. Each row's `messages` pairs a user observation with the assistant's next action; `format` identifies the observation format |
+| `data/sft_action/sft_val.jsonl` | 125 separate examples from TRAIN theorems for monitoring SFT loss. This is not research DEV |
+| `runtime/inputs/dev_pool.jsonl`, `dev_names.txt` | The 8 DEV statements and names used for model and setting choices |
+| `schedules/` | Fixed R and C task orders. Both reuse the same TRAIN tasks |
+| `models/B`, `models/S`, `models/R`, `models/C` | Complete checkpoint folders, including weights, tokenizer and model metadata |
+| `runtime/inputs/`, `lean_env/` | Archived checker, REPL, identity receipt, Lean and compiled mathlib |
+
+JSONL stores one JSON object per line. The [data handoff](../docs/EXPERIMENTS.md#4-the-datasets-you-use) describes fields and provenance.
+Keep the 21 TEST theorems reserved. The 164-theorem EXP-028 selection set is a separate exploratory set.
+
+Place the extracted inputs outside Git in this layout. Here `/absolute/path/to/study` is a directory you choose:
+
+```text
+study/
+  data/manifest.json
+  data/actor/{train_pool.jsonl,train_tasks.jsonl,exclude_names.txt}
+  data/sft_action/{sft_train.jsonl,sft_val.jsonl}
+  runtime/inputs/{dev_pool.jsonl,dev_names.txt,checker.py,repl,mathlib_source_identity.json}
+  schedules/{order_R_runtime.json,order_C_AI_runtime.json}
+  lean_env/{lean-4.10.0-rc1-linux/,mathlib/}
+  models/{B/,S/,R/,C/}
+```
+
+For a DEV check, only the selected model, data manifest, exclusion list, DEV files and runtime are needed.
+On the Linux run host, install the locked ML environment with `uv sync --locked --group training`.
+This downloads large ML packages. It uses the documented 19 October library versions; the original main-run package receipts remain external.
+
+### 3. Check inputs and prepare a run
+
+Replace the study path below with your extracted directory:
+
+```bash
+uv run python scripts/reproduce.py check --root /absolute/path/to/study --stage dev --model S
+uv run python scripts/reproduce.py prepare --root /absolute/path/to/study --stage dev --model S \
+  --run-id reproduction-001 --output /tmp/formal-rl-dev-plan-001
+```
+
+`check` returns a nonzero exit code for missing or mismatched inputs. It compares recorded file hashes, row counts, runtime layout and selected package versions.
+It checks metadata presence but does not establish tokenizer equivalence, execute Lean or load a model.
+The model hash check identifies the archived reference checkpoint; a newly trained checkpoint will have a different identity.
+
+`prepare` writes `config.json`, `command.txt` and `plan.json` into a new directory outside Git. It never launches a job.
+The plan includes input-check failures, source revision, whether the checkout has edits, and the intended output directory.
+Review those files before execution. Training needs the managed runner, resource caps, a registered run and approval of the quoted GPU cost.
+The managed runner must enforce the SFT wall cap; `run_sft.py` does not enforce it itself.
+
+| Stage | Starting model | Output |
+| --- | --- | --- |
+| `sft` | B | A new S checkpoint |
+| `rl-shuffled` | S | A new R checkpoint |
+| `rl-curriculum` | S | A new C checkpoint |
+| `dev` | B, S, R or C | Proof attempts and aggregate counts; no optimizer update |
+
+The versioned [reproduction specification](../configs/reproduction_v1.json) holds the file identities and reconstructed settings.
+These settings come from the [recorded recipe](../docs/EXPERIMENTS.md#7-step-by-step-run-with-this-data-as-the-main-run-did); they are not copies of the private configs, and no rerun is established by preparing them.
+Compare scientific outcomes from run artifacts: `run.json` holds resolved settings and counters, `steps.jsonl` holds group outcomes, and `rollouts.jsonl` holds actions.
+`counts.accepted` counts accepted attempts; the length of `solved_names` counts distinct proved theorems.
 
 ## Dataset recreation
 
@@ -122,7 +235,9 @@ No full public-corpus or real Lean rebuild has been validated by these additions
 
 ## Proof execution
 
-Start with [`train/run_tactic_rl.py`](train/run_tactic_rl.py). It contains both the command and `LeanEpisode`, the proof environment.
+Start with [`train/run_tactic_rl.py`](train/run_tactic_rl.py), which runs training and evaluation.
+The proof environment, [`LeanEpisode`](train/rl_components/environment.py), applies actions and checks proof completion.
+[`render_observation()`](train/rl_components/observations.py) builds the model's input from the current proof state.
 Environment version 2 follows this execution path:
 
 1. `main()` selects training or evaluation, validates inputs and applies the run limits. Task admission and scheduling live in [`rl_components/tasks.py`](train/rl_components/tasks.py).
@@ -148,8 +263,9 @@ The runner records settings and status in `run.json`, group outcomes in `steps.j
 | Action syntax and diagnostic formatting | [actions.py](train/rl_components/actions.py) |
 | Sampling backends, stop tokens and generation seeds | [generation.py](train/rl_components/generation.py) |
 | Run settings and training/evaluation restrictions | [configuration.py](train/rl_components/configuration.py) |
-| Model observations and proof interaction | `render_observation()` and `LeanEpisode` in [`run_tactic_rl.py`](train/run_tactic_rl.py) |
-| Tactic rewards | `transition()`, `finish()`, `local_feedback()` and `v2_feedback()` in [`run_tactic_rl.py`](train/run_tactic_rl.py) |
+| Model observations | [`render_observation()`](train/rl_components/observations.py) |
+| Proof interaction | [`LeanEpisode`](train/rl_components/environment.py) |
+| Tactic rewards | `transition()`, `finish()`, `local_feedback()` and `v2_feedback()` in [`environment.py`](train/rl_components/environment.py) |
 | REINFORCE objective or optimizer update | [`LeaveOneOutObjective` and `PolicyGradientUpdater`](train/rl_components/objectives.py) |
 | SFT message conversion | [`SFTDataset`](train/rl_components/sft.py) |
 | Proof reconstruction or fresh replay export | [`ProofTrajectory`](eval/proof_export/trajectory.py), [`ProofExporter`](eval/proof_export/exporter.py) |
@@ -160,6 +276,36 @@ Keep model, sampling, reward and budget settings in configs. Whole-proof GRPO us
 Import it from `scripts.data.nt_benchmark` in a repository checkout. Verification reads the frozen release config.
 `PolicyGradientUpdater` accepts separate advantage and token-log-probability callables.
 
+## Reusing the proof components
+
+The reusable boundary is a theorem, an observation, a tactic action and a verifier outcome.
+With `scripts/train` on the Python import path, import `LeanEpisode` from `rl_components.environment`, `render_observation` from `rl_components.observations`, and model sampling from `rl_components.generation`.
+Observation rendering needs neither Lean nor model libraries. The environment loads the existing verifier transport but no model or optimizer.
+This is a repository-level interface; it is not yet an installed SDK.
+
+A host must supply the pinned checker/REPL context, admitted theorem task, output directory and shared verifier counters.
+Use the context setup in `run_tactic_rl.py` as the runtime reference: construct an episode, call `reset()`, sample an action from its observation, call `step(action, bonus)`, and always call `close()` in a `finally` block.
+Keep original theorem context and runtime identities with every trajectory. A terminal candidate receives proof credit only after fresh whole-proof replay.
+Goal-text changes and error penalties are heuristic signals. `state_key()` normalizes goal text for cycle detection; it does not identify a complete Lean state.
+Branch handles belong to the live REPL and cannot be transferred across workers or serialized as portable proof states.
+
+### Toward a larger prover
+
+[AlphaProof's published design](https://www.nature.com/articles/s41586-025-09833-y) combines policy/value learning with tree search that tracks multiple proof obligations.
+It is a design reference here. No connection to the AlphaProof service has been implemented or validated.
+The candidate-PPO path has a critic for its finite tactic catalogue; the main tactic learner uses a leave-one-out baseline.
+Neither supplies a general value-guided AND–OR proof search implementation.
+
+Proceed in this order:
+
+1. Validate one admitted theorem end to end on the pinned Lean/mathlib pair, including a failing action, reset and fresh terminal replay. Local scripted tests do not establish runtime compatibility.
+2. Freeze dataset version, provenance, duplicate checks and TRAIN/DEV/TEST membership. Establish independent-sampling results with token, Lean-call, wall-time and GPU budgets.
+3. Register a bounded-search comparison against that baseline. Start with the existing `search_step()` interface; a larger search must explicitly manage all subgoals, branch lifetimes and budget accounting. Search-selected actions are not on-policy samples.
+4. Only then register value learning and verified replay-data collection. Keep reference and held-out proofs outside training, retrieval and adaptive sampling; select settings on DEV. Preserve unsuccessful and censored outcomes with their costs.
+5. Compare distinct proved theorems at equal budgets on the reserved test set after choices are frozen. Register every arm before launch and obtain approval for each paid GPU run.
+
+Literal integration into another service also requires its documented input/output and runtime contract. Shared use of Lean does not establish that contract.
+
 <a id="how-scripts-import-each-other"></a>
 
 ## Import structure
@@ -168,215 +314,279 @@ The scripts are not an installed package.
 Most scripts add sibling folders such as `scripts/data` and `scripts/eval` to `sys.path` and import other scripts by file name.
 Some command scripts therefore also hold code that many other scripts import.
 The command modules retain their existing import interfaces.
-New callers should import action, generation and configuration helpers from their owning modules.
+New callers should import environment, observation, action, objective, generation and configuration helpers from their owning modules.
+The trainer retains its old names as compatibility exports. Tests that replace verifier functions should patch `rl_components.environment`, where episodes resolve those functions.
 Update callers and source receipts when moving code; private run packages must include the full component directory.
 
 The Lean checker module `checker.py` is not in Git.
 Scripts that check proofs take its path with `--checker` and load it with `load_checker`.
 [Section 4.10 of the data handoff](../docs/EXPERIMENTS.md#410-the-lean-runtime-environment-repl-checker-and-identity) lists its archived copy, with the REPL binary and the Lean environment.
 
-| Shared file | What other scripts import from it | Importing scripts |
-| --- | --- | ---: |
-| [`data/prepare_grpo_pilot.py`](data/prepare_grpo_pilot.py) | `load_checker`, which loads the Lean checker module named by `--checker` | 34 |
-| [`eval/bench_lean_verifier.py`](eval/bench_lean_verifier.py) | `repl_context` and `verify_group`, the shared Lean REPL scoring path | 26 |
-| [`eval/probe_nt_pool.py`](eval/probe_nt_pool.py) | `check_candidates`, `lean_unit`, `header` and the proof prompt `INSTRUCTION` | 22 |
-| [`eval/probe_start_depth.py`](eval/probe_start_depth.py) | `FORBIDDEN`, the matcher for forbidden code outside comments | 19 |
-| [`data/rebuild_nt_dataset.py`](data/rebuild_nt_dataset.py) | Rebuild public number-theory data: sources, corpus, verifier identity and task orders. | EXP-025 | 0 |
-| [`data/replay_training_proofs.py`](data/replay_training_proofs.py) | `question`, `proof_body`, `direct_lean_call` and `ALLOWED_AXIOMS` | 15 |
-| [`train/run_tactic_rl.py`](train/run_tactic_rl.py) | `LeanEpisode`, the Lean proof environment that takes one action at a time, and `render_observation` | 12 |
-| [`audit/profile_external_proofs.py`](audit/profile_external_proofs.py) | `tokens`, `statement` and the `NUMBER_THEORY` pattern | 14 |
-| [`data/verify_external_proofs.py`](data/verify_external_proofs.py) | `HEADER`, the Lean file header, and `check_batch` | 11 |
-| [`train/rl_components/`](train/rl_components/) | Action parsing, generation, configuration, task scheduling, objectives and SFT examples | 11 |
-| [`data/build_nt_sft_data.py`](data/build_nt_sft_data.py) | `body_of` and `strip_comments` | 10 |
-| [`data/build_proof_tasks.py`](data/build_proof_tasks.py) | `top_level_steps` and the target guard `GUARD` | 7 |
+| Shared file | What other scripts import from it |
+| --- | --- |
+| [`data/prepare_grpo_pilot.py`](data/prepare_grpo_pilot.py) | `load_checker`, which loads the Lean checker module named by `--checker` |
+| [`eval/bench_lean_verifier.py`](eval/bench_lean_verifier.py) | `repl_context` and `verify_group`, the shared Lean REPL scoring path |
+| [`eval/probe_nt_pool.py`](eval/probe_nt_pool.py) | `check_candidates`, `lean_unit`, `header` and the proof prompt `INSTRUCTION` |
+| [`eval/probe_start_depth.py`](eval/probe_start_depth.py) | `FORBIDDEN`, the matcher for forbidden code outside comments |
+| [`data/replay_training_proofs.py`](data/replay_training_proofs.py) | `question`, `proof_body`, `direct_lean_call` and `ALLOWED_AXIOMS` |
+| [`train/run_tactic_rl.py`](train/run_tactic_rl.py) | Legacy compatibility exports and training command helpers |
+| [`audit/profile_external_proofs.py`](audit/profile_external_proofs.py) | `tokens`, `statement` and the `NUMBER_THEORY` pattern |
+| [`data/verify_external_proofs.py`](data/verify_external_proofs.py) | `HEADER`, the Lean file header, and `check_batch` |
+| [`train/rl_components/`](train/rl_components/) | Proof episodes, observations, parsing, generation, task scheduling, objectives and SFT examples |
+| [`data/build_nt_sft_data.py`](data/build_nt_sft_data.py) | `body_of` and `strip_comments` |
+| [`data/build_proof_tasks.py`](data/build_proof_tasks.py) | `top_level_steps` and the target guard `GUARD` |
 
 <a id="every-script"></a>
 
+## Runtime and development
+
+The `training` dependency group supplies `torch`, `transformers`, `trl`, `datasets` and `tensorboardX` for the Linux run host:
+
+```bash
+uv sync --locked --group training
+```
+
+The separate `local-probe` group targets the MLX probe and requires newer Transformers; uv prevents combining it with `training`.
+The unit suite needs the training packages and `math-verify` for answer-scoring tests:
+
+```bash
+uv run --locked --group training --with 'math-verify[antlr4-13-2]==0.9.0' python -m unittest discover -s tests
+```
+
+Tests that need the external Lean runtime remain skipped until it is configured.
+Use the small checks in the [reproduction workflow](#main-study-reproduction) for a local checkout without them.
+
+For proof checks, use the archived Linux Lean environment and its pinned mathlib revision; see [external artifacts](../README.md#not-in-git).
+Installing [elan](https://lean-lang.org/install/manual/) alone does not supply the checker or mathlib snapshot.
+Lean integration tests in `tests/test_tactic_rl_integration.py` need `TACTIC_RL_ROOT` and a new `TACTIC_RL_OUTPUT` directory.
+The root must contain `lean_env_full/`, `proof_replay_v1/code/checker.py` and the REPL build under `rlvr_verifier/`.
+
+For Markdown changes, run `uv run pre-commit run --files <changed-files>`.
+Build the report with `latexmk -pdf -quiet -cd -interaction=nonstopmode -halt-on-error docs/tex/project_report.tex`.
+
+Register scientific changes in the [experiment catalogue](../docs/EXPERIMENTS.md#protocol-and-result-updates).
+Keep human authorship in commits and documents. Software and automated methods belong in the relevant methods or provenance record.
+
+## Checkpoints
+
+The following checkpoints belong to the earlier 5–9 October experiments. They are not S, R or C from the 18–19 October main study.
+Their weights and tokenizer files are available through [GitHub Releases](https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases).
+The [download index](../configs/checkpoints.json) records source files, asset sizes, and GitHub digests.
+For the later study, use the [archived weights](../docs/EXPERIMENTS.md#49-model-weights) and identities in [reproduction_v1.json](../configs/reproduction_v1.json).
+
+| Checkpoint | Download |
+| --- | --- |
+| SFT final | [Release](https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/tag/lean_sft_20261009_v2-final) |
+| Primitive RLP step 118 | [Release](https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/tag/primitive_rlp_20261005-checkpoint-118) |
+| Primitive RLP final | [Release](https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/tag/primitive_rlp_20261005-final) |
+| Controlled RLP ordered final | [Release](https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/tag/controlled_rlp_20261006-ordered-final) |
+| Controlled RLP shuffled final | [Release](https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/tag/controlled_rlp_20261006-shuffled-final) |
+| SFT step 300 | [Release](https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/tag/lean_sft_20261009_v2-checkpoint-300) |
+| SFT step 1500 | [Release](https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/tag/lean_sft_20261009_v2-checkpoint-1500) |
+| SFT step 4526 | [Release](https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/tag/lean_sft_20261009_v2-checkpoint-4526) |
+
+Download all assets for a release into one directory:
+
+```bash
+gh release download lean_sft_20261009_v2-final --repo RavulapalliManas/efficient-rl-small-formal-reasoners --dir sft-final
+```
+
+If a release contains split files, use the reassembly command in its release notes.
+Auxiliary metadata with private infrastructure identifiers uses redacted `.public.json` files.
+Weights and optimizer state retain their original contents.
+
 ## File index
+
+<details>
+<summary>All 116 Python entry points and shared modules</summary>
 
 The tables below index command entry points and reusable modules. The primary workflow and implementation map provide their execution context.
 
 - **Purpose** summarizes the script's first docstring line, using the current names from the [handoff terminology table](../docs/EXPERIMENTS.md#start-here-one-page-for-abhinav).
 - **Experiments** lists catalogue entries and README status rows that name the script. A dash means no association is recorded. Shared scripts can serve several experiments.
-- **Imported by** counts other scripts that import this file. The count helps identify shared code; tests are excluded.
 
 ### Reproduction
 
-| Script | Purpose | Experiments | Imported by |
-| --- | --- | --- | ---: |
-| [`reproduce.py`](reproduce.py) | Inspect, check, and prepare the documented number-theory study without launching jobs. | EXP-026, EXP-027 | 0 |
+| Script | Purpose | Experiments |
+| --- | --- | --- |
+| [`reproduce.py`](reproduce.py) | Inspect, check, and prepare the documented number-theory study without launching jobs. | EXP-026, EXP-027 |
 
 ### data/
 
 Build datasets, splits, SFT examples and RL tasks.
 
-| Script | Purpose | Experiments | Imported by |
-| --- | --- | --- | ---: |
-| [`data/add_premises_sft.py`](data/add_premises_sft.py) | Add the retrieved-lemma section to existing v2 SFT examples. | EXP-028 | 0 |
-| [`data/build_answer_tasks.py`](data/build_answer_tasks.py) | Build Lean-checked number-theory answer tasks (formal Q&A) and check every reference answer in Lean. | EXP-024 | 1 |
-| [`data/build_dev_set.py`](data/build_dev_set.py) | Build a development set of LeanDojo Benchmark 4 random/val (+ test) theorems for comparing Lean 4 proof models. | – | 0 |
-| [`data/build_nt_archive.py`](data/build_nt_archive.py) | Number-theory theorems of the mathlib Archive at the pin, from files compiled at the pin. | – | 1 |
-| [`data/build_nt_benchmark.py`](data/build_nt_benchmark.py) | Build a versioned, exploratory number-theory benchmark from the existing corpus. | EXP-025 | 0 |
-| [`data/build_nt_hole_tasks.py`](data/build_nt_hole_tasks.py) | RL hole tasks from Lean-checked proofs of the held-out theorems, plus one whole-statement task per RL pool statement. | EXP-017 | 3 |
-| [`data/build_nt_knowledge.py`](data/build_nt_knowledge.py) | Number-theory knowledge items from mathlib at the pin: doc comment (informal) + Lean statement + proof as written. | – | 2 |
-| [`data/build_nt_pool.py`](data/build_nt_pool.py) | Build the number-theory statement pool for RL from Lean-checked Lean Workbook statements. | EXP-016 | 6 |
-| [`data/build_nt_sft_data.py`](data/build_nt_sft_data.py) | SFT examples from Lean-checked external proofs of number-theory pool statements (train split only). | EXP-017 | 10 |
-| [`data/build_nt_splits.py`](data/build_nt_splits.py) | Name lists of the midsem plan (artifacts/notes/2026-10-10_midsem_plan.md): what trains, what is held out, what is scored. | EXP-017 | 0 |
-| [`data/build_nt_states.py`](data/build_nt_states.py) | Initial goal states (Lean trace_state) for one split of the number-theory statement pool. | EXP-016 | 0 |
-| [`data/build_nt_tactic_aug.py`](data/build_nt_tactic_aug.py) | Tactic-level augmentation: new Lean-checked proofs from the accepted SFT proofs of sft_problems (train split only). | – | 0 |
-| [`data/build_premise_corpus.py`](data/build_premise_corpus.py) | Dump Mathlib theorem names and statements from the pinned Lean environment as a premise corpus. | EXP-028 | 0 |
-| [`data/build_proof_tasks.py`](data/build_proof_tasks.py) | Build Lean-checked proof tasks from the original mathlib proof text, with cut points. | – | 7 |
-| [`data/build_rft_data.py`](data/build_rft_data.py) | SFT examples for the rejection-sampling fine-tuning (RFT) baseline from Lean-accepted map attempts (train split only). | EXP-019 | 0 |
-| [`data/build_search_sft.py`](data/build_search_sft.py) | Mine SFT examples from a step-search assessment of TRAIN theorems (expert iteration and error repair). | EXP-028 | 0 |
-| [`data/build_sft_data.py`](data/build_sft_data.py) | Build Lean 4 SFT data from LeanDojo Benchmark 4 training proofs at the pinned mathlib commit. | EXP-014 | 0 |
-| [`data/build_syntax_sft.py`](data/build_syntax_sft.py) | Syntax SFT from existing replay-accepted bank proofs, at the project's Lean pin. | EXP-017 | 0 |
-| [`data/build_task_bank.py`](data/build_task_bank.py) | Merge Lean-checked proof tasks into one task bank with curriculum metadata. | – | 1 |
-| [`data/build_v21_sft.py`](data/build_v21_sft.py) | SFT examples in the environment version 2.1 format, from existing Lean-checked number-theory proofs. | – | 0 |
-| [`data/export_task_pool.py`](data/export_task_pool.py) | Export a larger training-theorem pool from LeanDojo Benchmark 4 for curriculum experiments. | – | 0 |
-| [`data/import_extra_nt.py`](data/import_extra_nt.py) | Import extra public Lean 4 number-theory statements and proofs, filter them like nt_pool_v2, and Lean-check them. | – | 2 |
-| [`data/mathematical_rlp_data.py`](data/mathematical_rlp_data.py) | Bounded, authored records and matched information views for mathematical RLP. | EXP-013 | 1 |
-| [`data/merge_sft_rows.py`](data/merge_sft_rows.py) | Assemble an SFT data directory from base SFT examples plus optional extra TRAIN SFT examples, within the SFT token limits. | – | 0 |
-| [`data/prepare_grpo_pilot.py`](data/prepare_grpo_pilot.py) | Prepare gold-free whole-proof prompts on cpu-angad. | – | 34 |
-| [`data/prepare_leandojo.py`](data/prepare_leandojo.py) | Prepare a project-defined Nat subset of LeanDojo's official random splits. | EXP-001 | 3 |
-| [`data/prepare_nt_tactic_expansion.py`](data/prepare_nt_tactic_expansion.py) | Prepare frozen TRAIN-source theorems and available prefixes, with separate DEV theorems. | – | 0 |
-| [`data/prepare_prerequisite_curriculum.py`](data/prepare_prerequisite_curriculum.py) | Prepare a small authored curriculum with the existing pinned checker. | EXP-005 | 0 |
-| [`data/prepare_rlp_corpus.py`](data/prepare_rlp_corpus.py) | Prepare RLP acquisition text on cpu-angad, without evaluation solutions. | – | 0 |
-| [`data/prepare_short_proof_subset.py`](data/prepare_short_proof_subset.py) | Select short original LeanDojo training proofs without exposing hidden suffixes. | – | 0 |
-| [`data/prepare_tactic_curriculum.py`](data/prepare_tactic_curriculum.py) | Freeze existing training proof starts and paired starting-state schedules. | – | 1 |
-| [`data/replay_training_proofs.py`](data/replay_training_proofs.py) | Replay linear LeanDojo training proofs with the pinned Lean checker on cpu-angad. | – | 15 |
-| [`data/retrace_v21_states.py`](data/retrace_v21_states.py) | Re-derive each v2.1 SFT prompt's goal through the RL environment and keep only SFT examples whose target RL can run. | – | 0 |
-| [`data/verify_external_proofs.py`](data/verify_external_proofs.py) | Check Lean Workbook statements and proofs (Lean Workbook and Goedel-Prover releases) at our pinned Lean. | EXP-016, EXP-024, EXP-025, EXP-029 | 11 |
+| Script | Purpose | Experiments |
+| --- | --- | --- |
+| [`data/rebuild_nt_dataset.py`](data/rebuild_nt_dataset.py) | Fetch pinned sources, assemble candidates, record verifier identity and build task orders. | EXP-025 |
+| [`data/add_premises_sft.py`](data/add_premises_sft.py) | Add the retrieved-lemma section to existing v2 SFT examples. | EXP-028 |
+| [`data/build_answer_tasks.py`](data/build_answer_tasks.py) | Build Lean-checked number-theory answer tasks (formal Q&A) and check every reference answer in Lean. | EXP-024 |
+| [`data/build_dev_set.py`](data/build_dev_set.py) | Build a development set of LeanDojo Benchmark 4 random/val (+ test) theorems for comparing Lean 4 proof models. | – |
+| [`data/build_nt_archive.py`](data/build_nt_archive.py) | Number-theory theorems of the mathlib Archive at the pin, from files compiled at the pin. | – |
+| [`data/build_nt_benchmark.py`](data/build_nt_benchmark.py) | Build a versioned, exploratory number-theory benchmark from the existing corpus. | EXP-025 |
+| [`data/build_nt_hole_tasks.py`](data/build_nt_hole_tasks.py) | RL hole tasks from Lean-checked proofs of the held-out theorems, plus one whole-statement task per RL pool statement. | EXP-017 |
+| [`data/build_nt_knowledge.py`](data/build_nt_knowledge.py) | Number-theory knowledge items from mathlib at the pin: doc comment (informal) + Lean statement + proof as written. | – |
+| [`data/build_nt_pool.py`](data/build_nt_pool.py) | Build the number-theory statement pool for RL from Lean-checked Lean Workbook statements. | EXP-016 |
+| [`data/build_nt_sft_data.py`](data/build_nt_sft_data.py) | SFT examples from Lean-checked external proofs of number-theory pool statements (train split only). | EXP-017 |
+| [`data/build_nt_splits.py`](data/build_nt_splits.py) | Name lists of the midsem plan (artifacts/notes/2026-10-10_midsem_plan.md): what trains, what is held out, what is scored. | EXP-017 |
+| [`data/build_nt_states.py`](data/build_nt_states.py) | Initial goal states (Lean trace_state) for one split of the number-theory statement pool. | EXP-016 |
+| [`data/build_nt_tactic_aug.py`](data/build_nt_tactic_aug.py) | Tactic-level augmentation: new Lean-checked proofs from the accepted SFT proofs of sft_problems (train split only). | – |
+| [`data/build_premise_corpus.py`](data/build_premise_corpus.py) | Dump Mathlib theorem names and statements from the pinned Lean environment as a premise corpus. | EXP-028 |
+| [`data/build_proof_tasks.py`](data/build_proof_tasks.py) | Build Lean-checked proof tasks from the original mathlib proof text, with cut points. | – |
+| [`data/build_rft_data.py`](data/build_rft_data.py) | SFT examples for the rejection-sampling fine-tuning (RFT) baseline from Lean-accepted map attempts (train split only). | EXP-019 |
+| [`data/build_search_sft.py`](data/build_search_sft.py) | Mine SFT examples from a step-search assessment of TRAIN theorems (expert iteration and error repair). | EXP-028 |
+| [`data/build_sft_data.py`](data/build_sft_data.py) | Build Lean 4 SFT data from LeanDojo Benchmark 4 training proofs at the pinned mathlib commit. | EXP-014 |
+| [`data/build_syntax_sft.py`](data/build_syntax_sft.py) | Syntax SFT from existing replay-accepted bank proofs, at the project's Lean pin. | EXP-017 |
+| [`data/build_task_bank.py`](data/build_task_bank.py) | Merge Lean-checked proof tasks into one task bank with curriculum metadata. | – |
+| [`data/build_v21_sft.py`](data/build_v21_sft.py) | SFT examples in the environment version 2.1 format, from existing Lean-checked number-theory proofs. | – |
+| [`data/export_task_pool.py`](data/export_task_pool.py) | Export a larger training-theorem pool from LeanDojo Benchmark 4 for curriculum experiments. | – |
+| [`data/import_extra_nt.py`](data/import_extra_nt.py) | Import extra public Lean 4 number-theory statements and proofs, filter them like nt_pool_v2, and Lean-check them. | – |
+| [`data/mathematical_rlp_data.py`](data/mathematical_rlp_data.py) | Bounded, authored records and matched information views for mathematical RLP. | EXP-013 |
+| [`data/merge_sft_rows.py`](data/merge_sft_rows.py) | Assemble an SFT data directory from base SFT examples plus optional extra TRAIN SFT examples, within the SFT token limits. | – |
+| [`data/prepare_grpo_pilot.py`](data/prepare_grpo_pilot.py) | Prepare gold-free whole-proof prompts on cpu-angad. | – |
+| [`data/prepare_leandojo.py`](data/prepare_leandojo.py) | Prepare a project-defined Nat subset of LeanDojo's official random splits. | EXP-001 |
+| [`data/prepare_nt_tactic_expansion.py`](data/prepare_nt_tactic_expansion.py) | Prepare frozen TRAIN-source theorems and available prefixes, with separate DEV theorems. | – |
+| [`data/prepare_prerequisite_curriculum.py`](data/prepare_prerequisite_curriculum.py) | Prepare a small authored curriculum with the existing pinned checker. | EXP-005 |
+| [`data/prepare_rlp_corpus.py`](data/prepare_rlp_corpus.py) | Prepare RLP acquisition text on cpu-angad, without evaluation solutions. | – |
+| [`data/prepare_short_proof_subset.py`](data/prepare_short_proof_subset.py) | Select short original LeanDojo training proofs without exposing hidden suffixes. | – |
+| [`data/prepare_tactic_curriculum.py`](data/prepare_tactic_curriculum.py) | Freeze existing training proof starts and paired starting-state schedules. | – |
+| [`data/replay_training_proofs.py`](data/replay_training_proofs.py) | Replay linear LeanDojo training proofs with the pinned Lean checker on cpu-angad. | – |
+| [`data/retrace_v21_states.py`](data/retrace_v21_states.py) | Re-derive each v2.1 SFT prompt's goal through the RL environment and keep only SFT examples whose target RL can run. | – |
+| [`data/verify_external_proofs.py`](data/verify_external_proofs.py) | Check Lean Workbook statements and proofs (Lean Workbook and Goedel-Prover releases) at our pinned Lean. | EXP-016, EXP-024, EXP-025, EXP-029 |
 
 ### data/nt_benchmark/
 
 Components used by `data/build_nt_benchmark.py` and `data/rebuild_nt_dataset.py` (EXP-025).
 
-| Script | Purpose | Experiments | Imported by |
-| --- | --- | --- | ---: |
-| [`data/nt_benchmark/__init__.py`](data/nt_benchmark/__init__.py) | Number-theory benchmark components. Legacy script commands remain supported. | EXP-025 | 3 |
-| [`data/nt_benchmark/artifacts.py`](data/nt_benchmark/artifacts.py) | Proof profiling and split-safe exports consumed by SFT and RL runners. | – | 3 |
-| [`data/nt_benchmark/corpus.py`](data/nt_benchmark/corpus.py) | Build a deterministic, disk-backed corpus of unverified number-theory proofs. | EXP-025 | 1 |
-| [`data/nt_benchmark/identity.py`](data/nt_benchmark/identity.py) | Record the pinned Lean/mathlib pair from clean Git checkouts and a live binary. | EXP-025 | 2 |
-| [`data/nt_benchmark/pipeline.py`](data/nt_benchmark/pipeline.py) | Compose replaceable selection, verification, and export components. | – | 1 |
-| [`data/nt_benchmark/schedules.py`](data/nt_benchmark/schedules.py) | Recreate paired task orders from one frozen TRAIN bank and explicit annotations. | EXP-025 | 1 |
-| [`data/nt_benchmark/selection.py`](data/nt_benchmark/selection.py) | Deterministic selection and duplicate-aware split assignment. | – | 3 |
-| [`data/nt_benchmark/sources.py`](data/nt_benchmark/sources.py) | Fetch pinned public files and adapt their proof candidates to one input schema. | EXP-025 | 4 |
-| [`data/nt_benchmark/storage.py`](data/nt_benchmark/storage.py) | Bounded JSONL storage and source receipts for benchmark builds. | – | 9 |
-| [`data/nt_benchmark/verification.py`](data/nt_benchmark/verification.py) | Pinned Lean replay, goal extraction, and complete baseline screening. | – | 3 |
+| Script | Purpose | Experiments |
+| --- | --- | --- |
+| [`data/nt_benchmark/__init__.py`](data/nt_benchmark/__init__.py) | Number-theory benchmark components. Legacy script commands remain supported. | EXP-025 |
+| [`data/nt_benchmark/artifacts.py`](data/nt_benchmark/artifacts.py) | Proof profiling and split-safe exports consumed by SFT and RL runners. | – |
+| [`data/nt_benchmark/corpus.py`](data/nt_benchmark/corpus.py) | Build a deterministic, disk-backed corpus of unverified number-theory proofs. | EXP-025 |
+| [`data/nt_benchmark/identity.py`](data/nt_benchmark/identity.py) | Record the pinned Lean/mathlib pair from clean Git checkouts and a live binary. | EXP-025 |
+| [`data/nt_benchmark/pipeline.py`](data/nt_benchmark/pipeline.py) | Compose replaceable selection, verification, and export components. | – |
+| [`data/nt_benchmark/schedules.py`](data/nt_benchmark/schedules.py) | Recreate paired task orders from one frozen TRAIN bank and explicit annotations. | EXP-025 |
+| [`data/nt_benchmark/selection.py`](data/nt_benchmark/selection.py) | Deterministic selection and duplicate-aware split assignment. | – |
+| [`data/nt_benchmark/sources.py`](data/nt_benchmark/sources.py) | Fetch pinned public files and adapt their proof candidates to one input schema. | EXP-025 |
+| [`data/nt_benchmark/storage.py`](data/nt_benchmark/storage.py) | Bounded JSONL storage and source receipts for benchmark builds. | – |
+| [`data/nt_benchmark/verification.py`](data/nt_benchmark/verification.py) | Pinned Lean replay, goal extraction, and complete baseline screening. | – |
 
 ### train/
 
 Training entry points and the Lean environment.
 
-| Script | Purpose | Experiments | Imported by |
-| --- | --- | --- | ---: |
-| [`train/band_sampler.py`](train/band_sampler.py) | Arm C task sampler: Thompson sampling toward families that give mixed groups. | – | 1 |
-| [`train/candidate_policy.py`](train/candidate_policy.py) | Shared categorical policy over a frozen menu of Lean-admitted tactics. | – | 2 |
-| [`train/lean_ppo.py`](train/lean_ppo.py) | Pinned TRL PPO with the existing binary Lean scorer, not a learned reward model. | EXP-022 | 2 |
-| [`train/local_operator_training.py`](train/local_operator_training.py) | Local-action mode for run_grpo_pilot, using the same pinned TRL optimizer. | EXP-011 | 1 |
-| [`train/run_candidate_ppo.py`](train/run_candidate_ppo.py) | PPO-Clip updates for complete Lean candidate-selection attempts. | – | 1 |
-| [`train/run_candidate_reinforce.py`](train/run_candidate_reinforce.py) | Monte Carlo REINFORCE over the shared frozen candidate policy. | – | 0 |
-| [`train/run_grpo_pilot.py`](train/run_grpo_pilot.py) | Thin TRL GRPO wrapper for the separate whole-proof pilot, one L40S. | EXP-004, EXP-005, EXP-006 | 0 |
-| [`train/run_interleaved_training.py`](train/run_interleaved_training.py) | Alternate existing SFT, hidden-target RLP, and Lean GRPO runners. | EXP-020 | 1 |
-| [`train/run_lean_grpo.py`](train/run_lean_grpo.py) | GRPO on Lean tasks with a Lean-verified binary reward, and cost records per optimizer step. | EXP-019 | 5 |
-| [`train/run_rlp_pilot.py`](train/run_rlp_pilot.py) | RLP acquisition through TRL, one L40S, no supervised proof objective. | EXP-007, EXP-008, EXP-009, EXP-013, EXP-021 | 1 |
-| [`train/run_sft.py`](train/run_sft.py) | Supervised fine-tuning on Lean 4 proofs with TRL 0.24 (prompt-completion, loss on the completion only). | EXP-014, EXP-018, EXP-023, EXP-024, EXP-025, EXP-027 | 0 |
-| [`train/run_tactic_ppo.py`](train/run_tactic_ppo.py) | Pinned library PPO for one tactic block, with the REINFORCE Lean attempt contract. | EXP-023 | 0 |
-| [`train/run_tactic_rl.py`](train/run_tactic_rl.py) | On-policy tactic RL with Lean transitions and a leave-one-out baseline. | EXP-019, EXP-020, EXP-021, EXP-023, EXP-024, EXP-026, EXP-027, EXP-028, EXP-029, EXP-030 | 12 |
+| Script | Purpose | Experiments |
+| --- | --- | --- |
+| [`train/band_sampler.py`](train/band_sampler.py) | Arm C task sampler: Thompson sampling toward families that give mixed groups. | – |
+| [`train/candidate_policy.py`](train/candidate_policy.py) | Shared categorical policy over a frozen menu of Lean-admitted tactics. | – |
+| [`train/lean_ppo.py`](train/lean_ppo.py) | Pinned TRL PPO with the existing binary Lean scorer, not a learned reward model. | EXP-022 |
+| [`train/local_operator_training.py`](train/local_operator_training.py) | Local-action mode for run_grpo_pilot, using the same pinned TRL optimizer. | EXP-011 |
+| [`train/run_candidate_ppo.py`](train/run_candidate_ppo.py) | PPO-Clip updates for complete Lean candidate-selection attempts. | – |
+| [`train/run_candidate_reinforce.py`](train/run_candidate_reinforce.py) | Monte Carlo REINFORCE over the shared frozen candidate policy. | – |
+| [`train/run_grpo_pilot.py`](train/run_grpo_pilot.py) | Thin TRL GRPO wrapper for the separate whole-proof pilot, one L40S. | EXP-004, EXP-005, EXP-006 |
+| [`train/run_interleaved_training.py`](train/run_interleaved_training.py) | Alternate existing SFT, hidden-target RLP, and Lean GRPO runners. | EXP-020 |
+| [`train/run_lean_grpo.py`](train/run_lean_grpo.py) | GRPO on Lean tasks with a Lean-verified binary reward, and cost records per optimizer step. | EXP-019 |
+| [`train/run_rlp_pilot.py`](train/run_rlp_pilot.py) | RLP acquisition through TRL, one L40S, no supervised proof objective. | EXP-007, EXP-008, EXP-009, EXP-013, EXP-021 |
+| [`train/run_sft.py`](train/run_sft.py) | Supervised fine-tuning on Lean 4 proofs with TRL 0.24 (prompt-completion, loss on the completion only). | EXP-014, EXP-018, EXP-023, EXP-024, EXP-025, EXP-027 |
+| [`train/run_tactic_ppo.py`](train/run_tactic_ppo.py) | Pinned library PPO for one tactic block, with the REINFORCE Lean attempt contract. | EXP-023 |
+| [`train/run_tactic_rl.py`](train/run_tactic_rl.py) | On-policy tactic RL with Lean transitions and a leave-one-out baseline. | EXP-019, EXP-020, EXP-021, EXP-023, EXP-024, EXP-026, EXP-027, EXP-028, EXP-029, EXP-030 |
 
 ### train/rl_components/
 
 Reusable training components. Importing these modules does not load model weights or start Lean.
 
-| Script | Purpose | Experiments | Imported by |
-| --- | --- | --- | ---: |
-| [`train/rl_components/__init__.py`](train/rl_components/__init__.py) | Reusable training components. Importing this package does not load model libraries. | EXP-025 | 11 |
-| [train/rl_components/actions.py](train/rl_components/actions.py) | Lean tactic-action parsing and diagnostic message formatting. | – | 3 |
-| [train/rl_components/configuration.py](train/rl_components/configuration.py) | Configuration validation and training/evaluation mode restrictions. | – | 1 |
-| [train/rl_components/generation.py](train/rl_components/generation.py) | Sampling backends, stop-token handling, and reproducible generation seeds. | – | 3 |
-| [`train/rl_components/objectives.py`](train/rl_components/objectives.py) | The existing leave-one-out estimator and streamed policy-gradient update. | – | 3 |
-| [`train/rl_components/premises.py`](train/rl_components/premises.py) | BM25 premise retrieval over library lemmas, independent of Lean processes. | – | 2 |
-| [`train/rl_components/proofs.py`](train/rl_components/proofs.py) | Lean action serialization without verifier or trainer imports. | – | 2 |
-| [`train/rl_components/sft.py`](train/rl_components/sft.py) | SFT message conversion without importing datasets, Torch, or TRL. | – | 4 |
-| [`train/rl_components/tasks.py`](train/rl_components/tasks.py) | Task admission and curriculum scheduling, independent of Lean processes. | EXP-026 | 1 |
+| Script | Purpose | Experiments |
+| --- | --- | --- |
+| [`train/rl_components/__init__.py`](train/rl_components/__init__.py) | Reusable training components. Importing this package does not load model libraries. | EXP-025 |
+| [train/rl_components/actions.py](train/rl_components/actions.py) | Lean tactic-action parsing and diagnostic message formatting. | – |
+| [train/rl_components/configuration.py](train/rl_components/configuration.py) | Configuration validation and training/evaluation mode restrictions. | – |
+| [train/rl_components/environment.py](train/rl_components/environment.py) | Lean proof episodes, replay acceptance, backtracking and local feedback. | – |
+| [train/rl_components/observations.py](train/rl_components/observations.py) | Shared observation renderer for training, evaluation and SFT data. | – |
+| [train/rl_components/generation.py](train/rl_components/generation.py) | Sampling backends, stop-token handling, and reproducible generation seeds. | – |
+| [`train/rl_components/objectives.py`](train/rl_components/objectives.py) | The existing leave-one-out estimator and streamed policy-gradient update. | – |
+| [`train/rl_components/premises.py`](train/rl_components/premises.py) | BM25 premise retrieval over library lemmas, independent of Lean processes. | – |
+| [`train/rl_components/proofs.py`](train/rl_components/proofs.py) | Lean action serialization without verifier or trainer imports. | – |
+| [`train/rl_components/sft.py`](train/rl_components/sft.py) | SFT message conversion without importing datasets, Torch, or TRL. | – |
+| [`train/rl_components/tasks.py`](train/rl_components/tasks.py) | Task admission and curriculum scheduling, independent of Lean processes. | EXP-026 |
 
 ### eval/
 
 Evaluations, baselines, probes and scoring checks.
 
-| Script | Purpose | Experiments | Imported by |
-| --- | --- | --- | ---: |
-| [`eval/bench_lean_verifier.py`](eval/bench_lean_verifier.py) | Compare three Lean verifier modes for a GRPO reward on the same proof attempts. No model runs. | AUD-002 | 26 |
-| [`eval/check_checker_attacks.py`](eval/check_checker_attacks.py) | Adversarial continuations against the shared Lean scorer (verify_group): every attack must be rejected. | AUD-002, EXP-023 | 0 |
-| [`eval/check_inhouse_controls.py`](eval/check_inhouse_controls.py) | Lean integration controls for build_nt_tactic_aug.py, build_nt_knowledge.py, and build_nt_archive.py (not unittest). | – | 0 |
-| [`eval/check_rollout_backends.py`](eval/check_rollout_backends.py) | GPU check that batched HF and vLLM sampling match single-prompt HF sampling of the tactic policy. | EXP-029 | 0 |
-| [`eval/check_scoring_paths.py`](eval/check_scoring_paths.py) | Integration test: score the same candidates through the probe, map, and trainer paths and require equal verdicts. | AUD-002 | 0 |
-| [`eval/check_task_scoring.py`](eval/check_task_scoring.py) | Integration test: RL tasks score the same in the pass-rate map (probe_nt_pool.py) and in the GRPO reward. | – | 0 |
-| [`eval/check_vllm_equivalence.py`](eval/check_vllm_equivalence.py) | vLLM-versus-HF equivalence test for probe_nt_pool.py (GPU; first step of the GPU lease; exit 1 on failure). | – | 0 |
-| [`eval/curriculum_metrics.py`](eval/curriculum_metrics.py) | Curriculum metrics from run_tactic_rl.py output directories (assessment or training). | EXP-023, EXP-024 | 0 |
-| [`eval/demo_episode.py`](eval/demo_episode.py) | Screen or demonstrate specified theorems in Lean environment version 2.1. | – | 0 |
-| [`eval/elaborate_statements.py`](eval/elaborate_statements.py) | Elaborate theorem statements under the pinned Lean and mathlib, with `sorry` as the proof. No proof is checked. | EXP-029 | 0 |
-| [`eval/eval_answer_tasks.py`](eval/eval_answer_tasks.py) | Pass rate of frozen models on Lean-checked answer tasks, next to two no-model baselines. | – | 0 |
-| [`eval/evaluate_acquisition.py`](eval/evaluate_acquisition.py) | Evaluation only: recognition, recall, and elementary number-theory application. | EXP-010 | 0 |
-| [`eval/export_tactic_proofs.py`](eval/export_tactic_proofs.py) | Export complete model proof paths and replay with the existing strict scorer. | EXP-023, EXP-026, EXP-027 | 0 |
-| [`eval/false_hypothesis_sweep.py`](eval/false_hypothesis_sweep.py) | False-hypothesis sweep: which statements of the number-theory pool have hypotheses that prove False. | EXP-029 | 0 |
-| [`eval/grade_mathematical_responses.py`](eval/grade_mathematical_responses.py) | Prepare blinded review packets and recount independent mathematical grades. | EXP-013 | 0 |
-| [`eval/lean_eval_statements.py`](eval/lean_eval_statements.py) | Lean-checked whole-proof evaluation of frozen models on curriculum-validation theorems. | EXP-015 | 2 |
-| [`eval/nearest_proof_baseline.py`](eval/nearest_proof_baseline.py) | Nearest-proof baseline: how many held-out statements a copied train proof proves, with no learning. | – | 0 |
-| [`eval/pass_rate_map.py`](eval/pass_rate_map.py) | Pass-rate map of one checkpoint over the task bank: a group of attempts per unit, by steps remaining. | EXP-019 | 0 |
-| [`eval/probe_nt_pool.py`](eval/probe_nt_pool.py) | Pass rates of frozen models and a single-tactic baseline on sampled statements of the number-theory pool. | EXP-015 | 22 |
-| [`eval/probe_qwen.py`](eval/probe_qwen.py) | Bounded, unquantized MLX math probe. Lean statements remain unverified. | EXP-002, EXP-003 | 0 |
-| [`eval/probe_start_depth.py`](eval/probe_start_depth.py) | Measure how often a frozen model finishes a training proof from a later starting point. | – | 19 |
-| [`eval/probe_tactic_burdens.py`](eval/probe_tactic_burdens.py) | Frozen prompt/premise diagnostic. No optimizer or generated-code execution. | – | 0 |
-| [`eval/regrade_controlled_rlp.py`](eval/regrade_controlled_rlp.py) | Blinded regrade of both arms of the controlled RLP study (Experiment 13); no model calls. | EXP-013 | 0 |
-| [`eval/rescore_accepted.py`](eval/rescore_accepted.py) | Re-score earlier accepted proofs with the current shared scorer and scan them for the checker holes of 2026-10-10. | – | 0 |
-| [`eval/search_tactics.py`](eval/search_tactics.py) | Best-first tactic search with a frozen model on curriculum-validation theorems (Lean REPL tactic mode). | EXP-015 | 1 |
-| [`eval/single_tactic_baseline.py`](eval/single_tactic_baseline.py) | No-model baseline: each fixed tactic alone as the whole proof of each curriculum-validation theorem. | EXP-015, EXP-024 | 1 |
-| [`eval/verify_local_operator.py`](eval/verify_local_operator.py) | Verify supplied-knowledge witness expressions with the existing Lean checker. | EXP-011 | 1 |
+| Script | Purpose | Experiments |
+| --- | --- | --- |
+| [`eval/bench_lean_verifier.py`](eval/bench_lean_verifier.py) | Compare three Lean verifier modes for a GRPO reward on the same proof attempts. No model runs. | AUD-002 |
+| [`eval/check_checker_attacks.py`](eval/check_checker_attacks.py) | Adversarial continuations against the shared Lean scorer (verify_group): every attack must be rejected. | AUD-002, EXP-023 |
+| [`eval/check_inhouse_controls.py`](eval/check_inhouse_controls.py) | Lean integration controls for build_nt_tactic_aug.py, build_nt_knowledge.py, and build_nt_archive.py (not unittest). | – |
+| [`eval/check_rollout_backends.py`](eval/check_rollout_backends.py) | GPU check that batched HF and vLLM sampling match single-prompt HF sampling of the tactic policy. | EXP-029 |
+| [`eval/check_scoring_paths.py`](eval/check_scoring_paths.py) | Integration test: score the same candidates through the probe, map, and trainer paths and require equal verdicts. | AUD-002 |
+| [`eval/check_task_scoring.py`](eval/check_task_scoring.py) | Integration test: RL tasks score the same in the pass-rate map (probe_nt_pool.py) and in the GRPO reward. | – |
+| [`eval/check_vllm_equivalence.py`](eval/check_vllm_equivalence.py) | vLLM-versus-HF equivalence test for probe_nt_pool.py (GPU; first step of the GPU lease; exit 1 on failure). | – |
+| [`eval/curriculum_metrics.py`](eval/curriculum_metrics.py) | Curriculum metrics from run_tactic_rl.py output directories (assessment or training). | EXP-023, EXP-024 |
+| [`eval/demo_episode.py`](eval/demo_episode.py) | Screen or demonstrate specified theorems in Lean environment version 2.1. | – |
+| [`eval/elaborate_statements.py`](eval/elaborate_statements.py) | Elaborate theorem statements under the pinned Lean and mathlib, with `sorry` as the proof. No proof is checked. | EXP-029 |
+| [`eval/eval_answer_tasks.py`](eval/eval_answer_tasks.py) | Pass rate of frozen models on Lean-checked answer tasks, next to two no-model baselines. | – |
+| [`eval/evaluate_acquisition.py`](eval/evaluate_acquisition.py) | Evaluation only: recognition, recall, and elementary number-theory application. | EXP-010 |
+| [`eval/export_tactic_proofs.py`](eval/export_tactic_proofs.py) | Export complete model proof paths and replay with the existing strict scorer. | EXP-023, EXP-026, EXP-027 |
+| [`eval/false_hypothesis_sweep.py`](eval/false_hypothesis_sweep.py) | False-hypothesis sweep: which statements of the number-theory pool have hypotheses that prove False. | EXP-029 |
+| [`eval/grade_mathematical_responses.py`](eval/grade_mathematical_responses.py) | Prepare blinded review packets and recount independent mathematical grades. | EXP-013 |
+| [`eval/lean_eval_statements.py`](eval/lean_eval_statements.py) | Lean-checked whole-proof evaluation of frozen models on curriculum-validation theorems. | EXP-015 |
+| [`eval/nearest_proof_baseline.py`](eval/nearest_proof_baseline.py) | Nearest-proof baseline: how many held-out statements a copied train proof proves, with no learning. | – |
+| [`eval/pass_rate_map.py`](eval/pass_rate_map.py) | Pass-rate map of one checkpoint over the task bank: a group of attempts per unit, by steps remaining. | EXP-019 |
+| [`eval/probe_nt_pool.py`](eval/probe_nt_pool.py) | Pass rates of frozen models and a single-tactic baseline on sampled statements of the number-theory pool. | EXP-015 |
+| [`eval/probe_qwen.py`](eval/probe_qwen.py) | Bounded, unquantized MLX math probe. Lean statements remain unverified. | EXP-002, EXP-003 |
+| [`eval/probe_start_depth.py`](eval/probe_start_depth.py) | Measure how often a frozen model finishes a training proof from a later starting point. | – |
+| [`eval/probe_tactic_burdens.py`](eval/probe_tactic_burdens.py) | Frozen prompt/premise diagnostic. No optimizer or generated-code execution. | – |
+| [`eval/regrade_controlled_rlp.py`](eval/regrade_controlled_rlp.py) | Blinded regrade of both arms of the controlled RLP study (Experiment 13); no model calls. | EXP-013 |
+| [`eval/rescore_accepted.py`](eval/rescore_accepted.py) | Re-score earlier accepted proofs with the current shared scorer and scan them for the checker holes of 2026-10-10. | – |
+| [`eval/search_tactics.py`](eval/search_tactics.py) | Best-first tactic search with a frozen model on curriculum-validation theorems (Lean REPL tactic mode). | EXP-015 |
+| [`eval/single_tactic_baseline.py`](eval/single_tactic_baseline.py) | No-model baseline: each fixed tactic alone as the whole proof of each curriculum-validation theorem. | EXP-015, EXP-024 |
+| [`eval/verify_local_operator.py`](eval/verify_local_operator.py) | Verify supplied-knowledge witness expressions with the existing Lean checker. | EXP-011 |
 
 ### eval/proof_export/
 
 Package used by `eval/export_tactic_proofs.py`.
 
-| Script | Purpose | Experiments | Imported by |
-| --- | --- | --- | ---: |
-| [`eval/proof_export/__init__.py`](eval/proof_export/__init__.py) | Reusable proof replay and attempt reconstruction components. | EXP-025 | 1 |
-| [`eval/proof_export/exporter.py`](eval/proof_export/exporter.py) | Re-admit saved tasks, replay complete proofs, and serialize export artifacts. | – | 1 |
-| [`eval/proof_export/trajectory.py`](eval/proof_export/trajectory.py) | Reconstruct the exact retained proof from a complete attempt. | – | 2 |
+| Script | Purpose | Experiments |
+| --- | --- | --- |
+| [`eval/proof_export/__init__.py`](eval/proof_export/__init__.py) | Reusable proof replay and attempt reconstruction components. | EXP-025 |
+| [`eval/proof_export/exporter.py`](eval/proof_export/exporter.py) | Re-admit saved tasks, replay complete proofs, and serialize export artifacts. | – |
+| [`eval/proof_export/trajectory.py`](eval/proof_export/trajectory.py) | Reconstruct the exact retained proof from a complete attempt. | – |
 
 ### audit/
 
 Read-only audits, leakage checks and held-out screens.
 
-| Script | Purpose | Experiments | Imported by |
-| --- | --- | --- | ---: |
-| [`audit/audit_primitive_rlp.py`](audit/audit_primitive_rlp.py) | Audit saved primitive RLP records on CPU; no model inference. | EXP-009 | 0 |
-| [`audit/audit_proofs.py`](audit/audit_proofs.py) | Stream existing GRPO failures on cpu-angad; no model or Lean execution. | – | 0 |
-| [`audit/audit_rlp_corpus.py`](audit/audit_rlp_corpus.py) | Audit immutable structured RLP exports on CPU, without model inference. | EXP-012 | 0 |
-| [`audit/audit_rlp_updates.py`](audit/audit_rlp_updates.py) | Compare saved RLP weights and isolate BF16 update rounding on CPU. | EXP-008 | 0 |
-| [`audit/automation_chain_screen.py`](audit/automation_chain_screen.py) | Automation-chain screen: which held-out statements a short, statement-independent automation chain proves. | EXP-029 | 0 |
-| [`audit/check_leakage.py`](audit/check_leakage.py) | Near-duplicate checks of new training items against held-out statements, with the thresholds of nt_splits_v3. | EXP-017 | 4 |
-| [`audit/check_split_leakage.py`](audit/check_split_leakage.py) | Check the training side of a split for leakage into validation, test, and miniF2F. | EXP-017 | 0 |
-| [`audit/classify_proof_failures.py`](audit/classify_proof_failures.py) | Classify the Lean errors in a saved whole-proof diagnostic; no model or Lean execution. | AUD-001, EXP-003, EXP-023 | 1 |
-| [`audit/curriculum_inventory.py`](audit/curriculum_inventory.py) | Count start points for a reverse proof-state curriculum in a LeanDojo export; read-only. | AUD-001 | 1 |
-| [`audit/heldout_screens.py`](audit/heldout_screens.py) | Pure helpers shared by the held-out screens: pool loading, statement parsing, similarity, bands and strata. | – | 5 |
-| [`audit/number_theory_priors.py`](audit/number_theory_priors.py) | Rank the prior knowledge that mathlib number-theory proofs use, from LeanDojo premise annotations. | – | 1 |
-| [`audit/profile_external_proofs.py`](audit/profile_external_proofs.py) | Profile the Lean-checked external proofs (verify_external_proofs.py output) before any use in training. | EXP-024 | 14 |
-| [`audit/stratify_heldout.py`](audit/stratify_heldout.py) | Join the three held-out screens into one stratum per statement, and count proved theorems per stratum and arm. | EXP-029 | 0 |
-| [`audit/train_similarity_strata.py`](audit/train_similarity_strata.py) | TRAIN-similarity screen: how close each held-out statement is to a TRAIN statement, with an optional copy baseline. | EXP-029 | 0 |
+| Script | Purpose | Experiments |
+| --- | --- | --- |
+| [`audit/audit_primitive_rlp.py`](audit/audit_primitive_rlp.py) | Audit saved primitive RLP records on CPU; no model inference. | EXP-009 |
+| [`audit/audit_proofs.py`](audit/audit_proofs.py) | Stream existing GRPO failures on cpu-angad; no model or Lean execution. | – |
+| [`audit/audit_rlp_corpus.py`](audit/audit_rlp_corpus.py) | Audit immutable structured RLP exports on CPU, without model inference. | EXP-012 |
+| [`audit/audit_rlp_updates.py`](audit/audit_rlp_updates.py) | Compare saved RLP weights and isolate BF16 update rounding on CPU. | EXP-008 |
+| [`audit/automation_chain_screen.py`](audit/automation_chain_screen.py) | Automation-chain screen: which held-out statements a short, statement-independent automation chain proves. | EXP-029 |
+| [`audit/check_leakage.py`](audit/check_leakage.py) | Near-duplicate checks of new training items against held-out statements, with the thresholds of nt_splits_v3. | EXP-017 |
+| [`audit/check_split_leakage.py`](audit/check_split_leakage.py) | Check the training side of a split for leakage into validation, test, and miniF2F. | EXP-017 |
+| [`audit/classify_proof_failures.py`](audit/classify_proof_failures.py) | Classify the Lean errors in a saved whole-proof diagnostic; no model or Lean execution. | AUD-001, EXP-003, EXP-023 |
+| [`audit/curriculum_inventory.py`](audit/curriculum_inventory.py) | Count start points for a reverse proof-state curriculum in a LeanDojo export; read-only. | AUD-001 |
+| [`audit/heldout_screens.py`](audit/heldout_screens.py) | Pure helpers shared by the held-out screens: pool loading, statement parsing, similarity, bands and strata. | – |
+| [`audit/number_theory_priors.py`](audit/number_theory_priors.py) | Rank the prior knowledge that mathlib number-theory proofs use, from LeanDojo premise annotations. | – |
+| [`audit/profile_external_proofs.py`](audit/profile_external_proofs.py) | Profile the Lean-checked external proofs (verify_external_proofs.py output) before any use in training. | EXP-024 |
+| [`audit/stratify_heldout.py`](audit/stratify_heldout.py) | Join the three held-out screens into one stratum per statement, and count proved theorems per stratum and arm. | EXP-029 |
+| [`audit/train_similarity_strata.py`](audit/train_similarity_strata.py) | TRAIN-similarity screen: how close each held-out statement is to a TRAIN statement, with an optional copy baseline. | EXP-029 |
 
 ### monitor/
 
 Run monitoring.
 
-| Script | Purpose | Experiments | Imported by |
-| --- | --- | --- | ---: |
-| [`monitor/track_tensorboard.py`](monitor/track_tensorboard.py) | Display the frozen-policy pilot's S3 records in TensorBoard. | – | 0 |
+| Script | Purpose | Experiments |
+| --- | --- | --- |
+| [`monitor/track_tensorboard.py`](monitor/track_tensorboard.py) | Display the frozen-policy pilot's S3 records in TensorBoard. | – |
 
 ### report/
 
 Figures for the report.
 
-| Script | Purpose | Experiments | Imported by |
-| --- | --- | --- | ---: |
-| [`report/make_report_figures.py`](report/make_report_figures.py) | Draw the data figures of docs/tex/project_report.tex from recorded counts. | – | 0 |
+| Script | Purpose | Experiments |
+| --- | --- | --- |
+| [`report/make_report_figures.py`](report/make_report_figures.py) | Draw the data figures of docs/tex/project_report.tex from recorded counts. | – |
+
+</details>

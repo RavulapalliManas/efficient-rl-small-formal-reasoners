@@ -55,8 +55,8 @@ class TacticPPO(unittest.TestCase):
                 return next(replies)
             verdict = dict(status=replay, lean_calls=1, lean_seconds=0.0, lean_cpu_seconds=0.0)
             with patch.object(LeanEpisode, 'send', send), patch.object(LeanEpisode, 'close'), \
-                    patch('run_tactic_rl.Repl', return_value=SimpleNamespace()), \
-                    patch('run_tactic_rl.verify_group', return_value=[verdict]):
+                    patch('rl_components.environment.Repl', return_value=SimpleNamespace()), \
+                    patch('rl_components.environment.verify_group', return_value=[verdict]):
                 result = driver.one_action_score(ctx, {'a': task}, ['a'], [text], None)[2][0]
             self.assertEqual(result['status'], expected)
             self.assertEqual(episodes[0].max_repair_attempts, 0)

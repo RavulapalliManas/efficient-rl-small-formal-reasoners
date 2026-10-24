@@ -1,6 +1,7 @@
 """Draw the data figures of docs/tex/project_report.tex from recorded counts.
 
-Every count below is copied from a recount record, named in the comment above it.
+Each plot names its source record. The dense-reward plot preserves the counts
+displayed in its earlier PDF; the underlying recount remains private.
 No model, Lean call, or remote file is read. Peak memory is a few MB.
 
 Run from the repository root:
@@ -543,6 +544,46 @@ def fig_oct20_why():
     save(fig, "oct20_why")
 
 
+def fig_oct21_dense_reward():
+    """Re-score display; counts transcribed from the existing dense-reward PDF.
+
+    Source: fig_oct21_dense_reward_flaw.pdf, attributed to p9_counterfactual.
+    The original recount is private. This rebuild preserves its displayed
+    counts and exact-nonzero criterion; it does not re-run that recount.
+    The historical filename stays unchanged so recorded links still resolve.
+    """
+    fig, (a, b) = plt.subplots(1, 2, figsize=(160 * MM, 80 * MM))
+    runs = ("R", "RL_filtered")
+    for offset, counts, colour, hatch, name in (
+        (-0.2, (92, 337), PARENT, None, "Recorded terminal reward"),
+        (0.2, (1012, 735), RL, "///", "Dense reward (EXP-030)"),
+    ):
+        positions = [i + offset for i in range(2)]
+        heights = [100 * count / 1012 for count in counts]
+        a.bar(positions, heights, width=0.38, color=colour, hatch=hatch, label=name)
+        for x, y, count in zip(positions, heights, counts):
+            a.text(x, y + 2, f"{count}/1012", ha="center", fontsize=7)
+    a.set_title("Groups with a nonzero sampled advantage", loc="left")
+    a.set_ylabel("Groups (%)")
+    counts = ((19750, 22962), (8306, 11656))
+    heights = [100 * count / total for count, total in counts]
+    b.bar(range(2), heights, color=RL, width=0.55)
+    for x, (count, total), y in zip(range(2), counts, heights):
+        b.text(x, y + 2, f"{count}/{total}", ha="center", fontsize=7)
+    b.set_title("Penalised actions with a positive sampled weight", loc="left")
+    b.set_ylabel("Penalised actions (%)")
+    for ax in (a, b):
+        ax.set_xticks(range(2), runs)
+        ax.set_ylim(0, 112)
+        ax.set_yticks((0, 25, 50, 75, 100))
+    fig.subplots_adjust(bottom=0.30, wspace=0.45)
+    fig.legend(loc="lower center", bbox_to_anchor=(0.5, 0.13), ncol=2, fontsize=6)
+    fig.text(0.5, 0.04, "Recorded-action re-scoring; nonzero means value != 0.\n"
+             "Advantage signs alone do not establish estimator bias or a training outcome.",
+             ha="center", fontsize=7)
+    save(fig, "fig_oct21_dense_reward_flaw")
+
+
 if __name__ == "__main__":
     fig_pmix()
     fig_rlp()
@@ -555,4 +596,5 @@ if __name__ == "__main__":
     fig_oct19_curriculum()
     fig_oct19_actions()
     fig_oct20_why()
+    fig_oct21_dense_reward()
     print("wrote", sorted(p.name for p in OUT.glob("*.pdf")))

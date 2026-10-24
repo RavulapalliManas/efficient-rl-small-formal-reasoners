@@ -160,7 +160,8 @@ class ExpansionTest(unittest.TestCase):
                     return {'input_ids': [1]}
             transformers = SimpleNamespace(AutoTokenizer=SimpleNamespace(
                 from_pretrained=lambda *a, **kw: Tokenizer()))
-            states = {(t['header'], t['given']): t['state'] for t in self.tasks}
+            from rl_components.environment import anonymous_header
+            states = {(anonymous_header(t['header'])[1], t['given']): t['state'] for t in self.tasks}
             ctx = SimpleNamespace(pool_repls=set(), local=threading.local(), setup_timeout=120,
                                   timeout=20, checker=SimpleNamespace(guard=lambda name: ''))
             active = set()
@@ -186,7 +187,7 @@ class ExpansionTest(unittest.TestCase):
                 context.pool_repls.add(pooled)
                 context.local.repl = pooled
                 return [{'status': 'accepted'}]
-            import run_tactic_rl as rl
+            from rl_components import environment as rl
             with patch('sys.argv', argv), patch.dict('sys.modules', transformers=transformers), \
                     patch.object(self.module, 'load_checker'), \
                     patch.object(self.module, 'repl_context', return_value=ctx), \

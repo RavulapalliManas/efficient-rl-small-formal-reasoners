@@ -239,7 +239,7 @@ class TorchCandidatePolicy:
 
     def evaluate(self, support):
         import torch
-        from run_tactic_rl import action_logprob
+        from rl_components.objectives import action_logprob
         prompt = prompt_ids(self.tokenizer, support.observation, self.max_prompt_tokens)
         # Validate all text before the first forward; no silent truncation changes support.
         actions = [action_ids(self.tokenizer, a.tactic, self.max_action_tokens) for a in support.actions]

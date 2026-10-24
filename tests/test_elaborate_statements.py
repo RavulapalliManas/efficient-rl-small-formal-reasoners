@@ -133,7 +133,8 @@ class Statuses(unittest.TestCase):
             out = Path(tmp) / "out"
             out.mkdir()
             es.write_outputs(out, records, {"extra": 1})
-            rows = [json.loads(line) for line in open(out / "checked.jsonl")]
+            with (out / "checked.jsonl").open() as source:
+                rows = [json.loads(line) for line in source]
             self.assertEqual(len(rows), 3)
             self.assertEqual(json.loads((out / "summary.json").read_text())["n"], 3)
             with self.assertRaises(FileExistsError):

@@ -34,6 +34,9 @@ SFT means supervised fine-tuning. RLP rewards reasoning that makes a hidden answ
 
 ## Configuration index
 
+<details>
+<summary>All versioned configurations and their experiment assignments</summary>
+
 **Purpose** summarizes the config's `purpose` field. A dash means the field is absent.
 Older terms use the names in the [handoff terminology table](../docs/EXPERIMENTS.md#start-here-one-page-for-abhinav).
 **Source** explains the experiment assignment. Prefer the first available source:
@@ -173,3 +176,5 @@ RL runs and the candidate-action catalogue.
 | [`rl/qwen_05b_tactic_rl_terminal.json`](rl/qwen_05b_tactic_rl_terminal.json) | Terminal-only interactive RL from EXP020 common SFT; GPU launch remains unapproved | EXP-019 | `run_id` prefix |
 | [`rl/qwen_05b_tactic_rl_terminal_comparison.json`](rl/qwen_05b_tactic_rl_terminal_comparison.json) | Exploratory Lean-in-the-loop feedback versus terminal reward. | EXP-019 | `run_id` prefix |
 | [`rl/qwen_05b_whole_proof_grpo.json`](rl/qwen_05b_whole_proof_grpo.json) | – | EXP-004 | catalogue and README |
+
+</details>

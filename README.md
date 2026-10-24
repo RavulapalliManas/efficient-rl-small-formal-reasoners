@@ -1,55 +1,14 @@
 # Efficient RL for Small Formal Reasoners
 
-This project tests whether reinforcement learning (RL) helps a small language model write number-theory proofs under a fixed compute budget.
-We use `Qwen/Qwen2.5-0.5B-Instruct`.
-The model proposes proof steps; Lean 4 checks them. A complete accepted proof earns the proof reward.
+This project studies reinforcement learning (RL) for number-theory proofs with `Qwen/Qwen2.5-0.5B-Instruct`.
+The model proposes proof steps. Lean 4 checks them, and a complete accepted proof earns the proof reward.
 
 <a id="read-this-first"></a>
 
-## Documentation
+Read the [research report](docs/tex/project_report.pdf) for methods, results and limitations.
+Use the [script guide](scripts/README.md) for reproduction and code navigation, and the [config guide](configs/README.md) to select settings.
 
-| Purpose | Reference |
-| --- | --- |
-| Study methods and findings | [Report PDF](docs/tex/project_report.pdf), with a reading guide at the start; [TeX source](docs/tex/project_report.tex) |
-| Execution status | [Status](#status) |
-| Reproduce the main study | [Reproduction workflow](#reproduce-the-main-study) |
-| Recreate datasets | [Dataset rebuild](#recreate-datasets) |
-| Local setup | [Setup](#setup) |
-| Implementation | [Script guide](scripts/README.md#primary-workflow) and [config guide](configs/README.md#configuration-selection) |
-| Experiment records | [Experiment register](docs/EXPERIMENTS.md#experiment-register) |
-| Main-study data and checkpoints | [Data specification](docs/EXPERIMENTS.md#start-here-one-page-for-abhinav) and [data handoff](docs/EXPERIMENTS.md#data-handoff-for-abhinav-20-october-2026-ist) |
-
-## Terms
-
-| Term | Meaning |
-| --- | --- |
-| Lean / mathlib | The proof assistant / its mathematics library. Runs use a fixed revision of each |
-| Tactic | One Lean proof instruction |
-| Action | One model response containing tactics |
-| Attempt | A sequence of actions on one theorem |
-| Accepted attempt | An attempt whose complete proof Lean accepts |
-| Proved theorem | A theorem with at least one accepted attempt. Counts of proved theorems and accepted attempts have different denominators |
-| SFT | Supervised fine-tuning: learning from example proof steps |
-| RL / RLVR | Reinforcement learning / RL with verifiable rewards. A Lean-accepted complete proof supplies the proof reward; some experiments add heuristic rewards or penalties |
-| B, S, R, C | In the 18–19 October study: unchanged model, SFT model, SFT + shuffled RL, SFT + prerequisite-first RL |
-
-Model letters are local to each study. Their definitions appear in the corresponding protocol.
-The [handoff terminology table](docs/EXPERIMENTS.md#start-here-one-page-for-abhinav) maps older names to these terms.
-
-## Reproduce the main study
-
-Start with EXP-026 and EXP-027, the 18–19 October study. Its model sequence is:
-
-```text
-B: unchanged Qwen -> supervised fine-tuning -> S
-S -> RL with shuffled theorem order          -> R
-S -> RL with prerequisite-first order        -> C
-```
-
-All four have the same model architecture. They differ in the training applied to their weights.
-Compare them on the same DEV statements and attempt budget. A model response proposes tactics; Lean decides whether the complete proof is accepted.
-
-### 1. Inspect the project locally
+## Setup
 
 Install Python 3.12 and [uv](https://docs.astral.sh/uv/getting-started/installation/), then run from the repository root:
 
@@ -59,113 +18,50 @@ uv run python scripts/reproduce.py overview
 uv run python -m unittest tests.test_reproduction tests.test_rl_components
 ```
 
-These commands need no model, Lean installation or GPU. The tests use synthetic inputs and check local code; they do not reproduce a research result.
-Follow [one proof attempt](scripts/README.md#proof-execution) to see how the implementation fits together.
+These checks need no GPU, model weights or Lean installation. They do not reproduce a research result.
+For training dependencies, the external Lean runtime and integration tests, see [Runtime and development](scripts/README.md#runtime-and-development).
 
-### 2. Obtain the frozen inputs
+## Reproduce the main study
 
-Ask the project owner for the [archived data, runtime and model directories](docs/EXPERIMENTS.md#6-step-by-step-fetch-and-verify-the-data).
-Some dataset builders and the original main-run configs are private, so a clone alone cannot reproduce the full study.
-The older [GitHub checkpoint releases](#checkpoints) are separate experiments.
-
-| Input | Meaning and use |
-| --- | --- |
-| `data/actor/train_pool.jsonl` | 506 TRAIN theorem statements: `name`, `formal_statement`, `split` |
-| `data/actor/train_tasks.jsonl` | 506 RL starts: task ID, theorem header, empty supplied proof and initial Lean state |
-| `data/sft_action/sft_train.jsonl` | 1,880 supervised examples. Each row's `messages` pairs a user observation with the assistant's next action; `format` identifies the observation format |
-| `data/sft_action/sft_val.jsonl` | 125 separate examples from TRAIN theorems for monitoring SFT loss. This is not research DEV |
-| `runtime/inputs/dev_pool.jsonl`, `dev_names.txt` | The 8 DEV statements and names used for model and setting choices |
-| `schedules/` | Fixed R and C task orders. Both reuse the same TRAIN tasks |
-| `models/B`, `models/S`, `models/R`, `models/C` | Complete checkpoint folders, including weights, tokenizer and model metadata |
-| `runtime/inputs/`, `lean_env/` | Archived checker, REPL, identity receipt, Lean and compiled mathlib |
-
-JSONL stores one JSON object per line. The [data handoff](docs/EXPERIMENTS.md#4-the-datasets-you-use) describes fields and provenance.
-Keep the 21 TEST theorems reserved. The 164-theorem EXP-028 selection set is a separate exploratory set.
-
-Place the extracted inputs outside Git in this layout. Here `/absolute/path/to/study` is a directory you choose:
-
-```text
-study/
-  data/manifest.json
-  data/actor/{train_pool.jsonl,train_tasks.jsonl,exclude_names.txt}
-  data/sft_action/{sft_train.jsonl,sft_val.jsonl}
-  runtime/inputs/{dev_pool.jsonl,dev_names.txt,checker.py,repl,mathlib_source_identity.json}
-  schedules/{order_R_runtime.json,order_C_AI_runtime.json}
-  lean_env/{lean-4.10.0-rc1-linux/,mathlib/}
-  models/{B/,S/,R/,C/}
-```
-
-For a DEV check, only the selected model, data manifest, exclusion list, DEV files and runtime are needed.
-On the Linux run host, install the locked ML environment with `uv sync --locked --group training`.
-This downloads large ML packages. It uses the documented 19 October library versions; the original main-run package receipts remain external.
-
-### 3. Check inputs and prepare a run
-
-Replace the study path below with your extracted directory:
-
-```bash
-uv run python scripts/reproduce.py check --root /absolute/path/to/study --stage dev --model S
-uv run python scripts/reproduce.py prepare --root /absolute/path/to/study --stage dev --model S \
-  --run-id reproduction-001 --output /tmp/formal-rl-dev-plan-001
-```
-
-`check` returns a nonzero exit code for missing or mismatched inputs. It compares recorded file hashes, row counts, runtime layout and selected package versions.
-It checks metadata presence but does not establish tokenizer equivalence, execute Lean or load a model.
-The model hash check identifies the archived reference checkpoint; a newly trained checkpoint will have a different identity.
-
-`prepare` writes `config.json`, `command.txt` and `plan.json` into a new directory outside Git. It never launches a job.
-The plan includes input-check failures, source revision, whether the checkout has edits, and the intended output directory.
-Review those files before execution. Training needs the managed runner, resource caps, a registered run and approval of the quoted GPU cost.
-The managed runner must enforce the SFT wall cap; `run_sft.py` does not enforce it itself.
-
-| Stage | Starting model | Output |
-| --- | --- | --- |
-| `sft` | B | A new S checkpoint |
-| `rl-shuffled` | S | A new R checkpoint |
-| `rl-curriculum` | S | A new C checkpoint |
-| `dev` | B, S, R or C | Proof attempts and aggregate counts; no optimizer update |
-
-The versioned [reproduction specification](configs/reproduction_v1.json) holds the file identities and reconstructed settings.
-These settings come from the [recorded recipe](docs/EXPERIMENTS.md#7-step-by-step-run-with-this-data-as-the-main-run-did); they are not copies of the private configs, and no rerun is established by preparing them.
-Compare scientific outcomes from run artifacts: `run.json` holds resolved settings and counters, `steps.jsonl` holds group outcomes, and `rollouts.jsonl` holds actions.
-`counts.accepted` counts accepted attempts; the length of `solved_names` counts distinct proved theorems.
+The 18–19 October study compares the unchanged model (B), supervised fine-tuning (S), shuffled RL (R) and prerequisite-first RL (C).
+Follow the [reproduction procedure](scripts/README.md#main-study-reproduction) for frozen inputs, file checks and command preparation.
+Original data, checkpoints and the Linux Lean runtime remain external; some original builders are private.
 
 ## Recreate datasets
 
-The public rebuild starts from pinned upstream files and produces a new exploratory dataset. It covers source downloads, corpus assembly, duplicate-aware splits, Lean verification, SFT/RL exports and task orders.
-Follow the [dataset recreation guide](scripts/README.md#dataset-recreation) for the complete commands and output schemas.
+The [public rebuild](scripts/README.md#dataset-recreation) fetches pinned upstream sources, assembles candidates, verifies proofs and exports a new dataset.
+It produces a separate exploratory release; it does not reconstruct the historical 506-theorem training release or its action examples.
 
 ```bash
 uv sync --locked --group data
 uv run python scripts/data/rebuild_nt_dataset.py sources --source lean_workbook
-uv run --group data python -m unittest tests.test_dataset_rebuild tests.test_nt_benchmark
 ```
 
-`sources` lists immutable revisions, file sizes and checksums without downloading data.
-The guide starts with Lean Workbook; the registry also covers Goedel Workbook, Goedel-Pset, Goedel SFT v2 and STP.
-Rebuilding needs no trained model. Lean verification runs on a managed Linux CPU host with the pinned toolchain and mathlib.
-
-The rebuilt dataset has its own version, split membership and counts. The original 506-theorem release, action SFT examples and AI-reviewed curriculum still require their frozen archives.
-Corpus candidates are marked unverified until Lean admission; the exported SFT examples contain full proofs. Keep these separate from the main study's interactive action examples.
+`sources` lists revisions, file sizes and checksums without downloading data.
+See the [data specification](docs/EXPERIMENTS.md#data-handoff-for-abhinav-20-october-2026-ist) for historical schemas and provenance.
 
 ## Status
 
-On 20 October 2026, Manas halted experiment execution and requested analysis only.
-EXP-029 and EXP-030 did not run; see the [EXP-029](docs/EXPERIMENTS.md#exp-029-stop) and [EXP-030](docs/EXPERIMENTS.md#exp-030-stop) stop records.
+Experiment execution stopped on 20 October 2026. EXP-029 and EXP-030 did not run.
+The recorded results do not demonstrate better proof performance on unseen theorems after RL.
 
-These tables are the current execution status record. Refer to the linked run records for scoring protocols and limitations.
-The [experiment register](docs/EXPERIMENTS.md#experiment-register) links each protocol, result and report section.
+- B, S, R and C each prove 0 of 8 DEV theorems. This small set cannot resolve modest differences.
+- On the separate selection set, S proves 1 of 163 assessed theorems, R proves 1 of 164, and filtered RL proves 2 of 164. No arm meets the promotion rule. One S theorem is censored by a runtime defect; it is not counted as a failed proof.
+- Prerequisite-first RL accepts 255 of 4,048 TRAIN attempts, against 164 for shuffled RL. These are training results from one run per arm, not evidence of transfer to unseen theorems.
+
+The [report](docs/tex/project_report.pdf) explains the comparisons and their limits.
+The tables below are the execution status record; the [experiment register](docs/EXPERIMENTS.md#experiment-register) links protocols and evidence.
+
+<details>
+<summary>Experiment results and execution status (32 records)</summary>
 
 | ID | Experiment | Config or entry point | Status |
 | --- | --- | --- | --- |
-| [EXP-030](docs/EXPERIMENTS.md#exp-030) | Do per-action Lean-error penalties make REINFORCE close more proofs than the terminal proof reward alone? | `scripts/train/run_tactic_rl.py` | Not run. EXP-030 does not run, because Manas stops all experiments (EXP-029 stop entry). The question of EXP-030 stays open |
-| [EXP-029](docs/EXPERIMENTS.md#exp-029) | Do the RL arms differ from S at 8 attempts on the screened 164-theorem selection set and on the 62 RL_filtered theorems? | `scripts/train/run_tactic_rl.py` | Not run. Neither Lease 5 nor Lease 6 is launched, and no EXP-029 stage runs. The questions of EXP-029 stay open |
-| [EXP-028](docs/EXPERIMENTS.md#exp-028) | Low-acceptance remedies: step search, automation fallback, lemma retrieval, search-mined SFT, pass-rate-filtered RL | `scripts/train/run_tactic_rl.py` options; `scripts/data/build_search_sft.py`, `add_premises_sft.py`, `build_premise_corpus.py` | No remedy arm is promoted on the 164-theorem selection set: S proves 1 (E0); search (E2), lemma retrieval (E3), the SFT seed control (E5), R (E7) and pass-rate-filtered RL (E6) prove 0 to 2. E4 did not run: the S_mined SFT stage failed on a data-builder defect, now fixed. RL_filtered raises acceptance on its 62 TRAIN theorems from 0.31 to 0.60 (p = 0.0001), without measurable transfer. Kimina-Prover-Distill-0.6B proves 47 and 40 of 164 within 8 attempts in two draws (56 in either) |
-| [EXP-027](docs/EXPERIMENTS.md#exp-027) | Curriculum, Manas: benchmark performance and generalization | [Protocol and execution guide](docs/EXPERIMENTS.md#exp-027); [common data and execution plan](docs/EXPERIMENTS.md#common-data-and-curriculum-execution-plan-18-october-2026-ist); [report plan](docs/tex/project_report.pdf); `scripts/train/run_tactic_rl.py --task-order` | C (prerequisite-first) accepts 255 of 4,048 TRAIN attempts against R's 164 on the same theorems (per-theorem p = 0.0002), with the gain inside the first epoch. C proves 0 of 8 DEV theorems; the held-out R/C contrast is not yet measured. Annotations have no human confirmation or measured prerequisite necessity |
+| [EXP-030](docs/EXPERIMENTS.md#exp-030) | Do per-action Lean-error penalties improve proof completion? | `scripts/train/run_tactic_rl.py` | Not run. All experiments stopped on 20 October; the proposed reward comparison remains unmeasured |
+| [EXP-029](docs/EXPERIMENTS.md#exp-029) | Compare RL arms with S at 8 attempts on the screened selection set and 62 filtered TRAIN theorems | `scripts/train/run_tactic_rl.py` | Not run. Neither planned stage launched before experiments stopped |
+| [EXP-028](docs/EXPERIMENTS.md#exp-028) | Low-acceptance remedies: step search, automation fallback, lemma retrieval, search-mined SFT, pass-rate-filtered RL | `scripts/train/run_tactic_rl.py` options; `scripts/data/build_search_sft.py`, `add_premises_sft.py`, `build_premise_corpus.py` | No remedy arm is promoted at 2 attempts per theorem: S (E0) and search (E2) each prove 1 of 163 assessed theorems; lemma retrieval (E3), R (E7), the SFT seed control (E5) and filtered RL (E6) prove 1, 1, 0 and 2 of 164, respectively. E0 and E2 censor one theorem after an automation timeout. E4 did not run: the S_mined SFT stage failed on a data-builder defect, now fixed. RL_filtered raises acceptance on its 62 TRAIN theorems from 0.31 to 0.60 (p = 0.0001), without measurable transfer. A separate Kimina-Prover-Distill-0.6B probe proves 47 and 40 of 164 within 8 attempts in two draws (56 in either); its format and token budget differ from S |
+| [EXP-027](docs/EXPERIMENTS.md#exp-027) | Curriculum order: benchmark performance and generalization | [Protocol and execution guide](docs/EXPERIMENTS.md#exp-027); [common data and execution plan](docs/EXPERIMENTS.md#common-data-and-curriculum-execution-plan-18-october-2026-ist); `scripts/train/run_tactic_rl.py --task-order` | C accepts 255 of 4,048 TRAIN attempts against R's 164 (per-theorem p = 0.0002), with the gain inside the first epoch. Both prove 0 of 8 DEV theorems; C has no selection-set evaluation. Annotations have no human confirmation or measured prerequisite necessity |
 | [EXP-026](docs/EXPERIMENTS.md#exp-026) | Generalization, Abhinav: unchanged Qwen, SFT, and SFT + RLVR | [Revised protocol](docs/EXPERIMENTS.md#generalization-experiment-revised-framing-16-october-2026); [current data and model contract](docs/EXPERIMENTS.md#current-data-and-model-contract-closure-18-october-2026-ist) | Fresh S trained; B, S and R each prove 0 of 8 DEV theorems. R accepts 164 of 4,048 TRAIN attempts with no detected learning (first against second visit, p = 0.93) and proves 1 of 164 selection-set theorems in EXP-028 (E7), no gain over S. RL shifts R toward short, malformed actions (DEV format errors 37 to 113 of 192) |
-
-<details>
-<summary>Earlier experiments (EXP-001 to EXP-025) and audits</summary>
 
 | ID | Experiment | Config or entry point | Status |
 | --- | --- | --- | --- |
@@ -199,111 +95,33 @@ The [experiment register](docs/EXPERIMENTS.md#experiment-register) links each pr
 
 </details>
 
-Longer historical status cells remain in the [catalogue](docs/EXPERIMENTS.md#readme-status-text-before-condensing-20-october-2026).
-Check each experiment's evidence before reusing a score. The catalogue's [10 October checkpoint](docs/EXPERIMENTS.md#adopted-inputs-and-next-actions) is historical.
-
-## Setup
-
-Use Python 3.12 and [uv](https://docs.astral.sh/uv/getting-started/installation/).
-From the repository root:
-
-```bash
-uv sync
-uv run pre-commit install
-uv run python scripts/data/build_nt_benchmark.py --help
-```
-
-This installs the small local environment and lets you inspect the benchmark command.
-The `training` dependency group supplies `torch`, `transformers`, `trl`, `datasets` and `tensorboardX` for the Linux run host:
-
-```bash
-uv sync --locked --group training
-```
-
-The separate `local-probe` group targets the MLX probe and requires newer Transformers; uv prevents combining it with `training`.
-The full unit suite (`uv run --group training python -m unittest discover -s tests`) needs ML packages.
-Use the small checks in the [reproduction workflow](#reproduce-the-main-study) for a local checkout without them.
-
-For proof checks, use the archived Linux Lean environment and its pinned mathlib revision; see [Not in Git](#not-in-git).
-Installing [elan](https://lean-lang.org/install/manual/) alone does not supply the checker or mathlib snapshot.
-Lean integration tests in `tests/test_tactic_rl_integration.py` need `TACTIC_RL_ROOT` and a new `TACTIC_RL_OUTPUT` directory.
-The root must contain `lean_env_full/`, `proof_replay_v1/code/checker.py` and the REPL build under `rlvr_verifier/`.
-
-For Markdown changes, run `uv run pre-commit run --files <changed-files>`.
-Build the report with `latexmk -pdf -quiet -cd -interaction=nonstopmode -halt-on-error docs/tex/project_report.tex`.
-
-## Layout
+## Repository layout
 
 | Path | Contents |
 | --- | --- |
-| [scripts/](scripts/README.md) | Data builders, trainers, evaluations, audits and shared code |
-| [configs/](configs/README.md) | Frozen settings, indexed by experiment |
-| [tests/](tests/) | Unit tests and a separate Lean integration group |
-| [docs/EXPERIMENTS.md](docs/EXPERIMENTS.md) | Protocols, evidence links, ownership and dated decisions |
-| [docs/tex/](docs/tex/) | Main report, [setup brief](docs/tex/training_setup.pdf), TeX sources and figures |
-| [docs/REWARD_HACKING.md](docs/REWARD_HACKING.md) | Reward exploits, fixes and remaining risks |
-| [docs/archive/](docs/archive/) | Historical handoff; not maintained |
-| [patches/](patches/) | Lean REPL patch for errors from aborted tactics |
-| `artifacts/` | Ignored local files; data and results belong in remote storage |
-| [AGENTS.md](AGENTS.md) | Agent instructions; `CLAUDE.md` links here |
+| [scripts/](scripts/README.md) | Dataset builders, training, evaluation and shared components |
+| [configs/](configs/README.md) | Versioned settings and checkpoint download index |
+| [tests/](tests/) | Local tests and a separate Lean integration group |
+| [docs/EXPERIMENTS.md](docs/EXPERIMENTS.md) | Protocols, evidence and dated decisions |
+| [docs/tex/](docs/tex/) | Report source, PDFs and figures |
+| [docs/REWARD_HACKING.md](docs/REWARD_HACKING.md) | Historical verifier audit and exploit evidence |
+| [patches/](patches/) | Lean REPL patch for aborted-tactic errors |
 
-## Curriculum
+<a id="not-in-git"></a>
 
-For the 18–19 October study, use `validated_v2`: 506 TRAIN theorems and 1,880 SFT examples.
-Use `release_v3` for evaluation: 8 DEV theorems for choices and 21 TEST theorems reserved for final evaluation.
-The separate 164-theorem selection set belongs to EXP-028. SFT loss validation also contains TRAIN theorems, so it is not DEV.
-The [data handoff](docs/EXPERIMENTS.md#data-handoff-for-abhinav-20-october-2026-ist) gives provenance, filenames and fetch-and-verify steps.
+Data, proof traces, checkpoints and run logs live outside Git. Follow the [archive retrieval procedure](docs/EXPERIMENTS.md#6-step-by-step-fetch-and-verify-the-data).
+Recorded archive copies expire between 11 and 19 November 2026 unless moved to permanent storage.
 
-Earlier inputs remain documented under [EXP-017](docs/EXPERIMENTS.md#exp-017), [EXP-019](docs/EXPERIMENTS.md#exp-019) and [EXP-025](docs/EXPERIMENTS.md#exp-025).
-The public [Lean curriculum v8 release](https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/tag/lean-curriculum-v8) belongs to EXP-017.
-The [benchmark v2 config](configs/data/nt_benchmark_v2.json) belongs to EXP-025; it predates `validated_v2`.
+<a id="checkpoints"></a>
 
-## Not in Git
+Published weights belong to earlier experiments; use the [checkpoint guide](scripts/README.md#checkpoints) to distinguish them from main-study models.
 
-A fresh clone cannot reproduce the full historical dataset build: several builders are private.
-The [public rebuild](#recreate-datasets) creates a new dataset from upstream sources. The benchmark screen now excludes forbidden tactics and records its resolved policy; old selections containing `exact?` must be regenerated.
-Fetch the frozen releases described above when reproducing the original study.
-
-- Data, run outputs and logs: [archive contents and fetch steps](docs/EXPERIMENTS.md#6-step-by-step-fetch-and-verify-the-data). The recorded copies expire between 11 and 19 November 2026 unless moved to permanent storage.
-- Lean runtime: archived `checker.py`, REPL binary and pinned environment. Scripts accept their paths through `--checker`, `--repl` and `--environment`; see [runtime files](docs/EXPERIMENTS.md#410-the-lean-runtime-environment-repl-checker-and-identity).
-- Original main-run configs and recount scripts: private records under `.private/ops/`. The [run guide](docs/EXPERIMENTS.md#7-step-by-step-run-with-this-data-as-the-main-run-did) gives commands and settings; [reproduction_v1.json](configs/reproduction_v1.json) reconstructs the documented recipe.
-- Model weights: [published checkpoints](#checkpoints) and the main study's [archived weights](docs/EXPERIMENTS.md#49-model-weights).
-
+<a id="terms"></a>
+<a id="curriculum"></a>
 <a id="modify-the-pipeline"></a>
+<a id="implementation"></a>
+<a id="layout"></a>
+<a id="documentation"></a>
+<a id="scripts"></a>
 
-## Implementation
-
-The [script guide](scripts/README.md#implementation-map) maps data selection, proof interaction, rewards and optimizer updates to their owning code.
-Use those components when changing behavior. Changes to scientific behavior need a recorded experiment; see [AGENTS.md](AGENTS.md).
-
-## Checkpoints
-
-The following checkpoints belong to the earlier 5–9 October experiments. They are not S, R or C from the 18–19 October main study.
-Their weights and tokenizer files are available through [GitHub Releases](https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases).
-The [download index](configs/checkpoints.json) records source files, asset sizes, and GitHub digests.
-For the later study, use the [archived weights](docs/EXPERIMENTS.md#49-model-weights) and identities in [reproduction_v1.json](configs/reproduction_v1.json).
-
-| Checkpoint | Download |
-| --- | --- |
-| SFT final | [Release](https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/tag/lean_sft_20261009_v2-final) |
-| Primitive RLP step 118 | [Release](https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/tag/primitive_rlp_20261005-checkpoint-118) |
-| Primitive RLP final | [Release](https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/tag/primitive_rlp_20261005-final) |
-| Controlled RLP ordered final | [Release](https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/tag/controlled_rlp_20261006-ordered-final) |
-| Controlled RLP shuffled final | [Release](https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/tag/controlled_rlp_20261006-shuffled-final) |
-| SFT step 300 | [Release](https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/tag/lean_sft_20261009_v2-checkpoint-300) |
-| SFT step 1500 | [Release](https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/tag/lean_sft_20261009_v2-checkpoint-1500) |
-| SFT step 4526 | [Release](https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases/tag/lean_sft_20261009_v2-checkpoint-4526) |
-
-Download all assets for a release into one directory:
-
-```bash
-gh release download lean_sft_20261009_v2-final --repo RavulapalliManas/efficient-rl-small-formal-reasoners --dir sft-final
-```
-
-If a release contains split files, use the reassembly command in its release notes.
-Auxiliary metadata with private infrastructure identifiers uses redacted `.public.json` files.
-Weights and optimizer state retain their original contents.
-
-## Scripts
-
-Run commands from the repository root. The [script guide](scripts/README.md) explains the main workflow, follows one proof attempt and indexes every script.
+For terminology, data roles and implementation details, use the [script guide](scripts/README.md#terms) and [experiment catalogue](docs/EXPERIMENTS.md).

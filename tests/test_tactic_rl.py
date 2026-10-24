@@ -17,6 +17,7 @@ class TacticRLTest(unittest.TestCase):
             spec = importlib.util.spec_from_file_location('tactic_rl', PATH)
             cls.rl = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(cls.rl)
+            cls.environment = __import__('rl_components.environment', fromlist=['LeanEpisode'])
 
     def setUp(self):
         self.assertTrue(PATH.exists(), 'Interactive tactic trainer is missing')
@@ -236,8 +237,8 @@ class TacticRLTest(unittest.TestCase):
 
         ctx = SimpleNamespace(checker=SimpleNamespace(source_for=source_for), rows={'t': {}},
                               environment=Path('/unused'), sources={}, eval_spans={}, setup_timeout=1, timeout=1)
-        with TemporaryDirectory() as directory, patch.object(self.rl, 'Repl', Repl), \
-                patch.object(self.rl, 'question', return_value=(q, None)):
+        with TemporaryDirectory() as directory, patch.object(self.environment, 'Repl', Repl), \
+                patch.object(self.environment, 'question', return_value=(q, None)):
             env = self.rl.LeanEpisode(ctx, task, Path(directory),
                                      dict(lean_calls=0, lean_seconds=0, lean_cpu_seconds=0))
             state = env.reset()
@@ -252,7 +253,7 @@ class TacticRLTest(unittest.TestCase):
             self.assertEqual(env.reset(), state)
             self.assertEqual(len(commands), 3)
             with patch.object(env, 'send', return_value={'proofState': 10, 'goals': []}), \
-                    patch.object(self.rl, 'verify_group', return_value=[dict(status='accepted', lean_calls=1,
+                    patch.object(self.environment, 'verify_group', return_value=[dict(status='accepted', lean_calls=1,
                                  lean_seconds=0, lean_cpu_seconds=0)]) as replay:
                 self.assertEqual(env.step('exact h', 0)['reward'], 1)
                 self.assertEqual(replay.call_args.args[1], task)
@@ -379,7 +380,7 @@ class TacticRLTest(unittest.TestCase):
                 verdict = dict(status='crash', lean_calls=1, lean_seconds=0.0, lean_cpu_seconds=0.0)
                 with patch.object(env, 'send', side_effect=EOFError() if stage == 'action' else None,
                                   return_value={'proofState': 2, 'goals': []}), \
-                        patch.object(self.rl, 'verify_group', return_value=[verdict]):
+                        patch.object(self.environment, 'verify_group', return_value=[verdict]):
                     result = env.step('trivial', 0)
                 self.assertEqual(result['status'], 'crash' if stage == 'action' else 'replay_crash')
                 self.assertTrue(result.get('censored'), 'A crashed verifier must not supply a training outcome')
@@ -491,6 +492,7 @@ class EnvironmentV2Test(unittest.TestCase):
         spec = importlib.util.spec_from_file_location('tactic_rl_v2', PATH)
         cls.rl = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(cls.rl)
+        cls.environment = __import__('rl_components.environment', fromlist=['LeanEpisode'])
 
     def episode(self, directory, responses, task=None, horizon=6, **kwargs):
         task = task or dict(task_id='t', name='t', kind='whole', header='theorem t (n : ℕ) : n + 0 = n',
@@ -589,8 +591,8 @@ class EnvironmentV2Test(unittest.TestCase):
                 env.candidate_menu(['close'], max_candidates=1, max_lean_calls=2)
             self.assertEqual(env.sent, [])
             rejected = dict(status='rejected', lean_calls=3, lean_seconds=0, lean_cpu_seconds=0)
-            with patch.object(self.rl, 'lean_unit', return_value='unit'), \
-                    patch.object(self.rl, 'verify_group', return_value=[rejected]):
+            with patch.object(self.environment, 'lean_unit', return_value='unit'), \
+                    patch.object(self.environment, 'verify_group', return_value=[rejected]):
                 menu = env.candidate_menu(['close'], max_candidates=1, max_lean_calls=8)
             self.assertEqual(menu['status'], 'empty')
             self.assertEqual(menu['actions'], [])
@@ -622,7 +624,7 @@ class EnvironmentV2Test(unittest.TestCase):
                 env.counts['lean_calls'] += 1
                 return send(request, timeout)
             env.send = counted_send
-            with patch.object(self.rl, 'lean_unit', return_value=unit), \
+            with patch.object(self.environment, 'lean_unit', return_value=unit), \
                     patch.object(verifier, 'open_repl', side_effect=setup_failure), \
                     self.assertRaisesRegex(RuntimeError, 'setup failed twice'):
                 env.candidate_menu(['close'], max_candidates=1, max_lean_calls=8)
@@ -689,8 +691,8 @@ class EnvironmentV2Test(unittest.TestCase):
         responses = {'simp': {'proofState': 1, 'goals': []}}
         for verdict, reward in (('accepted', 1.0), ('rejected', 0.0)):
             with TemporaryDirectory() as directory, \
-                    patch.object(self.rl, 'lean_unit', lambda task: 'unit'), \
-                    patch.object(self.rl, 'verify_group', lambda ctx, unit, bodies: [
+                    patch.object(self.environment, 'lean_unit', lambda task: 'unit'), \
+                    patch.object(self.environment, 'verify_group', lambda ctx, unit, bodies: [
                         dict(status=verdict, lean_calls=1, lean_seconds=0.1, lean_cpu_seconds=0.1, body=bodies[0])]):
                 env = self.episode(directory, responses)
                 result = env.step('-- close it\nsimp\nomega', 0)
@@ -705,8 +707,8 @@ class EnvironmentV2Test(unittest.TestCase):
                      'bad': {'message': 'Lean error:\nunknown identifier bad'},
                      'close': {'proofState': 3, 'goals': []}}
         verdict = dict(status='accepted', lean_calls=1, lean_seconds=0, lean_cpu_seconds=0)
-        with TemporaryDirectory() as directory, patch.object(self.rl, 'lean_unit', lambda task: 'unit'), \
-                patch.object(self.rl, 'verify_group', return_value=[verdict]) as replay:
+        with TemporaryDirectory() as directory, patch.object(self.environment, 'lean_unit', lambda task: 'unit'), \
+                patch.object(self.environment, 'verify_group', return_value=[verdict]) as replay:
             env = self.episode(directory, responses, backtrack_owner='policy')
             env.step('a', 0)
             env.step('backtrack 0', 0)
@@ -984,8 +986,8 @@ class EnvironmentV2Test(unittest.TestCase):
 
     def test_replay_crash_censors_the_group_instead_of_scoring_a_failed_proof(self):
         crash = dict(status='crash', lean_calls=1, lean_seconds=0, lean_cpu_seconds=0)
-        with TemporaryDirectory() as directory, patch.object(self.rl, 'lean_unit', lambda task: 'unit'), \
-                patch.object(self.rl, 'verify_group', lambda ctx, unit, bodies: [crash]):
+        with TemporaryDirectory() as directory, patch.object(self.environment, 'lean_unit', lambda task: 'unit'), \
+                patch.object(self.environment, 'verify_group', lambda ctx, unit, bodies: [crash]):
             env = self.episode(directory, {'simp': {'proofState': 1, 'goals': []}})
             result = env.step('simp', 0)
             self.assertTrue(result['censored'] and result['done'])
@@ -1008,7 +1010,7 @@ class EnvironmentV2Test(unittest.TestCase):
 
         ctx = SimpleNamespace(checker=SimpleNamespace(guard=lambda name: ''), setup_timeout=1, timeout=1)
         task = dict(task_id='t', name='t', kind='whole', header='theorem t : True', given='')
-        with TemporaryDirectory() as directory, patch.object(self.rl, 'Repl', Repl):
+        with TemporaryDirectory() as directory, patch.object(self.environment, 'Repl', Repl):
             env = self.rl.LeanEpisode(ctx, task, Path(directory), dict(lean_calls=0, lean_seconds=0, lean_cpu_seconds=0),
                                       version=2, horizon=3)
             with self.assertRaises(RuntimeError):
@@ -1041,7 +1043,7 @@ class EnvironmentV2Test(unittest.TestCase):
             self.assertIsNone(env.repl)
 
     def replay(self, verdict):
-        return patch.object(self.rl, 'verify_group', lambda ctx, unit, bodies: [
+        return patch.object(self.environment, 'verify_group', lambda ctx, unit, bodies: [
             dict(status=verdict, lean_calls=1, lean_seconds=0.1, lean_cpu_seconds=0.1, body=bodies[0])])
 
     def test_step_search_keeps_the_best_candidate_as_one_step(self):
@@ -1067,7 +1069,7 @@ class EnvironmentV2Test(unittest.TestCase):
     def test_step_search_stops_at_a_verified_proof_and_at_a_timeout(self):
         responses = {'close': {'proofState': 1, 'goals': []}, 'intro h': {'proofState': 2, 'goals': ['⊢ Q']},
                      'slow': TimeoutError()}
-        with TemporaryDirectory() as directory, patch.object(self.rl, 'lean_unit', lambda task: 'unit'), \
+        with TemporaryDirectory() as directory, patch.object(self.environment, 'lean_unit', lambda task: 'unit'), \
                 self.replay('accepted'):
             env = self.episode(directory, responses)
             search = env.search_step(['intro h', 'close', 'intro h'])
@@ -1086,7 +1088,7 @@ class EnvironmentV2Test(unittest.TestCase):
         responses = {'omega': {'message': 'Lean error:\nomega could not prove the goal'},
                      'simp': {'proofState': 1, 'goals': []}}
         for verdict in ('accepted', 'rejected'):
-            with TemporaryDirectory() as directory, patch.object(self.rl, 'lean_unit', lambda task: 'unit'), \
+            with TemporaryDirectory() as directory, patch.object(self.environment, 'lean_unit', lambda task: 'unit'), \
                     self.replay(verdict):
                 env = self.episode(directory, responses)
                 probe = env.try_automation(['omega', 'simp'], commit=False)
@@ -1221,6 +1223,7 @@ class LockstepTest(unittest.TestCase):
         spec = importlib.util.spec_from_file_location('tactic_rl_lockstep', PATH)
         cls.rl = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(cls.rl)
+        cls.environment = __import__('rl_components.environment', fromlist=['LeanEpisode'])
 
     def generation(self, ids=(7, 151645), pad=False):
         return dict(raw_response_ids=list(ids), action_ids=list(ids), generated_tokens=len(ids),
@@ -1382,6 +1385,7 @@ class ActionLogprobTest(unittest.TestCase):
         spec = importlib.util.spec_from_file_location('tactic_rl_logprob', PATH)
         cls.rl = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(cls.rl)
+        cls.environment = __import__('rl_components.environment', fromlist=['LeanEpisode'])
 
     @staticmethod
     def full_logits_logprob(model, prompt_ids, action_ids, torch):

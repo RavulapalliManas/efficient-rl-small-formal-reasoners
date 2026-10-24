@@ -16,7 +16,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from prepare_tactic_curriculum import (policy_row, read_rows, top_level_steps,
     task_units, tokens, statement, load_checker, mathlib_identity, repl_context,
     verify_group, reserved_template, STEP)  # noqa: E402
-from run_tactic_rl import LeanEpisode  # noqa: E402
+from rl_components.environment import LeanEpisode  # noqa: E402
 
 
 def select(tasks, pool, proofs, excluded, eval_states, eval_pool, config):

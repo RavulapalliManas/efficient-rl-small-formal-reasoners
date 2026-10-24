@@ -7,6 +7,7 @@ import json
 from pathlib import Path
 import re
 import sys
+import subprocess
 from tempfile import TemporaryDirectory
 from types import SimpleNamespace
 import unittest
@@ -18,6 +19,25 @@ sys.path.insert(0, str(TRAIN))
 
 
 class ComponentsTest(unittest.TestCase):
+    def test_proof_components_import_without_training_command_or_model_libraries(self):
+        for module in ('observations', 'environment'):
+            with self.subTest(module=module):
+                code = (
+                    'import sys; sys.path.insert(0, sys.argv[1]); '
+                    'import importlib; importlib.import_module(sys.argv[2]); '
+                    "assert not {'run_tactic_rl', 'torch', 'transformers'} & sys.modules.keys(); "
+                    "assert sys.argv[2].endswith('environment') or 'bench_lean_verifier' not in sys.modules"
+                )
+                subprocess.run([sys.executable, '-c', code, str(TRAIN), 'rl_components.' + module],
+                               check=True, capture_output=True, text=True)
+        import run_tactic_rl
+        from rl_components.environment import LeanEpisode
+        from rl_components.observations import render_observation
+        from rl_components.objectives import action_logprob
+        self.assertIs(run_tactic_rl.LeanEpisode, LeanEpisode)
+        self.assertIs(run_tactic_rl.render_observation, render_observation)
+        self.assertIs(run_tactic_rl.action_logprob, action_logprob)
+
     def test_proof_rewards_refuse_censored_batches_and_keep_opaque_rejections(self):
         module = importlib.import_module('rl_components.objectives')
         self.assertTrue(hasattr(module, 'proof_rewards'), 'Censored PPO reward guard is missing')

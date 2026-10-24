@@ -14,7 +14,7 @@ from pathlib import Path
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'scripts/train'))
-from run_tactic_rl import render_observation  # noqa: E402
+from rl_components.observations import render_observation  # noqa: E402
 from rl_components.premises import load_index  # noqa: E402
 
 SPLITS = ('sft_train.jsonl', 'sft_val.jsonl')

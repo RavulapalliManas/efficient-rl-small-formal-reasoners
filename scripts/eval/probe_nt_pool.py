@@ -109,7 +109,10 @@ def kimina_continuation(text, header):
 
 
 def read(path):
-    return [json.loads(line) for line in path.open()] if path.exists() else []
+    if not path.exists():
+        return []
+    with path.open() as source:
+        return [json.loads(line) for line in source]
 
 
 def append(path, rows):

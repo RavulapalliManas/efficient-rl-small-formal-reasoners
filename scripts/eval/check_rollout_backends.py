@@ -73,7 +73,8 @@ def main():
     args = parser.parse_args()
     import torch
     from transformers import AutoModelForCausalLM, AutoTokenizer, GenerationConfig, set_seed
-    from run_tactic_rl import action_logprob, render_observation
+    from rl_components.objectives import action_logprob
+    from rl_components.observations import render_observation
     from rl_components.generation import (
         HFGenerator, VLLMGenerator, generation_record, pad_left, stop_trimmed, vllm_action_ids,
     )

@@ -84,3 +84,22 @@ class PolicyGradientUpdater:
             norm = float(self.torch.nn.utils.clip_grad_norm_(self.model.parameters(), 1.0, error_if_nonfinite=True))
             self.optimizer.step()
         return dict(loss=loss_value, gradient_norm=norm, optimizer_updated=informative, advantages=values)
+
+
+def action_logprob(model, prompt_ids, action_ids, torch):
+    """Log probability of the sampled tokens, including EOS, without retokenizing.
+
+    Only the last len(action_ids)+1 positions reach the LM head (logits_to_keep), so the logits
+    tensor is (A+1, vocab) instead of (P+A, vocab). The values equal the full-logits path.
+    """
+    ids = torch.tensor(prompt_ids + action_ids, device=next(model.parameters()).device)[None]
+    mask = torch.ones_like(ids)
+    targets = torch.tensor(action_ids, device=ids.device)
+    try:
+        # Kept positions are P-1 .. P+A-1; the last one predicts nothing in the action.
+        logits = model(input_ids=ids, attention_mask=mask, use_cache=False,
+                       logits_to_keep=len(action_ids) + 1).logits[0, :-1]
+    except TypeError:  # An older transformers forward has no logits_to_keep; only the call may fall back.
+        logits = model(input_ids=ids, attention_mask=mask, use_cache=False).logits[0, len(prompt_ids) - 1:-1]
+    predicted = logits.float().log_softmax(-1)
+    return predicted.gather(1, targets[:, None]).sum()

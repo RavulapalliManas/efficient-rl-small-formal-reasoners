@@ -25,6 +25,7 @@ class TacticIntegration(unittest.TestCase):
         spec = importlib.util.spec_from_file_location('tactic_integration', path)
         cls.rl = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(cls.rl)
+        cls.environment = __import__('rl_components.environment', fromlist=['LeanEpisode'])
         environment = cls.root / 'lean_env_full'
         checker = cls.rl.load_checker(cls.root / 'proof_replay_v1/code/checker.py', environment, cls.output)
         cls.ctx = cls.rl.repl_context(checker, environment,
@@ -93,7 +94,7 @@ class TacticIntegration(unittest.TestCase):
         env = self.episode_v2('theorem tactic_fixture : True ∧ True')
         try:
             env.reset()
-            with patch.object(self.rl, 'verify_group', wraps=self.rl.verify_group) as replay:
+            with patch.object(self.environment, 'verify_group', wraps=self.rl.verify_group) as replay:
                 result = env.step('-- split the conjunction\nconstructor\n/- both sides -/\nexact True.intro\nexact True.intro', 0)
             self.assertTrue(result['accepted'], result)
             self.assertEqual((result['tactics_applied'], result['replay']['status']), (3, 'accepted'))
@@ -117,7 +118,7 @@ class TacticIntegration(unittest.TestCase):
             loop = env.step('exact missing_other', 0)
             self.assertEqual((loop['status'], loop['done'], env.state), ('rejected', False, state), loop)
             self.assertIn('missing_fixture', env.prompt_state())
-            with patch.object(self.rl, 'verify_group', wraps=self.rl.verify_group) as replay:
+            with patch.object(self.environment, 'verify_group', wraps=self.rl.verify_group) as replay:
                 final = env.step('exact True.intro\nexact True.intro', 0)
             self.assertTrue(final['accepted'], final)
             expected = ('  first |\n    constructor\n'
@@ -150,7 +151,7 @@ class TacticIntegration(unittest.TestCase):
             env.reset()
             env.step('constructor', 0)
             self.assertEqual(env.step('backtrack 0', 0)['status'], 'backtrack')
-            with patch.object(self.rl, 'verify_group', wraps=self.rl.verify_group) as replay:
+            with patch.object(self.environment, 'verify_group', wraps=self.rl.verify_group) as replay:
                 final = env.step('exact ⟨hp, hq⟩', 0)
             self.assertTrue(final['accepted'], final)
             self.assertEqual(final['proof_body'], '  first |\n    exact ⟨hp, hq⟩\n')
@@ -384,7 +385,7 @@ class TacticIntegration(unittest.TestCase):
                          'theorem premise : True := True.intro\nopen Nat in\n@[simp]\nprivate\n'))
         self.ctx.rows['native-fixture'] = {}
         try:
-            with patch.object(self.rl, 'question', return_value=(q, None)), \
+            with patch.object(self.environment, 'question', return_value=(q, None)), \
                     patch('bench_lean_verifier.question', return_value=(q, None)):
                 env = self.rl.LeanEpisode(self.ctx, task, self.output, self.counts)
                 try:

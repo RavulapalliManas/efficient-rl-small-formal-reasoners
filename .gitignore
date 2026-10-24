@@ -17,3 +17,4 @@ docs/tex/**/*.fdb_latexmk
 docs/tex/**/*.fls
 docs/tex/**/*.log
 docs/tex/**/*.out
+docs/tex/**/*.toc

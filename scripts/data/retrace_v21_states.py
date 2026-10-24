@@ -21,7 +21,8 @@ root = Path(__file__).resolve().parents[1]
 sys.path[:0] = [str(root / d) for d in ('train', 'data', 'eval', 'audit')]
 from bench_lean_verifier import repl_context  # noqa: E402
 from prepare_grpo_pilot import load_checker  # noqa: E402
-from run_tactic_rl import LeanEpisode, render_observation  # noqa: E402
+from rl_components.environment import LeanEpisode  # noqa: E402
+from rl_components.observations import render_observation  # noqa: E402
 
 squash = lambda text: re.sub(r'\s+', ' ', text).strip()
 

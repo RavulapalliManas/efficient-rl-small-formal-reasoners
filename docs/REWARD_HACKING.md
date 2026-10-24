@@ -1,11 +1,15 @@
-# Reward hacking through the Lean reward
+# Lean verifier audit
+
+<a id="reward-hacking-through-the-lean-reward"></a>
 
 Snapshot date: 2026-10-10. Scorer snapshot: `train_code_v9`.
 Catalogue record: [AUD-002](EXPERIMENTS.md#aud-002). Current execution status: [README](../README.md#status).
 The later decision log adopts `train_code_v11`. This inventory retains its earlier findings until source-based reconciliation.
 Its fix and open-item labels describe this snapshot. They are not a current scorer assessment.
 
-This file lists every input that the Lean reward accepts, or accepted, without a proof of a statement worth proving. Each entry gives the evidence, the fix, and what stays open.
+The audit records scorer exploits, data exposure and reward weaknesses. Each finding links the evidence, the fix and the remaining limits.
+
+[Findings](#findings-at-a-glance) · [Limits of the fixes](#limits-of-the-fixes) · [Source records](#sources)
 
 ## Scope of this snapshot
 

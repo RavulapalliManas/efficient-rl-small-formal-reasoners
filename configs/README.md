@@ -4,20 +4,17 @@ Each config records settings for a data build, evaluation or training run.
 Treat run settings as frozen: changed settings belong in a new versioned file.
 The [script guide](../scripts/README.md#primary-workflow) explains which commands read them.
 
-<a id="choose-a-config"></a>
+<a id="configuration-selection"></a>
 
-## Configuration selection
+## Choose a config
 
 1. Find the experiment in the [register](../docs/EXPERIMENTS.md#experiment-register).
 2. Read its protocol and the corresponding row below. The index includes prepared configurations; check [README status](../README.md#status).
 3. Match the config to its data release, starting checkpoint and Lean/mathlib revisions. Similar filenames can belong to different studies.
 
-The 18–19 October runs (EXP-026 to EXP-028) used private configs under `.private/ops/`.
-The [main-run guide](../docs/EXPERIMENTS.md#7-step-by-step-run-with-this-data-as-the-main-run-did) gives their commands and settings; ask Manas for the actual files.
-Public EXP-026 configs below include separate pilots, so they are not substitutes for the main-run configs.
-[`reproduction_v1.json`](reproduction_v1.json) is a versioned specification for the [reproduction workflow](../README.md#reproduce-the-main-study).
-It records model and data identities and reconstructs SFT, DEV, shuffled-RL and curriculum-RL settings from that guide.
-The helper generates a separate runner config from each selected stage. This specification is not an original config or evidence of a rerun.
+For the original 18–19 October study, use the [reproduction procedure](../scripts/README.md#main-study-reproduction) and [`reproduction_v1.json`](reproduction_v1.json).
+The specification reconstructs the documented recipe; it is not an original run config or evidence of a rerun.
+Original configs remain private. The public EXP-026 configs include separate pilots.
 
 | Folder | Settings for |
 | --- | --- |
@@ -35,7 +32,7 @@ SFT means supervised fine-tuning. RLP rewards reasoning that makes a hidden answ
 ## Configuration index
 
 <details>
-<summary>All versioned configurations and their experiment assignments</summary>
+<summary>How experiment assignments are recorded</summary>
 
 **Purpose** summarizes the config's `purpose` field. A dash means the field is absent.
 Older terms use the names in the [handoff terminology table](../docs/EXPERIMENTS.md#start-here-one-page-for-abhinav).
@@ -49,14 +46,24 @@ Older terms use the names in the [handoff terminology table](../docs/EXPERIMENTS
 `not recorded` means no source names an experiment for that config.
 A catalogue line uses the experiment in its heading, or the one explicit ID on the line when the heading names none.
 
+</details>
+
 ### Repository-level files
+
+<details>
+<summary>Show configurations</summary>
 
 | Config | Purpose | Experiment | Source |
 | --- | --- | --- | --- |
 | [`reproduction_v1.json`](reproduction_v1.json) | File identities and reconstructed main-study recipes for `scripts/reproduce.py` | EXP-026, EXP-027 | declared stage `experiment_id` fields; 21 October reproduction decision |
 | [`checkpoints.json`](checkpoints.json) | Download index for earlier published checkpoint releases | several earlier studies | release names in the index |
 
+</details>
+
 ### data/
+
+<details>
+<summary>Show configurations</summary>
 
 Inputs of dataset builds and selections.
 
@@ -77,7 +84,12 @@ Inputs of dataset builds and selections.
 | [`data/nt_validation_v1.json`](data/nt_validation_v1.json) | Held-out selection set for EXP-028 screening. | EXP-028 | declared `experiment` |
 | [`data/undergrad_nt_v1.json`](data/undergrad_nt_v1.json) | – | EXP-024 | declared `experiment` |
 
+</details>
+
 ### eval/
+
+<details>
+<summary>Show configurations</summary>
 
 Settings of evaluations, probes and grading.
 
@@ -108,7 +120,12 @@ Settings of evaluations, probes and grading.
 | [`eval/qwen_05b_tactic_fixed_short_dev.json`](eval/qwen_05b_tactic_fixed_short_dev.json) | Paired fresh evaluation on the three RL-parent-disjoint validation elementary theorems. | EXP-019 | `run_id` prefix |
 | [`eval/qwen_05b_tactic_fixed_short_prescreen.json`](eval/qwen_05b_tactic_fixed_short_prescreen.json) | Optimizer-disabled repeated frozen sampling before fixed-task learning. | EXP-019 | `run_id` prefix |
 
+</details>
+
 ### pretrain/
+
+<details>
+<summary>Show configurations</summary>
 
 RLP training on number-theory text.
 
@@ -117,7 +134,12 @@ RLP training on number-theory text.
 | [`pretrain/qwen_05b_number_theory_rlp.json`](pretrain/qwen_05b_number_theory_rlp.json) | – | EXP-007 | README pattern and catalogue pattern |
 | [`pretrain/qwen_05b_number_theory_rlp_continuation.json`](pretrain/qwen_05b_number_theory_rlp_continuation.json) | – | EXP-007 | README pattern and catalogue pattern |
 
+</details>
+
 ### midtrain/
+
+<details>
+<summary>Show configurations</summary>
 
 SFT, RLP and interleaved training runs.
 
@@ -141,7 +163,12 @@ SFT, RLP and interleaved training runs.
 | [`midtrain/qwen_05b_tactic_continued_sft_comparison.json`](midtrain/qwen_05b_tactic_continued_sft_comparison.json) | Exploratory continued-SFT candidate for EXP-019. | EXP-019 | declared `experiment_id` |
 | [`midtrain/qwen_05b_v21_warmstart.json`](midtrain/qwen_05b_v21_warmstart.json) | Format warmstart for environment version 2.1: teach the parent to answer the v2.1 observation with one ```lean fence of up to 4 tactics that ends at the closing fence. | EXP-023 | declared `experiment_id` |
 
+</details>
+
 ### rl/
+
+<details>
+<summary>Show configurations</summary>
 
 RL runs and the candidate-action catalogue.
 

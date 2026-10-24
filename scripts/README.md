@@ -1,34 +1,19 @@
 # Scripts
 
-Commands and shared code live here. Run commands from the repository root:
-
-```bash
-uv run python scripts/data/build_nt_benchmark.py --help
-```
-
-For dependencies and the external Lean runtime, see [Runtime and development](#runtime-and-development).
-For the experiment behind a settings file, see the [config guide](../configs/README.md).
-For a first reproduction attempt, follow [Main-study reproduction](#main-study-reproduction).
-[`reproduce.py`](reproduce.py) explains the main-study inputs, checks supplied files and prepares commands without launching them.
+Run commands from the repository root. Start with the workflow that matches your task.
 
 <a id="start-here"></a>
 
-## Terms
-
-| Term | Meaning |
+| Task | Guide |
 | --- | --- |
-| Lean / mathlib | The proof assistant / its mathematics library. Runs use a fixed revision of each |
-| Tactic | One Lean proof instruction |
-| Action | One model response containing tactics |
-| Attempt | A sequence of actions on one theorem |
-| Accepted attempt | An attempt whose complete proof Lean accepts |
-| Proved theorem | A theorem with at least one accepted attempt. Counts of proved theorems and accepted attempts have different denominators |
-| SFT | Supervised fine-tuning: learning from example proof steps |
-| RL / RLVR | Reinforcement learning / RL with verifiable rewards. A Lean-accepted complete proof supplies the proof reward; some experiments add heuristic rewards or penalties |
-| B, S, R, C | In the 18–19 October study: unchanged model, SFT model, SFT + shuffled RL, SFT + prerequisite-first RL |
+| Reproduce the recorded study | [Main-study reproduction](#main-study-reproduction) |
+| Build a new dataset | [Dataset recreation](#dataset-recreation) |
+| Follow a proof attempt | [Proof execution](#proof-execution) |
+| Change the code | [Implementation map](#implementation-map) |
+| Install dependencies or run checks | [Runtime and development](#runtime-and-development) |
+| Find a script | [File index](#file-index) |
 
-Model letters are local to each study. Their definitions appear in the corresponding protocol.
-The [handoff terminology table](../docs/EXPERIMENTS.md#start-here-one-page-for-abhinav) maps older names to these terms.
+Use the [config guide](../configs/README.md) to match settings to an experiment.
 
 ## Primary workflow
 
@@ -65,15 +50,7 @@ Compare them on the same DEV statements and attempt budget. A model response pro
 
 ### 1. Inspect the project locally
 
-Install Python 3.12 and [uv](https://docs.astral.sh/uv/getting-started/installation/), then run from the repository root:
-
-```bash
-uv sync --locked
-uv run python scripts/reproduce.py overview
-uv run python -m unittest tests.test_reproduction tests.test_rl_components
-```
-
-These commands need no model, Lean installation or GPU. The tests use synthetic inputs and check local code; they do not reproduce a research result.
+Run the [local setup checks](../README.md#setup). They use synthetic inputs and need no model, Lean installation or GPU.
 Follow [one proof attempt](#proof-execution) to see how the implementation fits together.
 
 ### 2. Obtain the frozen inputs
@@ -289,6 +266,9 @@ Keep original theorem context and runtime identities with every trajectory. A te
 Goal-text changes and error penalties are heuristic signals. `state_key()` normalizes goal text for cycle detection; it does not identify a complete Lean state.
 Branch handles belong to the live REPL and cannot be transferred across workers or serialized as portable proof states.
 
+<details>
+<summary>Possible search and value-learning extensions</summary>
+
 ### Toward a larger prover
 
 [AlphaProof's published design](https://www.nature.com/articles/s41586-025-09833-y) combines policy/value learning with tree search that tracks multiple proof obligations.
@@ -305,6 +285,8 @@ Proceed in this order:
 5. Compare distinct proved theorems at equal budgets on the reserved test set after choices are frozen. Register every arm before launch and obtain approval for each paid GPU run.
 
 Literal integration into another service also requires its documented input/output and runtime contract. Shared use of Lean does not establish that contract.
+
+</details>
 
 <a id="how-scripts-import-each-other"></a>
 
@@ -335,8 +317,6 @@ Scripts that check proofs take its path with `--checker` and load it with `load_
 | [`train/rl_components/`](train/rl_components/) | Proof episodes, observations, parsing, generation, task scheduling, objectives and SFT examples |
 | [`data/build_nt_sft_data.py`](data/build_nt_sft_data.py) | `body_of` and `strip_comments` |
 | [`data/build_proof_tasks.py`](data/build_proof_tasks.py) | `top_level_steps` and the target guard `GUARD` |
-
-<a id="every-script"></a>
 
 ## Runtime and development
 
@@ -395,23 +375,48 @@ If a release contains split files, use the reassembly command in its release not
 Auxiliary metadata with private infrastructure identifiers uses redacted `.public.json` files.
 Weights and optimizer state retain their original contents.
 
+## Terms
+
+| Term | Meaning |
+| --- | --- |
+| Lean / mathlib | The proof assistant / its mathematics library. Runs use a fixed revision of each |
+| Tactic | One Lean proof instruction |
+| Action | One model response containing tactics |
+| Attempt | A sequence of actions on one theorem |
+| Accepted attempt | An attempt whose complete proof Lean accepts |
+| Proved theorem | A theorem with at least one accepted attempt. Counts of proved theorems and accepted attempts have different denominators |
+| SFT | Supervised fine-tuning: learning from example proof steps |
+| RL / RLVR | Reinforcement learning / RL with verifiable rewards. A Lean-accepted complete proof supplies the proof reward; some experiments add heuristic rewards or penalties |
+| B, S, R, C | In the 18–19 October study: unchanged model, SFT model, SFT + shuffled RL, SFT + prerequisite-first RL |
+| Filtered RL | In EXP-028, RL on 62 TRAIN theorems that the SFT model proves in 1 to 3 of 4 initial attempts |
+
+Model letters are local to each study. Their definitions appear in the corresponding protocol.
+The [handoff terminology table](../docs/EXPERIMENTS.md#start-here-one-page-for-abhinav) maps older names to these terms.
+
+<a id="every-script"></a>
+
 ## File index
 
-<details>
-<summary>All 116 Python entry points and shared modules</summary>
+The index covers 116 command entry points and shared modules, grouped by folder.
 
-The tables below index command entry points and reusable modules. The primary workflow and implementation map provide their execution context.
-
-- **Purpose** summarizes the script's first docstring line, using the current names from the [handoff terminology table](../docs/EXPERIMENTS.md#start-here-one-page-for-abhinav).
-- **Experiments** lists catalogue entries and README status rows that name the script. A dash means no association is recorded. Shared scripts can serve several experiments.
+- Purpose summarizes the script's first docstring line, using the current names from the [handoff terminology table](../docs/EXPERIMENTS.md#start-here-one-page-for-abhinav).
+- Experiments lists catalogue entries and README status rows that name the script. A dash means no association is recorded. Shared scripts can serve several experiments.
 
 ### Reproduction
+
+<details>
+<summary>Show files</summary>
 
 | Script | Purpose | Experiments |
 | --- | --- | --- |
 | [`reproduce.py`](reproduce.py) | Inspect, check, and prepare the documented number-theory study without launching jobs. | EXP-026, EXP-027 |
 
+</details>
+
 ### data/
+
+<details>
+<summary>Show files</summary>
 
 Build datasets, splits, SFT examples and RL tasks.
 
@@ -453,7 +458,12 @@ Build datasets, splits, SFT examples and RL tasks.
 | [`data/retrace_v21_states.py`](data/retrace_v21_states.py) | Re-derive each v2.1 SFT prompt's goal through the RL environment and keep only SFT examples whose target RL can run. | – |
 | [`data/verify_external_proofs.py`](data/verify_external_proofs.py) | Check Lean Workbook statements and proofs (Lean Workbook and Goedel-Prover releases) at our pinned Lean. | EXP-016, EXP-024, EXP-025, EXP-029 |
 
+</details>
+
 ### data/nt_benchmark/
+
+<details>
+<summary>Show files</summary>
 
 Components used by `data/build_nt_benchmark.py` and `data/rebuild_nt_dataset.py` (EXP-025).
 
@@ -470,7 +480,12 @@ Components used by `data/build_nt_benchmark.py` and `data/rebuild_nt_dataset.py`
 | [`data/nt_benchmark/storage.py`](data/nt_benchmark/storage.py) | Bounded JSONL storage and source receipts for benchmark builds. | – |
 | [`data/nt_benchmark/verification.py`](data/nt_benchmark/verification.py) | Pinned Lean replay, goal extraction, and complete baseline screening. | – |
 
+</details>
+
 ### train/
+
+<details>
+<summary>Show files</summary>
 
 Training entry points and the Lean environment.
 
@@ -490,7 +505,12 @@ Training entry points and the Lean environment.
 | [`train/run_tactic_ppo.py`](train/run_tactic_ppo.py) | Pinned library PPO for one tactic block, with the REINFORCE Lean attempt contract. | EXP-023 |
 | [`train/run_tactic_rl.py`](train/run_tactic_rl.py) | On-policy tactic RL with Lean transitions and a leave-one-out baseline. | EXP-019, EXP-020, EXP-021, EXP-023, EXP-024, EXP-026, EXP-027, EXP-028, EXP-029, EXP-030 |
 
+</details>
+
 ### train/rl_components/
+
+<details>
+<summary>Show files</summary>
 
 Reusable training components. Importing these modules does not load model weights or start Lean.
 
@@ -508,7 +528,12 @@ Reusable training components. Importing these modules does not load model weight
 | [`train/rl_components/sft.py`](train/rl_components/sft.py) | SFT message conversion without importing datasets, Torch, or TRL. | – |
 | [`train/rl_components/tasks.py`](train/rl_components/tasks.py) | Task admission and curriculum scheduling, independent of Lean processes. | EXP-026 |
 
+</details>
+
 ### eval/
+
+<details>
+<summary>Show files</summary>
 
 Evaluations, baselines, probes and scoring checks.
 
@@ -542,7 +567,12 @@ Evaluations, baselines, probes and scoring checks.
 | [`eval/single_tactic_baseline.py`](eval/single_tactic_baseline.py) | No-model baseline: each fixed tactic alone as the whole proof of each curriculum-validation theorem. | EXP-015, EXP-024 |
 | [`eval/verify_local_operator.py`](eval/verify_local_operator.py) | Verify supplied-knowledge witness expressions with the existing Lean checker. | EXP-011 |
 
+</details>
+
 ### eval/proof_export/
+
+<details>
+<summary>Show files</summary>
 
 Package used by `eval/export_tactic_proofs.py`.
 
@@ -552,7 +582,12 @@ Package used by `eval/export_tactic_proofs.py`.
 | [`eval/proof_export/exporter.py`](eval/proof_export/exporter.py) | Re-admit saved tasks, replay complete proofs, and serialize export artifacts. | – |
 | [`eval/proof_export/trajectory.py`](eval/proof_export/trajectory.py) | Reconstruct the exact retained proof from a complete attempt. | – |
 
+</details>
+
 ### audit/
+
+<details>
+<summary>Show files</summary>
 
 Read-only audits, leakage checks and held-out screens.
 
@@ -573,7 +608,12 @@ Read-only audits, leakage checks and held-out screens.
 | [`audit/stratify_heldout.py`](audit/stratify_heldout.py) | Join the three held-out screens into one stratum per statement, and count proved theorems per stratum and arm. | EXP-029 |
 | [`audit/train_similarity_strata.py`](audit/train_similarity_strata.py) | TRAIN-similarity screen: how close each held-out statement is to a TRAIN statement, with an optional copy baseline. | EXP-029 |
 
+</details>
+
 ### monitor/
+
+<details>
+<summary>Show files</summary>
 
 Run monitoring.
 
@@ -581,7 +621,12 @@ Run monitoring.
 | --- | --- | --- |
 | [`monitor/track_tensorboard.py`](monitor/track_tensorboard.py) | Display the frozen-policy pilot's S3 records in TensorBoard. | – |
 
+</details>
+
 ### report/
+
+<details>
+<summary>Show files</summary>
 
 Figures for the report.
 

@@ -92,7 +92,9 @@ The original statement that every count matches raw files is not verified by thi
 
 <a id="exp-001"></a>
 
-### EXP-001: LeanDojo data subset
+<a id="exp-001-leandojo-data-subset"></a>
+
+### EXP-001: LeanDojo number-theory dataset preparation
 
 - Config: `configs/data/leandojo_*.json`.
 - Code: [`scripts/data/prepare_leandojo.py`](../scripts/data/prepare_leandojo.py).
@@ -103,7 +105,9 @@ We filtered LeanDojo Benchmark 4 to arithmetic and number-theory files and kept 
 
 <a id="exp-002"></a>
 
-### EXP-002: Base model math probe
+<a id="exp-002-base-model-math-probe"></a>
+
+### EXP-002: GSM8K supervised fine-tuning and informal mathematics evaluation
 
 - Config: `configs/eval/qwen_05b_probe.json; configs/midtrain/qwen_05b_gsm8k_lora.yaml`.
 - Code: [`scripts/eval/probe_qwen.py`](../scripts/eval/probe_qwen.py).
@@ -114,7 +118,9 @@ We tested the base model on 24 GSM8K and 20 MATH number-theory questions, then t
 
 <a id="exp-003"></a>
 
-### EXP-003: Instruct model proof check
+<a id="exp-003-instruct-model-proof-check"></a>
+
+### EXP-003: Lean proof-generation evaluation of the unchanged Instruct model
 
 - Config: `configs/eval/qwen_05b_probe.json`.
 - Code: [`scripts/eval/probe_qwen.py`](../scripts/eval/probe_qwen.py); [`scripts/audit/classify_proof_failures.py`](../scripts/audit/classify_proof_failures.py).
@@ -126,7 +132,9 @@ Each of 21 formal goals got three attempts. Lean accepted none. 23/63 responses 
 
 <a id="exp-004"></a>
 
-### EXP-004: Whole-proof GRPO
+<a id="exp-004-whole-proof-grpo"></a>
+
+### EXP-004: Ordered versus shuffled whole-proof GRPO
 
 - Config: `configs/rl/qwen_05b_whole_proof_grpo.json`.
 - Code: [`scripts/train/run_grpo_pilot.py`](../scripts/train/run_grpo_pilot.py).
@@ -137,7 +145,9 @@ Both arms ran 32 optimizer steps on identical theorems. The model never produced
 
 <a id="exp-005"></a>
 
-### EXP-005: Prerequisite curriculum GRPO
+<a id="exp-005-prerequisite-curriculum-grpo"></a>
+
+### EXP-005: Prerequisite-curriculum GRPO readiness assessment
 
 - Config: `configs/rl/qwen_05b_prerequisite_grpo*.json`.
 - Code: [`scripts/data/prepare_prerequisite_curriculum.py`](../scripts/data/prepare_prerequisite_curriculum.py); [`scripts/train/run_grpo_pilot.py`](../scripts/train/run_grpo_pilot.py).
@@ -148,7 +158,9 @@ We wrote four stages of tasks: logic, arithmetic, divisibility, induction. Befor
 
 <a id="exp-006"></a>
 
-### EXP-006: Assisted proof completion
+<a id="exp-006-assisted-proof-completion"></a>
+
+### EXP-006: Proof-prefix assistance for GRPO training
 
 - Config: `configs/rl/qwen_05b_completion_grpo.json`.
 - Code: [`scripts/train/run_grpo_pilot.py`](../scripts/train/run_grpo_pilot.py).
@@ -159,7 +171,9 @@ We gave the model most of a proof and asked it to finish. Filling one missing ex
 
 <a id="exp-007"></a>
 
-### EXP-007: RLP number-theory training
+<a id="exp-007-rlp-number-theory-training"></a>
+
+### EXP-007: Number-theory RLP training and continuation
 
 - Config: `configs/pretrain/qwen_05b_number_theory_rlp*.json`.
 - Code: [`scripts/train/run_rlp_pilot.py`](../scripts/train/run_rlp_pilot.py).
@@ -170,7 +184,9 @@ We trained with the RLP reward on number-theory text, first in textbook order, t
 
 <a id="exp-008"></a>
 
-### EXP-008: Precision audit
+<a id="exp-008-precision-audit"></a>
+
+### EXP-008: RLP optimizer-precision audit and FP32 rerun
 
 - Config: `configs/midtrain/qwen_05b_number_theory_rlp_fp32.json`.
 - Code: [`scripts/audit/audit_rlp_updates.py`](../scripts/audit/audit_rlp_updates.py); [`scripts/train/run_rlp_pilot.py`](../scripts/train/run_rlp_pilot.py).
@@ -181,7 +197,9 @@ Only 8,557,971 of 494,032,768 weights changed between checkpoints. The optimizer
 
 <a id="exp-009"></a>
 
-### EXP-009: Primitive RLP curriculum
+<a id="exp-009-primitive-rlp-curriculum"></a>
+
+### EXP-009: Primitive-first number-theory RLP curriculum
 
 - Config: `configs/midtrain/qwen_05b_primitive_rlp.json`.
 - Code: [`scripts/train/run_rlp_pilot.py`](../scripts/train/run_rlp_pilot.py); [`scripts/audit/audit_primitive_rlp.py`](../scripts/audit/audit_primitive_rlp.py).
@@ -192,7 +210,9 @@ We trained on 448 authored examples in dependency order, from witnesses to prime
 
 <a id="exp-010"></a>
 
-### EXP-010: Evaluations of saved checkpoints
+<a id="exp-010-evaluations-of-saved-checkpoints"></a>
+
+### EXP-010: Mathematical capability evaluation across RLP checkpoints
 
 - Config: `configs/eval/acquisition_probe_v1.json; configs/eval/decomposition_probe_v2.json; configs/eval/knowledge_inventory_v1.json`.
 - Code: [`scripts/eval/evaluate_acquisition.py`](../scripts/eval/evaluate_acquisition.py).
@@ -203,7 +223,9 @@ We compared the original model, early RLP (`checkpoint-118`), and final RLP on r
 
 <a id="exp-011"></a>
 
-### EXP-011: Local-action pilot
+<a id="exp-011-local-action-pilot"></a>
+
+### EXP-011: Lean-verified witness generation with GRPO
 
 - Config: `configs/rl/qwen_05b_local_operator_grpo.json`.
 - Code: [`scripts/train/local_operator_training.py`](../scripts/train/local_operator_training.py); [`scripts/eval/verify_local_operator.py`](../scripts/eval/verify_local_operator.py).
@@ -214,7 +236,9 @@ The model had to supply a witness, for example `k*l` for `c = a*(k*l)`. Lean che
 
 <a id="exp-012"></a>
 
-### EXP-012: RLP corpus audit
+<a id="exp-012-rlp-corpus-audit"></a>
+
+### EXP-012: RLP corpus correctness and assumption audit
 
 - Config: `configs/data/mathematical_rlp_review_v1.json`.
 - Code: [`scripts/audit/audit_rlp_corpus.py`](../scripts/audit/audit_rlp_corpus.py).
@@ -225,7 +249,9 @@ Every numeric answer in the primitive corpus was correct. 160 of the 448 trainin
 
 <a id="exp-013"></a>
 
-### EXP-013: Controlled RLP
+<a id="exp-013-controlled-rlp"></a>
+
+### EXP-013: Ordered versus shuffled mathematical-span RLP
 
 - Config: `configs/midtrain/qwen_05b_controlled_rlp.json`.
 - Code: [`scripts/data/mathematical_rlp_data.py`](../scripts/data/mathematical_rlp_data.py); [`scripts/train/run_rlp_pilot.py`](../scripts/train/run_rlp_pilot.py); [`scripts/eval/regrade_controlled_rlp.py`](../scripts/eval/regrade_controlled_rlp.py).
@@ -257,7 +283,9 @@ Do not use this list as execution status.
 
 <a id="exp-014"></a>
 
-### EXP-014: Lean SFT on mathlib proofs
+<a id="exp-014-lean-sft-on-mathlib-proofs"></a>
+
+### EXP-014: Supervised fine-tuning on mathlib proofs
 
 - Config: `configs/midtrain/qwen_05b_lean_sft_v1.json`.
 - Code: [`scripts/data/build_sft_data.py`](../scripts/data/build_sft_data.py); [`scripts/train/run_sft.py`](../scripts/train/run_sft.py).
@@ -267,7 +295,9 @@ Do not use this list as execution status.
 
 <a id="exp-015"></a>
 
-### EXP-015: Lean evaluation and tactic search
+<a id="exp-015-lean-evaluation-and-tactic-search"></a>
+
+### EXP-015: Lean Workbook proof evaluation with a fixed-tactic baseline
 
 - Config: No single frozen evaluation config indexed.
 - Code: [`scripts/eval/lean_eval_statements.py`](../scripts/eval/lean_eval_statements.py); [`scripts/eval/probe_nt_pool.py`](../scripts/eval/probe_nt_pool.py); [`scripts/eval/search_tactics.py`](../scripts/eval/search_tactics.py); [`scripts/eval/single_tactic_baseline.py`](../scripts/eval/single_tactic_baseline.py).
@@ -277,7 +307,9 @@ Do not use this list as execution status.
 
 <a id="exp-016"></a>
 
-### EXP-016: Number-theory statement pool
+<a id="exp-016-number-theory-statement-pool"></a>
+
+### EXP-016: Lean-checked number-theory statement-pool construction
 
 - Config: No standalone frozen build config indexed.
 - Code: [`scripts/data/build_nt_pool.py`](../scripts/data/build_nt_pool.py); [`scripts/data/build_nt_states.py`](../scripts/data/build_nt_states.py); [`scripts/data/verify_external_proofs.py`](../scripts/data/verify_external_proofs.py).
@@ -287,7 +319,9 @@ Do not use this list as execution status.
 
 <a id="exp-017"></a>
 
-### EXP-017: Midsem splits and training data
+<a id="exp-017-midsem-splits-and-training-data"></a>
+
+### EXP-017: Theorem splits, proof-action SFT data and RL task construction
 
 - Config: Input versions appear in the decision log and interleaved SFT config.
 - Code: [`scripts/data/build_nt_splits.py`](../scripts/data/build_nt_splits.py); [`scripts/data/build_nt_sft_data.py`](../scripts/data/build_nt_sft_data.py); [`scripts/data/build_syntax_sft.py`](../scripts/data/build_syntax_sft.py); [`scripts/data/build_nt_hole_tasks.py`](../scripts/data/build_nt_hole_tasks.py); [`scripts/audit/check_split_leakage.py`](../scripts/audit/check_split_leakage.py).
@@ -336,7 +370,9 @@ Existing cut states are not re-traced. No SFT or RL training runs in this data b
 
 <a id="exp-018"></a>
 
-### EXP-018: Interleaved number-theory SFT
+<a id="exp-018-interleaved-number-theory-sft"></a>
+
+### EXP-018: Interleaved informal reasoning and Lean-tactic SFT
 
 - Config: `configs/midtrain/qwen_05b_nt_interleaved_sft_v1.json`.
 - Code: [`scripts/train/run_sft.py`](../scripts/train/run_sft.py).
@@ -346,7 +382,9 @@ Existing cut states are not re-traced. No SFT or RL training runs in this data b
 
 <a id="exp-019"></a>
 
-### EXP-019: Interactive Lean RL
+<a id="exp-019-interactive-lean-rl"></a>
+
+### EXP-019: Interactive Lean RL with terminal and heuristic feedback rewards
 
 - Config: `configs/rl/qwen_05b_lean_grpo_smoke.json` is a smoke config, not a frozen GPU protocol.
 - Code: [`scripts/train/run_lean_grpo.py`](../scripts/train/run_lean_grpo.py); [`scripts/eval/pass_rate_map.py`](../scripts/eval/pass_rate_map.py); [`scripts/data/build_rft_data.py`](../scripts/data/build_rft_data.py).
@@ -373,7 +411,9 @@ Existing cut states are not re-traced. No SFT or RL training runs in this data b
 
 <a id="aud-001"></a>
 
-### AUD-001: Proof failures and curriculum inventory
+<a id="aud-001-proof-failures-and-curriculum-inventory"></a>
+
+### AUD-001: Post-hoc proof-failure and curriculum analysis
 
 - Config: Historical post hoc analysis; no single frozen config indexed.
 - Code: [`scripts/audit/classify_proof_failures.py`](../scripts/audit/classify_proof_failures.py); [`scripts/audit/curriculum_inventory.py`](../scripts/audit/curriculum_inventory.py).
@@ -384,7 +424,9 @@ Existing cut states are not re-traced. No SFT or RL training runs in this data b
 
 <a id="aud-002"></a>
 
-### AUD-002: Lean reward and engineering audit
+<a id="aud-002-lean-reward-and-engineering-audit"></a>
+
+### AUD-002: Lean reward-verifier and data-exposure audit
 
 - Config: Scorer adoption appears in the decision log.
 - Code: [`scripts/eval/check_checker_attacks.py`](../scripts/eval/check_checker_attacks.py); [`scripts/eval/bench_lean_verifier.py`](../scripts/eval/bench_lean_verifier.py); [`scripts/eval/check_scoring_paths.py`](../scripts/eval/check_scoring_paths.py).
@@ -395,7 +437,9 @@ Existing cut states are not re-traced. No SFT or RL training runs in this data b
 
 <a id="exp-020"></a>
 
-### EXP-020: Alternating SFT with RLP and Lean GRPO
+<a id="exp-020-alternating-sft-with-rlp-and-lean-grpo"></a>
+
+### EXP-020: Alternating SFT with RLP or Lean-reward GRPO
 
 - Question: Can alternating supervised proof practice with either hidden-target RLP or Lean-verified GRPO improve full proof completion? This is an exploratory pilot.
 - Config: `configs/midtrain/qwen_05b_interleaved_training_v3.json` for the portable-runtime retry. Preserve failed v1 and v2 configs and artifacts. Runner: `scripts/train/run_interleaved_training.py`.
@@ -436,9 +480,13 @@ The primary population excludes statements solved by the fixed standard-tactic b
 - Inference boundary: terminal branches receive additional SFT and use different RL data. The terminal comparison does not isolate RL or its algorithm. This is a single-seed validation result, not a held-out-test or efficiency claim. The first-GRPO comparison remains a separate DEV evaluation; do not choose a replacement checkpoint from these validation scores.
 - The older TeX report predates this evaluation. Its claims that no unassisted proof succeeds and that the Lean GRPO trainer has not run do not describe EXP-020. Preserve its early experiment history; reconcile its scope before using it as a current presentation source.
 
-## EXP-021
+<a id="exp-021"></a>
 
-### Monday recovery protocol, 11 October 2026
+## EXP-021: Rejection-sampling fine-tuning before Lean-reward GRPO
+
+<a id="monday-recovery-protocol-11-october-2026"></a>
+
+### Rejection-sampling fine-tuning protocol, 11 October 2026
 
 This exploratory study tests verified proof distillation before another Lean RL stage.
 Manas requests delivery by Monday night. The working cutoff is 12 October at 23:00 IST.
@@ -458,7 +506,9 @@ The deadline does not establish that any method improves the model.
 
 Method source: [DeepSeek-Prover-V1.5](https://arxiv.org/html/2408.08152v1), sections on expert iteration, proof-assistant feedback, and inference. This supplies a method precedent, not a performance prediction for this model.
 
-## EXP-022
+<a id="exp-022"></a>
+
+## EXP-022: PPO versus GRPO with matched Lean proof rewards
 
 ### PPO versus GRPO protocol, 11 October 2026
 
@@ -479,6 +529,8 @@ Scientific owner and reviewer: Manas. Execution details are recorded with the ru
 Implementation source: [TRL 0.24 PPO trainer](https://huggingface.co/docs/trl/v0.24.0/ppo_trainer) and its [pinned source](https://github.com/huggingface/trl/blob/v0.24.0/trl/trainer/ppo_trainer.py). Reuse the library optimizer and advantage calculation.
 
 ## Decision log
+
+- 2026-10-25 UTC: Study terminology and naming review requested by Manas. Standardize all 32 study titles and state motivations in the register. Preserve original protocols, old heading anchors, stable IDs, config keys and artifact filenames. Distinguish RLVR, REINFORCE with a leave-one-out baseline, GRPO and PPO; distinguish accepted attempts, theorem coverage, partial steps and the exploratory selection set. Update maintained guides, report headings and figure labels. Rebuild 12 public figures with unchanged numeric constants. Update titles and display aliases in 13 archived vector figures; preserve numerical annotations, paths and line styles, with original titles in metadata. The documented optional label pass checks numerical preservation before writing. The focused 23 tests pass, local links resolve, and the report builds without reference or box warnings. No experiment runs or measured result changes.
 
 - 2026-10-25 UTC: Further submission cleanup requested by Manas. Keep experiment summaries and recording rules in `docs/EXPERIMENTS.md`; move the detailed ledger to `docs/EXPERIMENT_HISTORY.md` and update its inbound links, reproduction source locator and figure-source comments. Preserve historical text, commands, file indexes and all 32 execution summaries. Consolidate reproduction caveats in the guides and describe 27 configs whose index entries had no purpose. In the report, shorten the repeated results summary, revise the causal heading and move software details to the appendix. Equations, quantitative tables, figures, citation keys and research results remain unchanged. Local verification: 23 focused tests pass; Markdown links and preservation checks pass; the report rebuilds without reference or box warnings. No experiment runs.
 
@@ -993,7 +1045,9 @@ Add one dated line per decision. Do not edit old lines.
 
   The portable DEV-b `validation_double_divisible` file returns exit 1 with `unknown identifier 'dvd_add'`. Its failed elaboration reports `sorryAx`, and the scorer rejects the file. The frozen smaller header does not support this seed's different generated tactic body. The remaining two DEV-b portable files are not produced or checked because the wrapper stops on failure. Preserve `registry.json`, service log, failed source, original accepted replay and `portable.tar.gz`. Do not change the header, memory threshold or timeout to obtain a pass. This failure limits portability of this frozen header; it does not replace the original-context replay outcome or change the recorded model accuracy.
 
-## EXP-023
+<a id="exp-023"></a>
+
+## EXP-023: Number-theory RL reward, algorithm and curriculum comparisons
 
 ### Expanded number-theory preparation, 12 October 2026
 
@@ -2070,7 +2124,9 @@ Run `exp023-mathlib-identity-cpu-s20261014-v1` exits 0 (source SHA-256 `00510271
 - Negative control: on a temporary copy of the Cli package, the check reports the appended file `Cli.lean` as mismatched and the planted `Planted.lean` as extra. The copy was deleted.
 - Scope: this establishes the sources and the presence of compiled files. It does not rebuild the `.olean` files or prove that they were compiled from these sources.
 
-## EXP-024
+<a id="exp-024"></a>
+
+## EXP-024: Undergraduate number-theory SFT versus equal-token reference SFT
 
 ### EXP-024 protocol: undergraduate number-theory SFT, 14 October 2026
 
@@ -2404,7 +2460,9 @@ Prepare a bounded candidate manifest from the existing pool, with topic coverage
 
 Method provenance: [Saparov et al.](https://arxiv.org/abs/2305.15269v3), abstract, explicitly studies depth, width and compositional generalization in synthetic deduction. This supports separating structural axes; its results do not validate a Lean difficulty metric. The [Lean Workbook dataset card](https://huggingface.co/datasets/internlm/Lean-Workbook) supplies the existing corpus source. Reuse the source snapshots and licence records in EXP-024 rather than treating a live dataset page as a frozen input.
 
-## EXP-025
+<a id="exp-025"></a>
+
+## EXP-025: Number-theory benchmark construction and proof-data verification
 
 ### Benchmark and data pipeline registration, 16 October 2026
 
@@ -2578,7 +2636,9 @@ Independent source review finds no important issue against the stated exclusion 
 
 The final archive command returns exit 0 and confirms the object through `head-object`. Receipt `archive_20261016T145057Z.json` is stored in the remote run and private operations directory. The snapshot preserves raw verification, the failed sizing check, the derived SFT view, source scripts and final readiness records. Existing namespace expiry remains in force.
 
-## EXP-026
+<a id="exp-026"></a>
+
+## EXP-026: Unchanged model, SFT and shuffled RL proof evaluation
 
 The R results of 19 October sit under EXP-028: [R and E3](#r-result-and-e3-result-19-october-2026-ist), [dev_R](#dev_r-result-rl-shifts-s-toward-repeated-short-actions-19-october-2026-ist) and [E7](#e7-result-r-on-the-selection-set-19-october-2026-ist).
 
@@ -2711,7 +2771,9 @@ The focused follow-up review finds no material issue against those named control
 
 Document verification: `latexmk -pdf -quiet -cd -interaction=nonstopmode -halt-on-error docs/tex/project_report.tex` returns exit 0. The final log contains no unresolved references, duplicate references or box warnings. The updated PDF contains the dated section and the new source citations. Text extraction exposed typographic conversion of command flags; breakable literal formatting corrects the flags and preserves their argument spaces. `uv run pre-commit run --files README.md docs/EXPERIMENTS.md docs/tex/project_report.tex` passes the applicable hooks, exit 0. `git diff --check` returns exit 0. No historical-result recertification, model sampling, training, commit, push or message to Abhinav occurs.
 
-## EXP-027
+<a id="exp-027"></a>
+
+## EXP-027: Prerequisite-ordered versus shuffled RL
 
 The C results of 19 October sit under EXP-028: [C](#c-result-curriculum-order-raises-train-acceptance-and-narrows-the-policy-19-october-2026-ist) and [dev_C](#dev_c-result-and-main-lease-end-19-october-2026-ist).
 
@@ -5089,7 +5151,9 @@ One error anywhere in such a block rejects the whole top-level tactic.
 The diagnosis attributes low acceptance to policy capability, not to a harness fault.
 It does not separate base-model size, SFT quantity, decoding temperature and action granularity.
 
-## EXP-028
+<a id="exp-028"></a>
+
+## EXP-028: Exploratory evaluation of search, retrieval, SFT and filtered RL
 
 Registered 18 October 2026 IST, before any EXP-028 run.
 Question: do the four literature remedies raise held-out complete-proof acceptance over the fresh S of the main lease?
@@ -5562,7 +5626,9 @@ Limits:
 - No run varies the reward, the starting policy, a KL or entropy term, or the action limits. EXP-029 and EXP-030 were to vary the limits and the reward, and they did not run.
 - RL_filtered makes 18 format errors in 1,948 held-out actions and solves 2 of 164 theorems, so fewer format errors alone did not give held-out proofs. The dense reward of EXP-030 also penalizes Lean rejections, and 1,636 of RL_filtered's 1,948 held-out actions are Lean rejections (`out/p3_horizon_tokens.json`). No record shows what that penalty would change. This is an inference, not a measurement of the dense reward.
 
-## EXP-029
+<a id="exp-029"></a>
+
+## EXP-029: Eight-attempt evaluation of SFT and RL checkpoints
 
 Registered 19 October 2026 IST, before any EXP-029 run. Lease run ID `exp029-lease5-s20261019-v1`; program, configs, input manifest and quote under `.private/ops/exp028_remedies_20261018_v1/lease5/` (dry run, no bucket write).
 Question: on the 164-theorem selection set, split into strata by three screens, do C, R and RL_filtered differ from S in complete-proof acceptance at 8 attempts per theorem, and does the RL_filtered gain on its 62 training tasks hold at 8 attempts and under a second training seed?
@@ -5643,7 +5709,9 @@ The exit code, the instance check and the 1.03 GB come from command output in th
 The program, configs, inputs and dry-run quotes under `.private/ops/exp028_remedies_20261018_v1/lease5/` and `lease6/` remain the record of the design.
 The questions of EXP-029 stay open. The counts in the analysis entry of 20 October under EXP-028 come from saved records.
 
-## EXP-030
+<a id="exp-030"></a>
+
+## EXP-030: Terminal proof reward versus per-action Lean-error penalties
 
 Registered 20 October 2026 IST, before any EXP-030 run. It runs in lease6 with the EXP-029 amendment (`exp029-030-lease6-s20261020-v1`). Config `lease6/configs/R_dense.json`; task order `lease6/inputs/R_dense_task_order.json`.
 Question: from the same S checkpoint, the same TRAIN task order and the same seed, does REINFORCE with per-action Lean-error penalties close more proofs than REINFORCE with the terminal proof reward alone?

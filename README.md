@@ -1,4 +1,6 @@
-# Efficient RL for Small Formal Reasoners
+# Reinforcement learning for Lean proofs with a small language model
+
+<a id="efficient-rl-for-small-formal-reasoners"></a>
 
 This project studies reinforcement learning (RL) for number-theory proofs with `Qwen/Qwen2.5-0.5B-Instruct`.
 The model proposes proof steps; Lean 4 checks the complete proof.
@@ -11,9 +13,9 @@ The model proposes proof steps; Lean 4 checks the complete proof.
 
 Experiment execution stopped on 20 October 2026. The recorded results do not establish better proof performance on unseen theorems after RL.
 
-- The unchanged model, supervised fine-tuning (SFT), shuffled RL and prerequisite-first RL each prove 0 of 8 development theorems. This set is too small to resolve modest differences.
+- The unchanged model, supervised fine-tuning (SFT), shuffled RL and prerequisite-ordered RL each prove 0 of 8 development theorems. This set is too small to resolve modest differences.
 - On the separate selection set, SFT proves 1 of 163 assessed theorems, shuffled RL 1 of 164, and filtered RL 2 of 164. No variant meets the promotion rule. One SFT theorem was not assessed after an automation timeout.
-- Prerequisite-first RL accepts 255 of 4,048 training attempts, against 164 for shuffled RL, with one training run per arm. These training results do not establish transfer.
+- Prerequisite-ordered RL accepts 255 of 4,048 training attempts, against 164 for shuffled RL, with one training run per arm. These training results do not establish transfer.
 
 Promotion requires at least a 5 percentage-point gain over the control, with a paired 95% interval excluding zero.
 The [report](docs/tex/project_report.pdf) explains the comparisons and limits.

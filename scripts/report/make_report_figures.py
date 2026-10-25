@@ -76,8 +76,8 @@ def fig_pmix():
         ax.plot([0.05], [y], "o", ms=3.5, color=RL if g == 8 else PARENT)
     ax.set_xlim(0, 1)
     ax.set_ylim(0, 1.08)
-    ax.set_xlabel("Acceptance rate p per attempt")
-    ax.set_ylabel("P(group is mixed)")
+    ax.set_xlabel("Per-attempt proof acceptance probability p")
+    ax.set_ylabel("Probability of mixed binary rewards")
     save(fig, "pmix")
 
 
@@ -89,7 +89,7 @@ def fig_rlp():
     a.set_xticks([0, 1], ["Start", "End"])
     a.set_xlim(-0.3, 1.3)
     a.set_ylabel("Mean log p(target | reasoning)")
-    a.set_title("Training reward signal rose", loc="left")
+    a.set_title("RLP target log-likelihood", loc="left")
     label(a, "a")
     # Held-out answers, n = 108 questions.
     rows = (("Correct answer", 42, 21, RL), ("No readable answer", 17, 69, DROP))
@@ -103,7 +103,7 @@ def fig_rlp():
     b.set_xlim(-0.3, 1.0)
     b.set_ylim(0, 0.8)
     b.set_ylabel("Fraction of held-out answers")
-    b.set_title("Held-out accuracy fell", loc="left")
+    b.set_title("Held-out answer outcomes", loc="left")
     label(b, "b")
     save(fig, "rlp_divergence")
 
@@ -127,7 +127,7 @@ def fig_interleaved():
     ax.set_yticks(range(len(rows)), [r[0] for r in rows])
     ax.invert_yaxis()
     ax.set_xlim(0, 8)
-    ax.set_xlabel("Non-trivial validation statements proved (%), 8 attempts each")
+    ax.set_xlabel("Non-trivial validation theorems proved (%), 8 attempts each")
     save(fig, "interleaved")
 
 
@@ -165,7 +165,7 @@ def fig_curriculum():
                                gridspec_kw={"width_ratios": [1.5, 1], "wspace": 0.7})
     # First action on the same 784 validation attempts.
     outcomes = {"SFT parent": (739, 40, 5), "Ordered RL": (696, 88, 0)}
-    parts = (("Stops at once", LIGHT), ("Valid action", PARENT), ("Complete proof", RL))
+    parts = (("Immediate termination", LIGHT), ("Valid action", PARENT), ("Complete proof", RL))
     for i, (name, counts) in enumerate(outcomes.items()):
         left = 0
         for (part, colour), k in zip(parts, counts):
@@ -175,7 +175,7 @@ def fig_curriculum():
     a.set_yticks([0, 1], list(outcomes))
     a.invert_yaxis()
     a.set_xlim(0, 784)
-    a.set_xlabel("First action, 784 validation attempts")
+    a.set_xlabel("First-action outcomes in 784 validation attempts")
     a.legend(loc="lower left", bbox_to_anchor=(0, 1.02), ncol=3)
     label(a, "a")
     # Easy retention, n = 48 attempts per model.
@@ -188,7 +188,7 @@ def fig_curriculum():
     b.set_xticks(range(3), [m[0] for m in models], rotation=20, ha="right", rotation_mode="anchor")
     b.set_xlim(-0.5, 2.7)
     b.set_ylim(0, 1)
-    b.set_ylabel("Easy retention, fraction accepted")
+    b.set_ylabel("Elementary DEV attempt acceptance")
     label(b, "b")
     save(fig, "curriculum_outcome")
 
@@ -202,7 +202,7 @@ def fig_probe():
     stages = {"S0": (44, 11, 1, 56), "S1": (14, 18, 0, 32), "S2": (8, 24, 0, 32)}
     for name, (*counts, n) in stages.items():
         assert sum(counts) == n, name
-    parts = (("Mixed (gradient)", RL), ("All fail", LIGHT), ("All accepted", PARENT))
+    parts = (("Mixed binary rewards", RL), ("All rejected", LIGHT), ("All accepted", PARENT))
     for i, (name, (*counts, n)) in enumerate(stages.items()):
         bottom = 0
         for (part, colour), k in zip(parts, counts):
@@ -223,7 +223,7 @@ def fig_probe():
         b.text(k + 0.8, i, f"{k}/64", va="center", fontsize=7)
     b.set_yticks(range(len(families)), [f[0] for f in families])
     b.set_xlim(0, 64)
-    b.set_xlabel("Accepted attempts (of 64), original S2 families")
+    b.set_xlabel("Accepted attempts (of 64), original S2 family IDs")
     label(b, "b")
     save(fig, "stage_probe")
 
@@ -235,25 +235,25 @@ def fig_oct19_heldout():
     # (a) Selection theorems solved within 2 attempts, as (name, solved, theorems assessed, colour).
     rows = [
         # docs/EXPERIMENT_HISTORY.md, "E0 result, 18 October 2026 IST"
-        ("S (E0)", 1, 163, PARENT),
+        ("SFT (S, E0)", 1, 163, PARENT),
         # docs/EXPERIMENT_HISTORY.md, "E2 result and lemma data, 18 October 2026 IST"
         ("S + step search (E2)", 1, 163, PARENT),
         # docs/EXPERIMENT_HISTORY.md, "R result and E3 result, 19 October 2026 IST"
-        ("Lemma-section SFT from B (E3)", 1, 164, PARENT),
+        ("SFT + lemma retrieval (E3)", 1, 164, PARENT),
         # docs/EXPERIMENT_HISTORY.md, "E5 result and the E3 comparison, 19 October 2026 IST"
         ("SFT seed 2 from B (E5)", 0, 164, PARENT),
         # docs/EXPERIMENT_HISTORY.md, "E7 result: R on the selection set, 19 October 2026 IST"
-        ("R (E7)", 1, 164, RL),
+        ("Shuffled RL (R, E7)", 1, 164, RL),
         # docs/EXPERIMENT_HISTORY.md, "E6 result: filtered RL on the selection set, 19 October 2026 IST"
-        ("RL_filtered (E6)", 2, 164, RL),
+        ("Filtered RL (E6)", 2, 164, RL),
     ]
     # Kimina-Prover-Distill-0.6B, unbiased pass@2 (%) from 8 samples on each of 164 theorems; not a k/n count.
     kimina = [
         # docs/EXPERIMENT_HISTORY.md, "Kimina capability probe result, 19 October 2026 IST" (Lease 3, 11.35%)
-        ("Kimina, draw 1", 11.345818815331011),
+        ("Kimina, draw 1 (estimate)", 11.345818815331011),
         # docs/EXPERIMENT_HISTORY.md, "Report recount of the 18 and 19 October results, 19 October 2026 IST";
         # recount in .private/ops/report_recount_20261019_v1/ (Lease 4)
-        ("Kimina, draw 2", 11.67247386759582),
+        ("Kimina, draw 2 (estimate)", 11.67247386759582),
     ]
     for i, (name, k, n, colour) in enumerate(rows):
         c, lo, hi = wilson(k, n)
@@ -269,7 +269,7 @@ def fig_oct19_heldout():
     a.invert_yaxis()
     a.set_xlim(0, 15)
     a.set_xticks([0, 5, 10, 15])
-    a.set_xlabel("Theorems proved within 2 attempts (%)")
+    a.set_xlabel("Proof completion within 2 attempts (%)")
     label(a, "a")
     # (b) Kimina theorems solved within 8 samples, by reference-proof length, as (theorems, solved).
     bins = ("≤20 lines", "21–40", ">40")
@@ -363,8 +363,8 @@ def fig_oct19_rl_filtered():
     b.set_xlim(-0.6, 4.6)
     b.set_ylim(-0.6, 4.6)
     b.set_aspect("equal")
-    b.set_xlabel("First visit (accepted of 4)")
-    b.set_ylabel("Last visit (accepted of 4)")
+    b.set_xlabel("First visit (accepted attempts of 4)")
+    b.set_ylabel("Last visit (accepted attempts of 4)")
     label(b, "b")
     save(fig, "oct19_rl_filtered")
 
@@ -390,7 +390,7 @@ def fig_oct19_curriculum():
                        capsize=2, elinewidth=0.8, lw=0)
     a.set_xticks(range(4), quarters)
     a.set_ylim(0, 16)
-    a.set_xlabel("Quarter of C's first-epoch order")
+    a.set_xlabel("Quarter of prerequisite-ordered RL (C), epoch 1")
     a.set_ylabel("Accepted attempts (%)")
     a.legend(loc="upper right")
     label(a, "a")
@@ -466,7 +466,7 @@ def fig_oct19_actions():
         # recount in .private/ops/report_recount_20261019_v1/
         "changed": 5, "no_progress": 2, "forbidden": 0, "accepted": 4,
     }
-    models = (("S (E0), n = 1,953 actions", e0), ("R (E7), n = 1,963", e7), ("RL_filtered (E6), n = 1,948", e6))
+    models = (("SFT (S, E0), n = 1,953 actions", e0), ("Shuffled RL (R, E7), n = 1,963", e7), ("Filtered RL (E6), n = 1,948", e6))
     fig, ax = plt.subplots(figsize=(147 * MM, 45 * MM))
     for i, (name, m) in enumerate(models):
         counts = (m["format_error"], m["rejected"], m["partial"], m["changed"],
@@ -497,7 +497,7 @@ def fig_oct20_why():
     fig, (a, b, c) = plt.subplots(1, 3, figsize=(165 * MM, 58 * MM),
                                   gridspec_kw={"width_ratios": [1.2, 1.15, 1.25], "wspace": 0.55})
     # (a) Episodes in which at least one tactic applies, of all episodes. Source: src, Result 3.
-    runs = (("S\nTRAIN", 1199, 2024, PARENT), ("S\nheld-out", 105, 326, PARENT), ("RL_filt.\nheld-out", 183, 328, RL))
+    runs = (("SFT (S)\nTRAIN", 1199, 2024, PARENT), ("SFT (S)\nselection\nset", 105, 326, PARENT), ("Filtered RL\nselection\nset", 183, 328, RL))
     for i, (name, k, n, colour) in enumerate(runs):
         p, lo, hi = wilson(k, n)
         a.bar(i, 100 * p, color=colour, width=0.6)
@@ -512,7 +512,7 @@ def fig_oct20_why():
     # Format errors (cap, over 4 tactics, other): src, "Action limits". Action totals: oct19_actions above.
     causes = (("192-token cap", DROP), ("More than 4 tactics", GREY), ("Other malformed", LIGHT))
     models = (("S (E0)", (320, 44, 9), 373, 1953), ("R (E7)", (20, 1257, 11), 1288, 1963),
-              ("RL_filt. (E6)", (1, 10, 7), 18, 1948))
+              ("Filtered RL\n(E6)", (1, 10, 7), 18, 1948))
     for i, (name, parts, total, actions) in enumerate(models):
         assert sum(parts) == total, name
         bottom = 0.0
@@ -532,9 +532,9 @@ def fig_oct20_why():
     assert sum(s_close) == 84 and sum(f_close) == 2082
     x = range(1, 7)
     c.bar([v - 0.2 for v in x], [100 * k / 84 for k in s_close], width=0.4, color=PARENT,
-          label="S, TRAIN (84 proofs)")
+          label="SFT (S), 84")
     c.bar([v + 0.2 for v in x], [100 * k / 2082 for k in f_close], width=0.4, color=RL,
-          label="RL_filtered training (2,082)")
+          label="Filtered RL, 2,082")
     c.set_xticks(list(x))
     c.set_ylim(0, 105)
     c.set_xlabel("Closing action")
@@ -553,10 +553,10 @@ def fig_oct21_dense_reward():
     The historical filename stays unchanged so recorded links still resolve.
     """
     fig, (a, b) = plt.subplots(1, 2, figsize=(160 * MM, 80 * MM))
-    runs = ("R", "RL_filtered")
+    runs = ("Shuffled RL (R)", "Filtered RL")
     for offset, counts, colour, hatch, name in (
         (-0.2, (92, 337), PARENT, None, "Recorded terminal reward"),
-        (0.2, (1012, 735), RL, "///", "Dense reward (EXP-030)"),
+        (0.2, (1012, 735), RL, "///", "Error-penalized reward (EXP-030)"),
     ):
         positions = [i + offset for i in range(2)]
         heights = [100 * count / 1012 for count in counts]
@@ -570,8 +570,8 @@ def fig_oct21_dense_reward():
     b.bar(range(2), heights, color=RL, width=0.55)
     for x, (count, total), y in zip(range(2), counts, heights):
         b.text(x, y + 2, f"{count}/{total}", ha="center", fontsize=7)
-    b.set_title("Penalised actions with a positive sampled weight", loc="left")
-    b.set_ylabel("Penalised actions (%)")
+    b.set_title("Penalized actions with positive sampled advantages", loc="left")
+    b.set_ylabel("Penalized actions (%)")
     for ax in (a, b):
         ax.set_xticks(range(2), runs)
         ax.set_ylim(0, 112)
@@ -584,7 +584,112 @@ def fig_oct21_dense_reward():
     save(fig, "fig_oct21_dense_reward_flaw")
 
 
+def standardize_archived_labels():
+    """Edit labels in archived vector figures; preserve plotted data and geometry.
+
+    The original generators and recounts are private. This optional editorial
+    step needs PyMuPDF and operates on the checked-in PDF snapshots only.
+    Historical filenames remain stable. Original titles stay in PDF metadata.
+    """
+    from collections import Counter
+    import re
+
+    import pymupdf
+
+    titles = {
+        "fig_oct21_action_limits": "Reference-proof compatibility with current and relaxed action limits",
+        "fig_oct21_error_response": "Action changes following Lean errors during training",
+        "fig_oct21_exp023_diversity": "Distinct first-action frequency across training deciles and studies",
+        "fig_oct21_feedback_use": "Action repetition after errors and comment frequency during training",
+        "fig_oct21_heldout_errors": "First-error categories on the exploratory selection set",
+        "fig_oct21_heldout_partial_progress": "Valid tactic steps on the exploratory selection set",
+        "fig_oct21_learning_signal": "Training groups with nonzero sampled advantages",
+        "fig_oct21_sharpening_vs_coverage": "Early- and late-training acceptance and theorem coverage in filtered RL",
+        "fig_oct21_spillover": "Single-automation first actions on theorems without an initial proof",
+        "fig_oct21_tactic_distance_kimina": "Tactic-distribution distance from accepted Kimina proofs",
+        "fig_oct21_template_takeover": "Automation-template frequency and proof acceptance during filtered RL",
+        "fig_oct21_trajectory_matrix": "Per-theorem accepted attempts across filtered-RL visits",
+        "fig_oct21_update_follow": "First-action repetition after positive and negative sampled advantages",
+    }
+    aliases = {
+        "RL_filtered": "Filtered RL", "RL_filt.": "Filtered RL", "E0_S": "E0", "E7_R_main": "E7",
+        "October main runs": "Main SFT-initialized RL runs",
+        "A stage-ordered": "A: stage order", "B shuffled": "B: shuffled order",
+        "C_seq family bands": "C: sequential family blocks",
+        "pass@1 rises": "Mean pass@1", "Coverage falls": "Theorem coverage",
+    }
+    for name, title in titles.items():
+        path = OUT / f"{name}.pdf"
+        with pymupdf.open(path) as document:
+            page = document[0]
+            spans = [span for block in page.get_text("dict")["blocks"] if block["type"] == 0
+                     for line in block["lines"] for span in line["spans"]]
+            heading = min(spans, key=lambda span: span["bbox"][1])
+            replacements = []
+            for span in spans:
+                old = span["text"]
+                new = title if span is heading else old
+                for source, display in aliases.items():
+                    new = new.replace(source, display)
+                if new != old:
+                    replacements.append((span, new, span is heading))
+            if not replacements:
+                continue
+            original_paths = [{key: value for key, value in path.items() if key != "seqno"}
+                              for path in page.get_drawings()]
+            numeric_annotations = Counter(re.findall(r"\d+(?:[.,]\d+)*", page.get_text().replace(heading["text"], "")))
+            # These Matplotlib snapshots put each horizontal label in an
+            # isolated translation / text / restore block. Remove only that
+            # block, preserving all path and graphics-state commands verbatim.
+            pending = list(replacements)
+            number = rb"([-+0-9.eE]+)"
+            text_block = re.compile(rb"q\s+1\s+0\s+-?0\s+1\s+" + number + rb"\s+" + number + rb"\s+cm\s+BT\b.*?\bET\s+Q", re.S)
+
+            def remove_label(match):
+                x, y = float(match[1]), page.rect.height - float(match[2])
+                for item in pending:
+                    span = item[0]
+                    if abs(x - span["origin"][0]) < 0.02 and abs(y - span["origin"][1]) < 0.02:
+                        pending.remove(item)
+                        return b""
+                return match[0]
+
+            for xref in page.get_contents():
+                content = document.xref_stream(xref)
+                document.update_stream(xref, text_block.sub(remove_label, content))
+            if pending:
+                raise ValueError(f"Unrecognized label layout in {path}")
+            for span, text, is_heading in replacements:
+                font = "hebo" if is_heading else "helv"
+                size = span["size"]
+                width = page.rect.width - 20 if is_heading else span["bbox"][2] - span["bbox"][0]
+                length = pymupdf.get_text_length(text, fontname=font, fontsize=size)
+                if length > width:
+                    size *= width / length
+                x = (page.rect.width - pymupdf.get_text_length(text, fontname=font, fontsize=size)) / 2 if is_heading else span["origin"][0]
+                page.insert_text((x, span["origin"][1]), text, fontsize=size, fontname=font)
+            remaining_numbers = Counter(re.findall(r"\d+(?:[.,]\d+)*", page.get_text().replace(title, "")))
+            if numeric_annotations != remaining_numbers:
+                raise ValueError(f"Label edit changed numeric annotations in {path}")
+            updated_paths = [{key: value for key, value in path.items() if key != "seqno"}
+                             for path in page.get_drawings()]
+            if original_paths != updated_paths:
+                raise ValueError(f"Label edit changed plotted paths or styles in {path}")
+            metadata = document.metadata
+            if not metadata.get("subject", "").startswith("Original display title:"):
+                metadata["subject"] = "Original display title: " + heading["text"]
+                document.set_metadata(metadata)
+            updated = document.tobytes(garbage=4, deflate=True)
+        path.write_bytes(updated)
+
+
 if __name__ == "__main__":
+    import argparse
+
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--standardize-archived-labels", action="store_true",
+                        help="Update archived vector-PDF labels with PyMuPDF; preserve the plotted data")
+    args = parser.parse_args()
     fig_pmix()
     fig_rlp()
     fig_interleaved()
@@ -597,4 +702,6 @@ if __name__ == "__main__":
     fig_oct19_actions()
     fig_oct20_why()
     fig_oct21_dense_reward()
+    if args.standardize_archived_labels:
+        standardize_archived_labels()
     print("wrote", sorted(p.name for p in OUT.glob("*.pdf")))

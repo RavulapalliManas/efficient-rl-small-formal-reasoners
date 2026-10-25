@@ -53,8 +53,8 @@
 \begin{abstract}
 We study whether reinforcement learning (RL) improves Lean~4 proof writing by Qwen2.5-0.5B-Instruct after supervised fine-tuning (SFT).
 The model proposes tactics, and Lean checks the resulting proof.
-In the main study, prerequisite-first RL accepts 255 of 4,048 training attempts, against 164 for shuffled RL from the same SFT checkpoint, with one training run per arm.
-This training advantage does not establish transfer: the unchanged, SFT, shuffled-RL and prerequisite-first models each prove 0 of 8 DEV theorems.
+In the main study, prerequisite-ordered RL accepts 255 of 4,048 training attempts, against 164 for shuffled RL from the same SFT checkpoint, with one training run per arm.
+This training advantage does not establish transfer: the unchanged, SFT, shuffled-RL and prerequisite-ordered models each prove 0 of 8 DEV theorems.
 On a separate selection set, SFT proves 1 of 163 assessed theorems, shuffled RL proves 1 of 164, and RL restricted to 62 partially solvable training theorems proves 2 of 164.
 No arm meets the registered promotion rule.
 Earlier experiments also find gains on familiar proofs without an established gain on held-out constructions.
@@ -73,10 +73,11 @@ The README gives current execution status. \pth{docs/EXPERIMENTS.md} indexes the
 
 \paragraph{Models and measures.}
 B is the unchanged model; S is B after SFT.
-R is S after RL on shuffled training theorems; C is S after RL in prerequisite-first order.
+R is the shuffled-RL model; C is the prerequisite-ordered-RL model. Both start from S.
 These names refer to the 18 and 19 October study. Earlier experiments define their own model letters.
 TRAIN supplies learning examples, DEV supports choices, and TEST is reserved for final evaluation.
 The separate EXP-028 selection set supports exploratory comparisons.
+Filtered RL (\code{RL\_filtered}, E6) trains on the 62 TRAIN theorems that S proves in 1 to 3 of 4 reference attempts.
 An \emph{action} is one model response containing Lean tactics; an \emph{attempt} is a sequence of actions on one theorem.
 An accepted attempt contains a complete proof that Lean accepts. A proved theorem has at least one accepted attempt.
 
@@ -85,7 +86,7 @@ An accepted attempt contains a complete proof that Lean accepts. A proved theore
 \clearpage
 
 %======================================================================
-\section{The problem}
+\section{Research question and scope}
 \label{sec:problem}
 
 We want a small language model that writes proofs that the proof assistant Lean~4 can check.
@@ -93,12 +94,17 @@ The topic is school and early-university number theory: parity, divisibility, gc
 The midterm goal was a model that produces some complete proofs that Lean accepts.
 The goal for the end of the semester is proof strategy on competition-style theorems.
 
+The main study asks whether RL improves complete-proof acceptance beyond the SFT checkpoint, and whether theorem order changes that outcome.
+Training acceptance and held-out proof completion are separate endpoints.
+Earlier pilots examine initialization, reward design and task feasibility; they do not form one matched algorithm comparison.
+Study titles and motivations are indexed by stable EXP and AUD identifiers in \pth{docs/EXPERIMENTS.md}.
+
 \paragraph{Motivation.}
 \begin{enumerate}
 \item \textbf{Efficiency.} We want the most proofs for a fixed compute budget. We study the \emph{curriculum} (which theorems, in which order) and the \emph{distribution of reward} over the actions of a proof.
 \item \textbf{Checked learning.} A model that learns without a checker can learn false statements. Lean should check the model while it learns, not only at the end.
 \item \textbf{One model for informal and formal reasoning.} The model writes a short informal argument and then its Lean tactic. A separate translator would add errors and compute.
-\item \textbf{No human graders.} Lean gives an exact reward. This setting is called RL with verifiable rewards (RLVR). The reward is \emph{sparse}: a signal comes only from a complete proof.
+\item \textbf{No human graders.} Lean gives an exact reward. This reward setting is called RL with verifiable rewards (RLVR); it does not name an optimization algorithm. The reward is \emph{sparse}: a signal comes only from a complete proof.
 \end{enumerate}
 
 \paragraph{What Lean does.}
@@ -229,7 +235,7 @@ Version 2 replaced the terminal-error transition with a self-loop and a fuller s
 Version 2.2 fixed the deployed interface (Table~\ref{tab:mdp-v22}).
 Section~\ref{sec:next} gives the reasons for each change.
 
-\subsection{Learning algorithm}
+\subsection{REINFORCE and GRPO estimators}
 We maximize the expected return $J(\theta) = \mathbb{E}_{\tau \sim \pi_\theta}\big[\sum_t \gamma^t r_t\big]$.
 The only reward is at the end, so the return of an episode $\tau$ is $R(\tau) \in \{0, 1\}$.
 For one theorem, we sample $G$ episodes (one episode is one attempt) and use the REINFORCE estimator~\cite{williams1992}
@@ -238,7 +244,8 @@ For one theorem, we sample $G$ episodes (one episode is one attempt) and use the
 \label{eq:pg}
 \end{equation}
 The \emph{advantage} $A_i$ compares attempt $i$ with the other attempts.
-The interactive runs use the leave-one-out baseline (RLOO)~\cite{ahmadian2024}, and the whole-proof runs use GRPO~\cite{shao2024,trl}:
+The interactive runs use REINFORCE with a leave-one-out baseline (RLOO)~\cite{ahmadian2024}.
+The whole-proof runs use group relative policy optimization (GRPO)~\cite{shao2024,trl}:
 \begin{equation}
 A_i^{\text{RLOO}} = R_i - \frac{1}{G-1}\sum_{j \neq i} R_j, \qquad
 A_i^{\text{GRPO}} = \frac{R_i - \bar R}{s_R + \varepsilon},
@@ -246,7 +253,7 @@ A_i^{\text{GRPO}} = \frac{R_i - \bar R}{s_R + \varepsilon},
 \end{equation}
 where $\bar R$ and $s_R$ are the mean and standard deviation of the $G$ rewards.
 
-\subsection{Main consequence: no accepted attempt, no learning}
+\subsection{Reward variation within sampled groups}
 \label{sec:zero}
 If all $G$ attempts fail, every $R_i = 0$, so every $A_i = 0$, and the update in Equation~\eqref{eq:pg} is exactly zero.
 For this undiscounted, terminal-only reward, the same is true when Lean accepts all attempts.
@@ -290,7 +297,7 @@ This equation explains most of our failures.
 \label{fig:pmix}
 \end{figure}
 
-\subsection{A second reward: RLP}
+\subsection{Target-likelihood reward (RLP)}
 \label{sec:rlp}
 Some experiments used the RLP reward~\cite{rlp} instead of Lean.
 For a question $x$, reasoning $c$, and known answer $y$, the reward is $\log p_\theta(y \mid x, c) - \log p_{\bar\theta}(y \mid x)$, where $p_{\bar\theta}$ is a slowly updated copy of the model.
@@ -447,10 +454,10 @@ Final & S0 to S4 templates & Identity, one lemma, two steps, chain of subgoals, 
 \end{table}
 
 %======================================================================
-\section{Results of 18 and 19 October 2026}
+\section{Main study: proof completion after SFT and RL}
 \label{sec:oct19-results}
 
-This section reports EXP-028 and the R and C branches of the main run.
+This section reports the 18--19 October study: training-stage evaluation (EXP-026), prerequisite-ordered versus shuffled RL (EXP-027), and the exploratory intervention screen (EXP-028).
 EXP-028 measures S, arms derived from S, and two SFT runs from B on a new held-out selection set, with S (E0) as the baseline.
 Table~\ref{tab:oct19-runs} lists the runs.
 Here B, S, R and C name the models of the main run (Section~\ref{sec:nt-curriculum-execution}), not the EXP-023 arms of Table~\ref{tab:final-curriculum-outcome}.
@@ -506,14 +513,14 @@ R (E7) & S & REINFORCE on all 506 TRAIN theorems in shuffled order & Selection s
 \code{RL\_filtered} (E6) & S & REINFORCE on 62 TRAIN theorems with S acceptance in $(0, 0.75]$; 1,012 groups of 4 & Selection set & 2 per theorem \\
 Kimina-Prover-Distill-0.6B, two draws & Released model & A different model; whole proofs with long reasoning; 8,096-token limit per attempt & Selection set & 8 per theorem per draw \\
 \code{pass\_rates} & S & Nothing; measures S on TRAIN & 506 TRAIN theorems & 4 per theorem \\
-R and C training & S & Same theorem multiset; R in shuffled order, C in prerequisite-first order run twice & 506 TRAIN theorems & 1,012 groups of 4 \\
+R and C training & S & Same theorem multiset; R in shuffled order, C in prerequisite order run twice & 506 TRAIN theorems & 1,012 groups of 4 \\
 \code{dev\_R}, \code{dev\_C} & R, C & Nothing; final weights & 8 DEV theorems & 32 per model \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
 %----------------------------------------------------------------------
-\subsection{Environment and learner of these runs}
+\subsection{Interactive proof environment and policy-gradient estimator}
 \label{sec:oct19-setup}
 
 Every run in this section uses environment version~2.2 (Section~\ref{sec:next}).
@@ -618,7 +625,7 @@ Section~\ref{sec:oct20-why} reports what the interface still rejects, and Sectio
 \end{figure}
 
 %----------------------------------------------------------------------
-\subsection{No arm shows a detected held-out gain over S}
+\subsection{Selection-set proof completion}
 \label{sec:oct19-heldout}
 
 In E0, S proves 1 of 163 selection theorems and accepts 1 of 326 attempts (Figure~\ref{fig:oct19-heldout}a).
@@ -676,7 +683,7 @@ Reference length describes one recorded proof; it is not a measured minimum diff
 \end{figure}
 
 %----------------------------------------------------------------------
-\subsection{RL raises acceptance on its training theorems without measured transfer}
+\subsection{Training acceptance under pass-rate-filtered RL}
 \label{sec:oct19-rl-filtered}
 
 \code{pass\_rates} measures S with 4 attempts on each of the 506 TRAIN theorems.
@@ -719,12 +726,12 @@ R and \code{RL\_filtered} also differ in theorem set (506 against 62 theorems), 
 \end{figure}
 
 %----------------------------------------------------------------------
-\subsection{In one run per arm, curriculum order raises TRAIN acceptance and narrows the actions}
+\subsection{Training acceptance under prerequisite-ordered RL}
 \label{sec:oct19-curriculum}
 
 R and C start from the same S and run 1,012 groups of 4 attempts on the same 506 TRAIN theorems.
 Their configurations differ only in identifiers, and their commands differ only in the task order.
-R uses a shuffled order, and C runs its prerequisite-first order twice.
+R uses a shuffled order, and C runs its prerequisite order twice.
 Both complete all groups with no censored group.
 C accepts 255 of 4,048 attempts, and R accepts 164 of 4,048.
 C proves 93 of the 506 theorems, and R proves 63.
@@ -786,7 +793,7 @@ No row of that table applies yet.
 \end{figure}
 
 %----------------------------------------------------------------------
-\subsection{RL changes how the model fails}
+\subsection{Selection-set action validity and format errors}
 \label{sec:oct19-actions}
 
 Figure~\ref{fig:oct19-actions} classifies every model action on the selection set for S (E0), R (E7) and \code{RL\_filtered} (E6).
@@ -929,7 +936,7 @@ The visit comparisons use 8 sign-flip tests, 4 per arm.
 Under a Bonferroni factor of 8, C's first-visit gain over S stays below 0.05 (0.015), and C's split result does not (0.087).
 
 %----------------------------------------------------------------------
-\subsection{What the results show}
+\subsection{Findings and interpretation}
 \label{sec:oct19-summary}
 
 \code{RL\_filtered} improves acceptance on its 62 training theorems, and C accepts more TRAIN attempts than R in one run per arm.
@@ -979,7 +986,8 @@ The earlier detailed report (Git commit \code{e3b7747}) contains every count of 
 The reward exploits are in \pth{docs/REWARD_HACKING.md}.
 The script \pth{scripts/report/make_report_figures.py} rebuilds 12 plots from counts recorded in its source, with pointers to their records.
 This includes the dense-reward plot, reconstructed from the counts in its previously published PDF.
-The other \pth{fig_oct21_*} PDFs are included in the repository, but their builders and recount inputs remain in the private directory named in Appendix~\ref{sec:oct21-analyses}.
+The other \pth{fig_oct21_*} PDFs retain archived plotted data, with editorial title and display-name corrections.
+Their original builders and recount inputs remain in the private directory named in Appendix~\ref{sec:oct21-analyses}.
 
 \begin{thebibliography}{99}
 \bibitem{qwen25} Qwen Team. Qwen2.5 technical report. \url{https://arxiv.org/abs/2412.15115}.
@@ -1049,7 +1057,7 @@ Table~\ref{tab:oct21-scorecard} lists the measured changes that this section add
 \begin{table}[!htbp]
 \centering
 \small
-\caption{Scorecard of the post-hoc analyses. ``Before'' is S, or the start of training. ``After'' is the RL model, or the end of training. All entries are exploratory and come from one run per arm. Files are in \pth{out/}.}
+\caption{Summary of exploratory analyses of the saved runs. ``Before'' is S, or the start of training. ``After'' is the RL model, or the end of training. All entries are exploratory and come from one run per arm. Files are in \pth{out/}.}
 \label{tab:oct21-scorecard}
 \begin{tabularx}{\textwidth}{@{}P{1.3cm}YP{2.0cm}P{2.3cm}P{3.4cm}@{}}
 \toprule
@@ -1106,7 +1114,7 @@ The greedy split does not show that a model would find these proofs under relaxe
 \label{fig:oct21-limits}
 \end{figure}
 
-\paragraph{The updates reinforced 1-action attempts.}
+\paragraph{First-action repetition after unequal-return groups.}
 In quarter~1 of \code{RL\_filtered}, the feature ``1 action'' gets an advantage mass of $+46.96$.
 The feature ``6 actions'' gets $-100.84$, and ``0 tactics applied'' gets $-52.18$ (\pth{p7_reinforced}).
 The mean closing action of accepted attempts falls from 2.08 in quarter~1 to 1.14 in quarter~4, over 404 and 602 accepted attempts.
@@ -1146,7 +1154,7 @@ The learner has no KL or entropy term (Table~\ref{tab:mdp-v22}). No run adds one
 \label{fig:oct21-spillover}
 \end{figure}
 
-\paragraph{\code{RL\_filtered} proves its usual theorems more often but proves fewer theorems.}
+\paragraph{Accepted-attempt rate and theorem coverage during filtered RL.}
 From the early half to the late half of training, the mean pass@1 per theorem rises from 0.446 to 0.583 (36 theorems higher, 14 lower, sign test $p = 0.0026$).
 Here pass@1 is the chance that one attempt is accepted.
 Theorems proved fall from 50 to 40 of 62 (McNemar 1 against 11, $p = 0.0063$; Figure~\ref{fig:oct21-sharpening}).
@@ -1180,7 +1188,7 @@ S proves each of these 16 in only 1 of its 4 attempts, so they can be sampling n
 \label{fig:oct21-trajectories}
 \end{figure}
 
-\paragraph{\code{RL\_filtered} and C use Lean's error messages less.}
+\paragraph{Action repetition after Lean errors.}
 In \code{RL\_filtered}, the next action applies a tactic after an error in 662 of 3,260 cases in quarter~1, and in 181 of 2,120 in quarter~4 (\pth{p7_feedback}).
 In C, an identical repeat of the failed action follows an error in 72 of 4,557 cases in quarter~1, and in 1,872 of 4,190 in quarter~4.
 In \code{RL\_filtered}, it rises from 122 of 3,260 to 420 of 2,120 (Figure~\ref{fig:oct21-feedback}).
@@ -1188,7 +1196,7 @@ After a failed named tactic, \code{RL\_filtered}'s next action starts with the s
 After an unknown-name error, \code{RL\_filtered} keeps the same name in 871 of 2,260 next actions, against a baseline of 103 of 808 (Figure~\ref{fig:oct21-error-response}).
 The Fisher tests in Figure~\ref{fig:oct21-error-response} treat pairs inside one attempt as independent. They are not, so these $p$-values are optimistic.
 
-\paragraph{Comments disappear.}
+\paragraph{Comment frequency in generated actions.}
 Actions with a comment fall in all three runs from quarter~1 to quarter~4.
 R falls from 728 of 5,905 to 30 of 5,955, C from 350 of 5,765 to 22 of 5,869, and \code{RL\_filtered} from 208 of 4,480 to 0 of 3,149 (\pth{p7_feedback}).
 Comments do not change what Lean checks. We did not test whether their loss changes proof success.
@@ -1218,7 +1226,7 @@ A name counts as wholly invented if its normalized edit distance to the nearest 
 \begin{figure}[!htbp]
 \centering
 \includegraphics[width=0.8\textwidth]{fig_oct21_heldout_errors}
-\caption{First-error classes of failed actions on the selection set. x-axis: share of failed held-out actions (\%). y-axis: run. Classes: failed named tactic, unknown name, syntax or parse error, and other classes. n: failed actions, S (E0) 1,534, R (E7) 659 and \code{RL\_filtered} (E6) 1,919. No test. Source: \pth{p5_errors}, \code{runs.*.classes}.}
+\caption{First-error categories of failed actions on the selection set. x-axis: share of failed held-out actions (\%). y-axis: run. Classes: failed named tactic, unknown name, syntax or parse error, and other classes. n: failed actions, S (E0) 1,534, R (E7) 659 and \code{RL\_filtered} (E6) 1,919. No test. Source: \pth{p5_errors}, \code{runs.*.classes}.}
 \label{fig:oct21-heldout-errors}
 \end{figure}
 
@@ -1242,7 +1250,7 @@ C accepts 39 of 408 attempts in decile~1 and 4 of 404 in decile~10 (\pth{p5_dive
 On about the same theorems, its first pass accepts 16 of 808 attempts and its second pass 9 of 808 (\pth{p11_regressions}).
 These counts are consistent with theorem order as the main source of the decile-10 drop. The same-theorem drop is smaller. Neither comparison has a test.
 
-\paragraph{The dense reward of EXP-030 gives penalized actions a positive weight.}
+\paragraph{Sampled advantages under counterfactual error penalties (EXP-030).}
 EXP-030 did not run (Section~\ref{sec:oct20-not-run}).
 A re-scoring of the recorded actions under its reward (Table~\ref{tab:dense-reward}) finds positive per-action weights on many penalised actions.
 The baseline counts all actions of the other attempts, but the reward-to-go of a late action drops the early penalties of its own attempt.
@@ -1270,7 +1278,7 @@ Section~\ref{sec:oct19-results} reports the complete-proof comparisons.
 \begin{table}[!htbp]
 \centering
 \footnotesize
-\caption{Positives of the post-hoc analyses, each with its control and its caveat. All are exploratory and come from one run per arm. Files are in \pth{out/}.}
+\caption{Exploratory measurements of partial progress and training gains, with controls and limitations. All are exploratory and come from one run per arm. Files are in \pth{out/}.}
 \label{tab:oct21-positives}
 \begin{tabularx}{\textwidth}{@{}P{3.0cm}P{5.6cm}P{2.6cm}Y@{}}
 \toprule
@@ -1309,7 +1317,7 @@ With 6 similar theorems, this check cannot detect a small effect.
 \label{fig:oct21-partial}
 \end{figure}
 
-\paragraph{Other fixes during training.}
+\paragraph{Changes in training error categories.}
 These fixes are on TRAIN only.
 In R, the share of non-format actions with an unknown-name error falls from 0.146 at visit~1 to 0.0861 at visit~2. A sign test on the per-theorem rate over all actions gives 296 theorems that fall and 115 that rise ($p = 1.7 \times 10^{-19}$).
 R's format errors rise in the same comparison, from 0.164 to 0.2928 of actions (311 theorems rise, 138 fall, $p = 2.0 \times 10^{-16}$).
@@ -1558,7 +1566,7 @@ A deliberately false line of reasoning increased the reward in both inspected ex
 A \emph{candidate} reason for the accuracy decrease is that training supplied the start of the answer format, but the test did not.
 
 %----------------------------------------------------------------------
-\subsection{A smaller goal (Experiment 11)}
+\subsection{Lean-verified witness generation (EXP-011)}
 \label{sec:local}
 We reduced the proof to one missing expression with the mathematics supplied (Figure~\ref{fig:exp11}), and ran GRPO with $G = 8$.
 Validation accuracy increased from 0/8 to 6/8, and held-out accuracy from 0/4 to 2/4.
@@ -1656,7 +1664,7 @@ The ordered model made more valid first moves than the parent (88 against 40), b
 One common explanation is not supported: most repeated-state failures occurred without \code{simp\_all}.
 
 %======================================================================
-\section{Ways to obtain the reward without proof skill}
+\section{Reward-verifier exploits and data exposure}
 \label{sec:cheat}
 The verifier audit found six ways to obtain the Lean reward without proof skill (Figure~\ref{fig:cheat}).
 
@@ -1683,7 +1691,7 @@ Some statements are also formalized incorrectly; for example, a divisibility sta
 Before we report an RL gain, we therefore separate trivial, contradictory, near-duplicate, and new statements, and report the new statements.
 
 %======================================================================
-\section{Engineering faults}
+\section{Training and verification implementation defects}
 \label{sec:bugs}
 
 \begin{table}[!htbp]
@@ -1984,7 +1992,7 @@ Section~\ref{sec:oct19-results} reports their subsequent execution and results.
 Experiment & Comparison & Question \\
 \midrule
 Generalization, EXP-026 & Unchanged Qwen; SFT; SFT + RLVR & What does each training stage change on familiar and shifted theorems? \\
-Curriculum, EXP-027 & Shuffled RL; prerequisite-first RL, from the same SFT checkpoint & Does curriculum improve familiar performance, generalization, or both? \\
+Curriculum, EXP-027 & Shuffled RL; prerequisite-ordered RL, from the same SFT checkpoint & Does curriculum improve familiar performance, generalization, or both? \\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -2050,7 +2058,7 @@ If a panel cannot be supported, report that limitation and retain an explicitly 
 \subsection{Experiment 2: curriculum effects on performance and generalization}
 
 The second experiment holds the SFT checkpoint S and RLVR implementation fixed.
-Its conditions are R, shuffled RL practice, and C, prerequisite-first RL practice.
+Its conditions are R, shuffled RL practice, and C, prerequisite-ordered RL practice.
 Both start from the exact S checkpoint.
 The first intervention changes RL order while keeping SFT unchanged.
 This measures the total effect of the schedule, without assuming a transfer benefit.

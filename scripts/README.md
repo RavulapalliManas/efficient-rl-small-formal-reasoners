@@ -28,7 +28,15 @@ The 18–19 October study (EXP-026 to EXP-028) follows this workflow:
 | Evaluate | [train/run_tactic_rl.py](train/run_tactic_rl.py) | Use `--evaluation-names` for DEV. Use `--assessment-only` to assess tasks without updates; its default split is TRAIN |
 | Draw report figures | [report/make_report_figures.py](report/make_report_figures.py) | Plot recorded counts for the report |
 
-The figure script rebuilds 12 plots from counts recorded in its source. The dense-reward plot preserves the counts from its earlier PDF. The other `fig_oct21_*` PDFs are checked in, but their builders and recount inputs remain in the private directory named in the report.
+The figure script rebuilds 12 plots from recorded counts. The other `fig_oct21_*` PDFs retain their archived plotted data.
+Their generators and recount inputs remain private. To rebuild the public plots and standardize labels in the archived vector figures, run:
+
+```bash
+uv run --with matplotlib --with pymupdf python scripts/report/make_report_figures.py --standardize-archived-labels
+```
+
+The optional label pass changes titles and display aliases; it preserves plotted geometry and stores original titles in PDF metadata.
+The dense-reward plot is rebuilt from the counts in its earlier PDF. Historical filenames remain stable.
 
 Use [Main-study reproduction](#main-study-reproduction) for the recorded study.
 Public configs also cover older experiments and unrun proposals; match them through the [config guide](../configs/README.md).
@@ -41,7 +49,7 @@ Start with EXP-026 and EXP-027, the 18–19 October study. Its model sequence is
 ```text
 B: unchanged Qwen -> supervised fine-tuning -> S
 S -> RL with shuffled theorem order          -> R
-S -> RL with prerequisite-first order        -> C
+S -> RL with prerequisite order        -> C
 ```
 
 All four use the same architecture. Compare their complete-proof acceptance on the same DEV statements and attempt budget.
@@ -384,10 +392,17 @@ Weights and optimizer state retain their original contents.
 | Proved theorem | A theorem with at least one accepted attempt. Counts of proved theorems and accepted attempts have different denominators |
 | SFT | Supervised fine-tuning: learning from example proof steps |
 | RL / RLVR | Reinforcement learning / RL with verifiable rewards. A Lean-accepted complete proof supplies the proof reward; some experiments add heuristic rewards or penalties |
-| B, S, R, C | In the 18–19 October study: unchanged model, SFT model, SFT + shuffled RL, SFT + prerequisite-first RL |
-| Filtered RL | In EXP-028, RL on 62 TRAIN theorems that the SFT model proves in 1 to 3 of 4 initial attempts |
+| Unchanged model (B) | Pinned Qwen2.5-0.5B-Instruct before project fine-tuning |
+| SFT model (S) | B after supervised fine-tuning |
+| Shuffled RL (R) | S after REINFORCE on the shuffled TRAIN theorem order |
+| Prerequisite-ordered RL (C) | S after REINFORCE on the annotated prerequisite order; prerequisite necessity was not verified |
+| Filtered RL (`RL_filtered`, E6) | In EXP-028, RL on 62 TRAIN theorems that S proves in 1 to 3 of 4 reference attempts |
+| GRPO | Group relative policy optimization; used by the whole-proof trainer |
+| REINFORCE with a leave-one-out baseline | Policy-gradient estimator used by the interactive trainer; group sampling does not make it GRPO |
+| PPO | Proximal policy optimization; the prepared comparisons include a learned value function |
 
 Model letters are local to each study. Their definitions appear in the corresponding protocol.
+Use the [study titles and naming rules](../docs/EXPERIMENTS.md#naming-and-terminology) in new documentation. Historical run IDs and config keys retain their original names.
 The [handoff terminology table](../docs/EXPERIMENT_HISTORY.md#start-here-one-page-for-abhinav) maps older names to these terms.
 
 <a id="every-script"></a>
@@ -429,7 +444,7 @@ Build datasets, splits, SFT examples and RL tasks.
 | [`data/build_nt_knowledge.py`](data/build_nt_knowledge.py) | Number-theory knowledge items from mathlib at the pin: doc comment (informal) + Lean statement + proof as written. | – |
 | [`data/build_nt_pool.py`](data/build_nt_pool.py) | Build the number-theory statement pool for RL from Lean-checked Lean Workbook statements. | EXP-016 |
 | [`data/build_nt_sft_data.py`](data/build_nt_sft_data.py) | SFT examples from Lean-checked external proofs of number-theory pool statements (train split only). | EXP-017 |
-| [`data/build_nt_splits.py`](data/build_nt_splits.py) | Name lists of the midsem plan (artifacts/notes/2026-10-10_midsem_plan.md): what trains, what is held out, what is scored. | EXP-017 |
+| [`data/build_nt_splits.py`](data/build_nt_splits.py) | Construct theorem name lists for training, held-out evaluation and scoring. | EXP-017 |
 | [`data/build_nt_states.py`](data/build_nt_states.py) | Initial goal states (Lean trace_state) for one split of the number-theory statement pool. | EXP-016 |
 | [`data/build_nt_tactic_aug.py`](data/build_nt_tactic_aug.py) | Tactic-level augmentation: new Lean-checked proofs from the accepted SFT proofs of sft_problems (train split only). | – |
 | [`data/build_premise_corpus.py`](data/build_premise_corpus.py) | Dump Mathlib theorem names and statements from the pinned Lean environment as a premise corpus. | EXP-028 |

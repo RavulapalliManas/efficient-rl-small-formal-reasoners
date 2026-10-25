@@ -51,25 +51,21 @@
 \maketitle
 
 \begin{abstract}
-We study whether reinforcement learning (RL) improves Lean~4 proof writing by Qwen2.5-0.5B-Instruct after supervised fine-tuning (SFT).
-The model proposes tactics, and Lean checks the resulting proof.
-In the main study, prerequisite-ordered RL accepts 255 of 4,048 training attempts, against 164 for shuffled RL from the same SFT checkpoint, with one training run per arm.
-This training advantage does not establish transfer: the unchanged, SFT, shuffled-RL and prerequisite-ordered models each prove 0 of 8 DEV theorems.
-On a separate selection set, SFT proves 1 of 163 assessed theorems, shuffled RL proves 1 of 164, and RL restricted to 62 partially solvable training theorems proves 2 of 164.
+We test whether reinforcement learning (RL) improves Lean~4 proof generation by Qwen2.5-0.5B-Instruct after supervised fine-tuning (SFT).
+From the same SFT checkpoint, prerequisite-ordered RL accepts 255 of 4,048 training attempts, compared with 164 for shuffled RL, with one training run per arm.
+The unchanged, SFT and both RL models each prove 0 of 8 DEV theorems.
+On a separate selection set, SFT proves 1 of 163 assessed theorems, shuffled RL 1 of 164, and RL on 62 partially solvable training theorems 2 of 164.
 No arm meets the registered promotion rule.
-Earlier experiments also find gains on familiar proofs without an established gain on held-out constructions.
-Exploratory analyses of the saved runs show sparse rewards and increasingly narrow tactic choices, but no controlled experiment tests these as causes of the missing transfer.
-The report records failed runs, verifier faults and limits on reproduction alongside the measured results.
+As in earlier experiments, training gains do not establish better performance on held-out proofs.
+Exploratory analyses find sparse rewards and narrower tactic choices, but no controlled run tests whether these explain the missing transfer.
 \end{abstract}
 
 \paragraph{Reading guide.}
-Section~\ref{sec:oct19-results} reports the main study.
-Section~\ref{sec:oct20-why} examines possible explanations; Appendix~\ref{sec:oct21-analyses} gives the detailed exploratory analyses.
-Earlier experiments and historical protocols remain in Appendices~\ref{sec:experiments}, \ref{sec:next} and~\ref{sec:curriculum-generalization}.
-Appendix~\ref{sec:oct20-not-run} records two follow-up designs that did not run.
-Appendix~\ref{app:evaluation-questions} describes the larger evaluation review pack, which is distinct from the main study's final DEV and TEST sets.
-Experiment execution stopped on 20 October 2026; the post-hoc analyses use saved records.
-The README gives current execution status. \pth{docs/EXPERIMENTS.md} indexes the protocols and evidence in \pth{docs/EXPERIMENT_HISTORY.md}.
+Section~\ref{sec:oct19-results} reports the main study; Appendix~\ref{sec:oct21-analyses} gives the detailed exploratory analyses.
+Earlier experiments and protocols are in Appendices~\ref{sec:experiments}, \ref{sec:next} and~\ref{sec:curriculum-generalization}; unrun follow-ups are in Appendix~\ref{sec:oct20-not-run}.
+The larger evaluation review pack in Appendix~\ref{app:evaluation-questions} is separate from the main DEV and TEST sets.
+Experiments ended on 20 October 2026. Later analyses use saved records.
+The README gives current status; \pth{docs/EXPERIMENTS.md} indexes the protocols and evidence in \pth{docs/EXPERIMENT_HISTORY.md}.
 
 \paragraph{Models and measures.}
 B is the unchanged model; S is B after SFT.
@@ -89,30 +85,27 @@ An accepted attempt contains a complete proof that Lean accepts. A proved theore
 \section{Research question and scope}
 \label{sec:problem}
 
-We want a small language model that writes proofs that the proof assistant Lean~4 can check.
-The topic is school and early-university number theory: parity, divisibility, gcd and lcm, primes, and congruences.
-The midterm goal was a model that produces some complete proofs that Lean accepts.
-The goal for the end of the semester is proof strategy on competition-style theorems.
-
-The main study asks whether RL improves complete-proof acceptance beyond the SFT checkpoint, and whether theorem order changes that outcome.
+We test whether RL helps a small language model write Lean~4 proofs in school and early-university number theory: parity, divisibility, gcd and lcm, primes, and congruences.
+The main comparison asks what RL adds beyond SFT and whether theorem order changes that outcome.
 Training acceptance and held-out proof completion are separate endpoints.
-Earlier pilots examine initialization, reward design and task feasibility; they do not form one matched algorithm comparison.
-Study titles and motivations are indexed by stable EXP and AUD identifiers in \pth{docs/EXPERIMENTS.md}.
+Earlier pilots examine initialization, rewards and task feasibility; they are not one matched algorithm comparison.
+\pth{docs/EXPERIMENTS.md} lists their titles and motivations.
 
-\paragraph{Motivation.}
-\begin{enumerate}
-\item \textbf{Efficiency.} We want the most proofs for a fixed compute budget. We study the \emph{curriculum} (which theorems, in which order) and the \emph{distribution of reward} over the actions of a proof.
-\item \textbf{Checked learning.} A model that learns without a checker can learn false statements. Lean should check the model while it learns, not only at the end.
-\item \textbf{One model for informal and formal reasoning.} The model writes a short informal argument and then its Lean tactic. A separate translator would add errors and compute.
-\item \textbf{No human graders.} Lean gives an exact reward. This reward setting is called RL with verifiable rewards (RLVR); it does not name an optimization algorithm. The reward is \emph{sparse}: a signal comes only from a complete proof.
-\end{enumerate}
+The midterm goal was to produce some complete proofs that Lean accepts.
+The longer-term goal is proof strategy on competition-style theorems.
+We seek more proofs within a fixed compute budget by studying which theorems the model practices, their order, and how rewards are assigned across proof actions.
+
+\paragraph{Why this setting.}
+Lean checks proofs during learning and supplies the proof reward without a human grader.
+This setting is called RL with verifiable rewards (RLVR); the name describes the reward, not the optimizer.
+A model trained without a checker can learn false statements.
+Here, the terminal proof reward is sparse: it arrives only after a complete accepted proof.
+The model writes informal reasoning and a Lean tactic in one response, avoiding the errors and compute of a separate translator.
 
 \paragraph{What Lean does.}
-A Lean theorem has a statement and a proof.
-We write the proof as a list of \emph{tactics}.
-Each tactic changes the \emph{goals}, the facts that remain to be proved.
-When no goals remain, the proof is complete.
-Table~\ref{tab:example} shows a small example that we wrote to explain the idea, and Figure~\ref{fig:checker} shows when Lean accepts a proof.
+A Lean theorem consists of a statement and a proof.
+Tactics transform the remaining \emph{goals} until none remain.
+Table~\ref{tab:example} gives an illustrative proof; Figure~\ref{fig:checker} shows the acceptance checks.
 
 \begin{table}[!htbp]
 \centering
@@ -149,18 +142,17 @@ Action & Goal before the action & Tactic (the action) & Effect \\
 \end{figure}
 
 \paragraph{Setup.}
-Model: \code{Qwen/Qwen2.5-0.5B-Instruct}~\cite{qwen25}, with 494,032,768 parameters.
-Checker: Lean \code{v4.10.0-rc1} with one fixed mathlib version.
-Compute: one rented NVIDIA L40S GPU, and a shared CPU server.
+We use \code{Qwen/Qwen2.5-0.5B-Instruct}~\cite{qwen25} (494,032,768 parameters), Lean \code{v4.10.0-rc1} and a fixed mathlib revision.
+Runs use one rented NVIDIA L40S GPU and a shared CPU server.
 
 %======================================================================
 \section{Formulation as an MDP}
 \label{sec:mdp}
 
-An MDP describes an agent that acts step by step~\cite{suttonbarto}.
-At step $t$, the agent observes a state $s_t$, selects an action $a_t$, receives a reward $r_t$, and moves to a state $s_{t+1}$.
-Here the agent (the \emph{policy} $\pi_\theta$) is the language model, and the environment is Lean.
-We used two formulations, which differ only in the size of one action (Figure~\ref{fig:formab}).
+We model proof generation as a Markov decision process (MDP)~\cite{suttonbarto}.
+At step $t$, the model (policy $\pi_\theta$) observes state $s_t$, chooses action $a_t$, receives reward $r_t$, and reaches state $s_{t+1}$.
+Lean is the environment.
+The two formulations differ in action size: a complete proof or an interactive tactic block (Figure~\ref{fig:formab}).
 
 \begin{figure}[!htbp]
 \centering
@@ -227,13 +219,10 @@ Discount & $\gamma = 1$ \\
 \label{fig:mdpgraph}
 \end{figure}
 
-Version 1 has three defects.
-The model does not see the remaining actions, the theorem, or the proof so far.
-With an action limit that the model cannot see, the process is not exactly Markov.
-One error ends the episode.
-Version 2 replaced the terminal-error transition with a self-loop and a fuller state; version 2.1 added tactic chunks and harness backtracking (Tables~\ref{tab:mdp-v2} and~\ref{tab:mdp-v21}).
-Version 2.2 fixed the deployed interface (Table~\ref{tab:mdp-v22}).
-Section~\ref{sec:next} gives the reasons for each change.
+Version 1 hides the theorem, proof so far and remaining action budget; the unobserved budget makes the process not exactly Markov.
+It also ends the episode after one error.
+Version 2 adds a fuller state and replaces error termination with a self-loop; version 2.1 adds tactic chunks and backtracking (Tables~\ref{tab:mdp-v2} and~\ref{tab:mdp-v21}).
+Version 2.2 fixes the deployed interface (Table~\ref{tab:mdp-v22}); Section~\ref{sec:next} explains these changes.
 
 \subsection{REINFORCE and GRPO estimators}
 We maximize the expected return $J(\theta) = \mathbb{E}_{\tau \sim \pi_\theta}\big[\sum_t \gamma^t r_t\big]$.
@@ -354,10 +343,9 @@ Curriculum templates & 192 training theorems in 5 stages and 152 held-out theore
 \end{tabularx}
 \end{table}
 
-Table~\ref{tab:data} lists the data used by the earlier experiments.
-The main study uses a later release, described in Section~\ref{sec:oct19-setup} and Appendix~\ref{sec:nt-curriculum-execution}.
-Figure~\ref{fig:splits} shows how we keep test data out of training.
-Renamed copies of one theorem always go to the same split, and we never train on the DEV set.
+Table~\ref{tab:data} and Figure~\ref{fig:splits} describe the earlier datasets and splits.
+Renamed copies of a theorem stay together, and DEV is excluded from training.
+The main study uses a later release (Section~\ref{sec:oct19-setup}; Appendix~\ref{sec:nt-curriculum-execution}).
 
 \begin{figure}[!htbp]
 \centering
@@ -378,11 +366,10 @@ Renamed copies of one theorem always go to the same split, and we never train on
 \end{figure}
 
 \paragraph{Training stages.}
-The earlier experiments use the checkpoint chain in Figure~\ref{fig:pipeline}.
-SFT v2 is one epoch over Lean proofs from the LeanDojo training files (4,526 optimizer updates of 64 examples), without any file that contains a validation or test theorem.
-Common SFT is a second supervised stage on the number-theory SFT set.
-Supervised fine-tuning (SFT) copies existing proofs.
-RL learns from the model's own attempts, so Lean must accept some attempts.
+The earlier checkpoint chain (Figure~\ref{fig:pipeline}) starts with SFT v2: one epoch on LeanDojo proofs, with 4,526 optimizer updates of 64 examples.
+Files containing validation or test theorems are excluded.
+Common SFT adds supervised training on the number-theory set.
+SFT learns from reference proofs; RL learns from the model's own attempts and therefore needs some accepted proofs.
 
 \begin{figure}[!htbp]
 \centering
@@ -402,13 +389,10 @@ RL learns from the model's own attempts, so Lean must accept some attempts.
 \end{figure}
 
 \paragraph{Curricula.}
-RL needs theorems that the model can prove some of the time.
-A \emph{curriculum} starts with easier versions of a theorem.
-We made theorems easier to prove in three ways: we supplied knowledge in the prompt, we supplied part of the proof (a \emph{reverse curriculum}~\cite{r3}, Figure~\ref{fig:reverse}), or we asked for one action instead of a whole proof.
-Most known proofs are short: 85\% of the linear tactic proofs in our LeanDojo pool have one or two tactics, and only 24 have five or more.
-Therefore a reverse curriculum on these proofs has few levels.
-To test whether \emph{order} matters, an \emph{ordered} arm and a \emph{shuffled} arm receive the same theorems the same number of times.
-Table~\ref{tab:curricula} lists the curriculum of each experiment.
+We use curricula to give the model tasks it can sometimes solve: supply knowledge, supply a proof prefix (a \emph{reverse curriculum}~\cite{r3}; Figure~\ref{fig:reverse}), or ask for one action rather than a whole proof.
+Reverse curricula offer few levels here: 85\% of the LeanDojo pool's linear tactic proofs have one or two tactics, and only 24 have five or more.
+To isolate ordering, ordered and shuffled arms receive each theorem equally often.
+Table~\ref{tab:curricula} lists the comparisons.
 
 \begin{figure}[!htbp]
 \centering
@@ -457,15 +441,13 @@ Final & S0 to S4 templates & Identity, one lemma, two steps, chain of subgoals, 
 \section{Main study: proof completion after SFT and RL}
 \label{sec:oct19-results}
 
-This section reports the 18--19 October study: training-stage evaluation (EXP-026), prerequisite-ordered versus shuffled RL (EXP-027), and the exploratory intervention screen (EXP-028).
-EXP-028 measures S, arms derived from S, and two SFT runs from B on a new held-out selection set, with S (E0) as the baseline.
-Table~\ref{tab:oct19-runs} lists the runs.
-Here B, S, R and C name the models of the main run (Section~\ref{sec:nt-curriculum-execution}), not the EXP-023 arms of Table~\ref{tab:final-curriculum-outcome}.
-The run outcome counts below were recounted from the saved run records, without new Lean or model runs.
-Costs and the selection-set construction counts come from the dated record.
-Sign-flip $p$-values below are exact.
-The original dated entries give Monte Carlo values, and the recount entry of 19 October gives the exact values.
-The dated records are in EXP-028 of \pth{docs/EXPERIMENT_HISTORY.md}.
+The 18--19 October study evaluates training stages (EXP-026), prerequisite-ordered versus shuffled RL (EXP-027), and exploratory interventions (EXP-028).
+EXP-028 compares S, its derived arms and two SFT runs from B on a separate selection set, using S (E0) as baseline (Table~\ref{tab:oct19-runs}).
+B, S, R and C refer to the main study (Section~\ref{sec:nt-curriculum-execution}), not the EXP-023 arms in Table~\ref{tab:final-curriculum-outcome}.
+
+Counts are recounted from saved records, without new Lean or model runs.
+Costs and selection-set construction counts come from the dated records in \pth{docs/EXPERIMENT_HISTORY.md}, EXP-028.
+The sign-flip $p$-values are exact, as recorded in the 19 October recount; earlier entries used Monte Carlo estimates.
 
 \paragraph{Selection set and decision rule.}
 The EXP-028 selection set comes from the existing corpus.
@@ -475,11 +457,9 @@ The selection set holds 164 of the 201 admitted theorems.
 Of the 164 theorems, 79 fall in the four TRAIN topics and 85 in other topics.
 The median reference proof has 29 lines.
 Each arm makes 2 attempts per theorem, and each comparison pairs the theorems that both arms assess.
-The registered rule promotes an arm only if its paired gain over E0 is at least 5 points.
-Its paired bootstrap 95\% interval must also exclude 0.
-E3 is compared with E5, its SFT seed control, instead of E0.
-The bootstrap resamples theorems with 10,000 replicates.
-TEST remains unused.
+Promotion requires a paired gain of at least 5 points over E0 and a bootstrap 95\% interval excluding 0.
+E3 instead uses its SFT seed control, E5.
+The bootstrap resamples theorems with 10,000 replicates; TEST remains unused.
 
 \paragraph{What did not run.}
 E4 was to test SFT from B on the 1,880 base SFT examples plus 64 SFT examples mined from step search on TRAIN.
@@ -628,25 +608,20 @@ Section~\ref{sec:oct20-why} reports what the interface still rejects, and Sectio
 \subsection{Selection-set proof completion}
 \label{sec:oct19-heldout}
 
-In E0, S proves 1 of 163 selection theorems and accepts 1 of 326 attempts (Figure~\ref{fig:oct19-heldout}a).
-E0 assesses 163 of the 164 theorems.
-On group 143, a root automation probe hit the 20\,s Lean timeout, and the running code censored the whole group.
-A timeout is a failed automation outcome, not an infrastructure fault; later runs record it and continue.
-Comparisons with E0 therefore pair 163 theorems.
-E2 loses the same group to the same defect.
+S (E0) proves 1 of 163 assessed selection theorems in 1 of 326 attempts (Figure~\ref{fig:oct19-heldout}a).
+Group 143 was censored after a root automation probe hit the 20\,s Lean timeout; E2 loses the same group.
+Comparisons with E0 therefore pair 163 of the 164 theorems.
+Later runs record this as a failed automation outcome and continue.
 
-E2 proves 1 of 163 theorems, E3 1 of 164, E5 0 of 164, R (E7) 1 of 164 and \code{RL\_filtered} (E6) 2 of 164.
-No arm meets the promotion rule, and no paired interval excludes 0.
+Figure~\ref{fig:oct19-heldout}a gives all arm counts. None meets the promotion rule, and no paired interval excludes 0.
 The largest gain is E6 against E0: $+0.92$ points, with a bootstrap 95\% interval of $[-0.61, +3.07]$.
 E3 against its control E5 gains $+0.30$ points, with an interval of $[0.00, +0.91]$.
-E0, E2, E3 and E7 each prove 1 theorem.
-E2 and E3 prove the same theorem, and E0 and E7 each prove a different one.
+E2 and E3 prove the same theorem; E0 and E7 each prove a different one.
 This pattern fits sampling noise at the floor.
 
 \paragraph{Capability probe.}
-The probe asks whether S's near-zero acceptance comes from S or from the difficulty of the selection set.
-It uses Kimina-Prover-Distill-0.6B, which its model card describes as a distillation of Kimina-Prover-72B~\cite{kimina}.
-The probe uses the model card's sampling settings and checks each proof through the same verifier path as S.
+To assess whether the selection set is beyond a small prover's capability, we test Kimina-Prover-Distill-0.6B, described as a distillation of Kimina-Prover-72B~\cite{kimina}.
+We use its model-card sampling settings and S's verifier path.
 In draw~1, Kimina proves 47 of 164 theorems within 8 attempts.
 In draw~2, which changes only the batching, it proves 40 of 164.
 An exact McNemar test on the 25 theorems proved in only one draw gives $p = 0.23$.
@@ -669,11 +644,8 @@ The panel compares models at an equal number of attempts, not at equal generated
 A 0.6B prover with whole-proof generation and a larger generation budget therefore proves many of these theorems.
 The probe does not separate S's model and training data from its action format and generation budget.
 
-Kimina's proved fraction falls with reference-proof length in both draws (Figure~\ref{fig:oct19-heldout}b).
-For references of at most 20 lines, it proves 28 of 62 theorems in draw~1 and 20 of 62 in draw~2.
-For 21 to 40 lines, it proves 13 of 42 and 12 of 42.
-For more than 40 lines, it proves 6 of 60 and 8 of 60.
-Reference length describes one recorded proof; it is not a measured minimum difficulty.
+Kimina proves a smaller fraction of theorems with longer reference proofs in both draws (Figure~\ref{fig:oct19-heldout}b).
+Reference length describes one recorded proof, not its minimum difficulty.
 
 \begin{figure}[!htbp]
 \centering
@@ -693,11 +665,11 @@ The registered filter keeps the 62 theorems with an S acceptance rate in $(0, 0.
 \code{RL\_filtered} runs REINFORCE from S on these 62 theorems, with the resource caps of R.
 It completes all 1,012 groups of 4 attempts, with 337 optimizer updates and no censored group.
 
-Acceptance rises by training quarter: 404, 500, 576 and 602 of 1,012 attempts (Figure~\ref{fig:oct19-rl-filtered}a).
+Acceptance rises across training quarters (Figure~\ref{fig:oct19-rl-filtered}a).
 Each theorem is visited 16 or 17 times.
 The mean first-visit acceptance per theorem is 0.306.
 The mean last-visit acceptance is 0.597.
-Of the 62 theorems, 33 are higher at the last visit, 7 are lower and 22 are equal (Figure~\ref{fig:oct19-rl-filtered}b).
+Figure~\ref{fig:oct19-rl-filtered}b pairs the first and last visit for every theorem.
 An exact paired sign-flip test gives $p < 0.001$ ($p = 2.4 \times 10^{-6}$).
 On the same 62 theorems, S's \code{pass\_rates} acceptance is 0.323.
 The first visit is close to this value, so regression to the mean after selection does not explain the rise.
@@ -710,12 +682,10 @@ One of its theorems is the one that E2 and E3 prove, and the other is the one th
 Against R (E7), E6 gains $+0.91$ points, with an interval of $[0.00, +2.44]$.
 The training gain on 62 theorems therefore does not transfer measurably to the selection set at this set size.
 
-\emph{Limits}: the rise measures fit to the 62 trained theorems, and it may be memorization.
-S's SFT examples are extracted from reference proofs of TRAIN statements.
-The theorem exclusions that define the RL bank also apply to these SFT examples.
-S may therefore have seen actions from reference proofs of the trained theorems.
-Recall of SFT-seen proofs is a candidate explanation of the rise; no run here tests it.
-The data audit of 19 October counts them: 59 of the 62 trained theorems have at least one SFT example from their own reference proof.
+\emph{Limits}: better fit to these 62 training theorems may reflect memorization.
+SFT uses TRAIN reference proofs, with the same theorem exclusions as the RL bank.
+The 19 October audit finds an SFT example from the theorem's own reference proof for 59 of the 62 theorems.
+Recall of these proofs is a possible explanation; no run tests it.
 R and \code{RL\_filtered} also differ in theorem set (506 against 62 theorems), visits per theorem (2 against 16 or 17) and order. No run separates these differences.
 
 \begin{figure}[!htbp]
@@ -729,15 +699,13 @@ R and \code{RL\_filtered} also differ in theorem set (506 against 62 theorems), 
 \subsection{Training acceptance under prerequisite-ordered RL}
 \label{sec:oct19-curriculum}
 
-R and C start from the same S and run 1,012 groups of 4 attempts on the same 506 TRAIN theorems.
-Their configurations differ only in identifiers, and their commands differ only in the task order.
-R uses a shuffled order, and C runs its prerequisite order twice.
-Both complete all groups with no censored group.
+R and C start from S and complete 1,012 groups of 4 attempts on the same 506 TRAIN theorems, with no censored groups.
+Their configs differ only in identifiers and their commands only in task order: shuffled for R, twice through the prerequisite order for C.
 C accepts 255 of 4,048 attempts, and R accepts 164 of 4,048.
 C proves 93 of the 506 theorems, and R proves 63.
 Per theorem, C minus R is positive for 73 theorems and negative for 32 (paired sign-flip $p = 0.0002$).
-Each arm is one training run.
-The sign-flip test treats theorems as independent, so it does not include run-to-run variation or dependence between theorem families.
+Each arm has one training run.
+The sign-flip test assumes independent theorems, so it omits run-to-run variation and dependence within theorem families.
 
 \paragraph{When the gain appears.}
 S's \code{pass\_rates} run gives a measurement before RL on the same theorems.
@@ -745,13 +713,10 @@ C's first visits accept 130 of 2,024 attempts, against 84 for S ($p = 0.0019$).
 R's first visits accept 81 of 2,024 ($p = 0.87$ against S).
 C's second epoch accepts 125 of 2,024 attempts ($p = 0.79$ against its first epoch).
 C's gain therefore appears within its first epoch and does not grow in the second.
-By quarter of C's first-epoch order, C's first visits accept 56, 35, 33 and 6 attempts (Figure~\ref{fig:oct19-curriculum}a).
-On the same quarters, S accepts 42, 27, 12 and 3 attempts.
-The quarters hold 504, 504, 504 and 512 attempts.
+Figure~\ref{fig:oct19-curriculum}a breaks down the first-epoch comparison by quarter.
 
 \paragraph{Exploratory automation check.}
-This check is exploratory, and its rule was not registered.
-It asks how much of the late-quarter gain consists of proofs that use only automation tactics.
+This unregistered check measures how much of the late-quarter gain comes from automation-only proofs.
 Under the strict rule, an accepted attempt is \emph{automation-only} if every action is exactly one automation tactic name with no arguments.
 Under the argument rule, a tactic with arguments, for example \code{simp [h]}, also counts.
 In quarter~3, 3 of C's 33 accepted first-visit attempts are automation-only under the strict rule.
@@ -939,21 +904,18 @@ Under a Bonferroni factor of 8, C's first-visit gain over S stays below 0.05 (0.
 \subsection{Findings and interpretation}
 \label{sec:oct19-summary}
 
-\code{RL\_filtered} improves acceptance on its 62 training theorems, and C accepts more TRAIN attempts than R in one run per arm.
-C also exceeds S on its first epoch; R shows no detected rise on TRAIN.
-None of these comparisons establishes a held-out gain: the selection-set intervals include zero, and all four main models prove 0 of 8 DEV theorems.
-The preceding subsections give the counts and tests.
+Filtered RL improves acceptance on its 62 training theorems. C has higher training acceptance than R overall and than S in its first epoch; R shows no detected training gain.
+With one run per arm, these comparisons do not establish a held-out gain: the selection-set intervals include zero, and all four main models prove 0 of 8 DEV theorems.
 
-The exploratory analyses show shorter actions, more format errors for R and concentration on automation tactics for C.
-C's second-visit gain over S appears on theorems with an initial proof, but does not survive the stated multiple-test correction.
-\code{RL\_filtered} also concentrates its held-out first actions on \code{simp\_all} with lemma lists.
-These observations describe the saved runs; they do not isolate a cause of the missing transfer.
+RL also shortens actions and narrows tactic choices. R makes more format errors; C favors automation; filtered RL favors \code{simp\_all} with lemma lists.
+C's second-visit gain on initially successful theorems does not survive the stated multiple-test correction.
+These exploratory observations do not identify a cause of the missing transfer.
 
-Hypotheses, not tested:
-\begin{itemize}
-\item RL sharpens behaviour that S already has, rather than adding new proofs. \code{RL\_filtered} trains only on theorems that S proves at least once in 4 attempts, so its training gain cannot show new proofs. Yue et al.\ report that RL with verifiable rewards raises pass@$k$ at small $k$ but lowers it at large $k$, relative to the base model~\cite{yue2025}. This study does not measure pass@$k$ at large $k$.
-\item The training rise reflects recall of proofs seen in SFT. S's SFT examples come from reference proofs of TRAIN statements, including 59 of the 62 \code{RL\_filtered} theorems, and no run separates recall from new skill.
-\end{itemize}
+Two hypotheses remain untested: RL reinforces behaviour S already has, and training gains reflect recall of SFT proofs.
+Filtered RL uses only theorems S proves at least once in 4 attempts; 59 of its 62 theorems have reference-proof examples in SFT.
+The run cannot distinguish recall from new skill.
+Yue et al.\ report higher pass@$k$ at small $k$ and lower pass@$k$ at large $k$ after RL with verifiable rewards, relative to the base model~\cite{yue2025}.
+This study does not measure pass@$k$ at large $k$.
 
 \paragraph{Measurement floor.}
 S proves 1 of 163 selection theorems and 0 of 8 DEV theorems.
@@ -1017,11 +979,9 @@ Their original builders and recount inputs remain in the private directory named
 \section{Post-hoc analyses of 20 and 21 October 2026}
 \label{sec:oct21-analyses}
 
-This section records every post-hoc analysis of the runs of 18 to 20 October that was done on 20 and 21 October 2026.
-No analysis used new Lean, model or GPU runs.
-Each one reads the saved run records of Section~\ref{sec:oct19-results}.
-The analyses measure changes in proof acceptance, tactic choice and responses to Lean errors.
-Sections~\ref{sec:oct19-results} and~\ref{sec:oct20-why} give the primary comparisons and their interpretation.
+These post-hoc analyses were conducted on 20 and 21 October 2026 using saved records from the 18--20 October runs (Section~\ref{sec:oct19-results}).
+They measure proof acceptance, tactic choice and responses to Lean errors, without new Lean, model or GPU runs.
+Section~\ref{sec:oct20-why} discusses possible explanations.
 The scripts and their outputs are in the private recount directory \pth{.private/ops/report_recount_20261019_v1/}, in \pth{scripts/} and \pth{out/}.
 The analysis counts come from JSON files in \pth{out/}. Software notes appear at the end of the appendix.
 
@@ -1429,7 +1389,7 @@ No new run is planned. Each item names the test that would answer it.
 \label{sec:software-notes}
 
 \paragraph{Reproduction.}
-The README gives an entry path for a new reader; the script guide holds the main-study reproduction procedure, data roles and local checks.
+The README and script guide give setup, input requirements and reproduction commands.
 \pth{scripts/reproduce.py} checks supplied files against recorded hashes and prepares SFT, DEV and RL command plans using \pth{configs/reproduction_v1.json}.
 The settings are reconstructed from the documented recipe of 18--19 October; they are not the original private config files or evidence of a rerun.
 The locked training dependency group follows the documented 19 October library combination, while the original main-run package receipts remain external.
@@ -1446,8 +1406,8 @@ These commands produce a new exploratory dataset, not the historical filtered re
 The recorded local checks use synthetic JSON and Parquet data and scripted verifier outcomes; they establish neither a full public-corpus rebuild nor real Lean admission.
 
 \paragraph{Reuse in a larger prover.}
-Proof interaction and replay acceptance now reside in \pth{rl_components/environment.py}; the shared observation renderer resides in \pth{rl_components/observations.py}.
-Data builders can use these components without importing the training command, and the command retains compatibility exports.
+\pth{rl_components/environment.py} handles proof interaction and replay; \pth{rl_components/observations.py} renders observations.
+Builders can import them directly. The training command retains compatibility exports.
 The host still supplies the pinned checker, REPL context, admitted tasks and run records; these modules are not a portable prover service.
 AlphaProof's policy/value-guided tree search~\cite{alphaproof} is an architectural reference, not a validated integration.
 The existing finite-catalogue candidate critic does not supply a general value model or AND--OR search over proof obligations.

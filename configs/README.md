@@ -1,20 +1,22 @@
-# Configs
+<a id="configs"></a>
 
-Each config records settings for a data build, evaluation or training run.
+# Configurations
+
+Each configuration records settings for a data build, evaluation or training run.
 Treat run settings as frozen: changed settings belong in a new versioned file.
 The [script guide](../scripts/README.md#primary-workflow) explains which commands read them.
 
-<a id="configuration-selection"></a>
+<a id="choose-a-config"></a>
 
-## Choose a config
+## Configuration selection
 
 1. Find the experiment in the [register](../docs/EXPERIMENTS.md#experiment-register).
 2. Read its protocol and the corresponding row below. The index includes prepared configurations; check [README status](../README.md#status).
-3. Match the config to its data release, starting checkpoint and Lean/mathlib revisions. Similar filenames can belong to different studies.
+3. Match the configuration to its data release, starting checkpoint and Lean/mathlib revisions. Similar filenames can belong to different studies.
 
 For the original 18–19 October study, use the [reproduction procedure](../scripts/README.md#main-study-reproduction) and [`reproduction_v1.json`](reproduction_v1.json).
-The specification reconstructs the documented recipe; it is not an original run config or evidence of a rerun.
-Original configs remain private. The public EXP-026 configs include separate pilots.
+The specification reconstructs the documented recipe; it is not an original run configuration or evidence of a rerun.
+Original configurations remain private. Public EXP-026 configurations include separate pilots.
 
 | Folder | Settings for |
 | --- | --- |
@@ -52,7 +54,7 @@ A catalogue line uses the experiment in its heading, or the one explicit ID on t
 <details>
 <summary>Show configurations</summary>
 
-| Config | Purpose | Experiment | Source |
+| Configuration | Purpose | Experiment | Source |
 | --- | --- | --- | --- |
 | [`reproduction_v1.json`](reproduction_v1.json) | File identities and reconstructed main-study recipes for `scripts/reproduce.py` | EXP-026, EXP-027 | declared stage `experiment_id` fields; 21 October reproduction decision |
 | [`checkpoints.json`](checkpoints.json) | Download index for earlier published checkpoint releases | several earlier studies | release names in the index |
@@ -66,7 +68,7 @@ A catalogue line uses the experiment in its heading, or the one explicit ID on t
 
 Inputs of dataset builds and selections.
 
-| Config | Purpose | Experiment | Source |
+| Configuration | Purpose | Experiment | Source |
 | --- | --- | --- | --- |
 | [`data/highschool_prerequisites_v1.json`](data/highschool_prerequisites_v1.json) | High-school mathematics sources and subject/level splits for prerequisite preparation | EXP-019 | declared `experiment_id` |
 | [`data/leandojo_nat_v1.json`](data/leandojo_nat_v1.json) | LeanDojo selection of natural-number proofs from pinned mathlib sources | EXP-001 | README pattern and catalogue pattern |
@@ -92,7 +94,7 @@ Inputs of dataset builds and selections.
 
 Settings of evaluations, probes and grading.
 
-| Config | Purpose | Experiment | Source |
+| Configuration | Purpose | Experiment | Source |
 | --- | --- | --- | --- |
 | [`eval/acquisition_probe_v1.json`](eval/acquisition_probe_v1.json) | Exploratory recognition, recall and application probes after the historical RLP runs | EXP-010 | catalogue |
 | [`eval/decomposition_grading_v2.json`](eval/decomposition_grading_v2.json) | User-requested exploratory regrading of all checkpoints with partial credit and separate ancillary errors. | not recorded | not recorded |
@@ -128,7 +130,7 @@ Settings of evaluations, probes and grading.
 
 RLP training on number-theory text.
 
-| Config | Purpose | Experiment | Source |
+| Configuration | Purpose | Experiment | Source |
 | --- | --- | --- | --- |
 | [`pretrain/qwen_05b_number_theory_rlp.json`](pretrain/qwen_05b_number_theory_rlp.json) | Bounded number-theory RLP adaptation from the pinned Instruct model | EXP-007 | README pattern and catalogue pattern |
 | [`pretrain/qwen_05b_number_theory_rlp_continuation.json`](pretrain/qwen_05b_number_theory_rlp_continuation.json) | Continue the saved number-theory RLP policy and EMA with a fresh optimizer | EXP-007 | README pattern and catalogue pattern |
@@ -142,7 +144,7 @@ RLP training on number-theory text.
 
 SFT, RLP and interleaved training runs.
 
-| Config | Purpose | Experiment | Source |
+| Configuration | Purpose | Experiment | Source |
 | --- | --- | --- | --- |
 | [`midtrain/qwen_05b_controlled_rlp.json`](midtrain/qwen_05b_controlled_rlp.json) | Controlled mathematical-span RLP from the primitive-RLP checkpoint | EXP-013 | catalogue and README |
 | [`midtrain/qwen_05b_gsm8k_lora.yaml`](midtrain/qwen_05b_gsm8k_lora.yaml) | Exploratory GSM8K supervised fine-tuning with LoRA | EXP-002 | catalogue |
@@ -171,7 +173,7 @@ SFT, RLP and interleaved training runs.
 
 RL runs and the candidate-action catalogue.
 
-| Config | Purpose | Experiment | Source |
+| Configuration | Purpose | Experiment | Source |
 | --- | --- | --- | --- |
 | [`rl/lean_candidate_catalogue_v1.json`](rl/lean_candidate_catalogue_v1.json) | Finite list of tactic candidates for action-selection policies | not recorded | not recorded |
 | [`rl/qwen_05b_candidate_frozen_lm_v1.json`](rl/qwen_05b_candidate_frozen_lm_v1.json) | Prospective no-update baseline for matched candidate-policy comparison. | EXP-026 | declared `experiment_id` |

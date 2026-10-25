@@ -58,12 +58,16 @@ Original data, weights, runtime and configs are external; several dataset builde
 [`reproduction_v1.json`](../configs/reproduction_v1.json) reconstructs the [recorded recipe](../docs/EXPERIMENT_HISTORY.md#7-step-by-step-run-with-this-data-as-the-main-run-did).
 It has not been validated by a rerun. The helper checks inputs and prepares commands; you must execute those commands separately.
 
-### 1. Inspect the project locally
+<a id="1-inspect-the-project-locally"></a>
+
+### 1. Local verification
 
 Run the [local setup checks](../README.md#setup). They use synthetic inputs and need no model, Lean installation or GPU.
 Follow [one proof attempt](#proof-execution) to see how the implementation fits together.
 
-### 2. Obtain the frozen inputs
+<a id="2-obtain-the-frozen-inputs"></a>
+
+### 2. Archived inputs
 
 Ask the project owner for the [archived data, runtime and model directories](../docs/EXPERIMENT_HISTORY.md#6-step-by-step-fetch-and-verify-the-data).
 The older [GitHub checkpoint releases](../README.md#checkpoints) are separate experiments.
@@ -99,7 +103,9 @@ For a DEV check, only the selected model, data manifest, exclusion list, DEV fil
 On the Linux run host, install the locked ML environment with `uv sync --locked --group training`.
 This downloads large ML packages. It uses the documented 19 October library versions; the original main-run package receipts remain external.
 
-### 3. Check inputs and prepare a run
+<a id="3-check-inputs-and-prepare-a-run"></a>
+
+### 3. Input verification and run preparation
 
 Replace the study path below with your extracted directory:
 
@@ -260,7 +266,9 @@ Keep model, sampling, reward and budget settings in configs. Whole-proof GRPO us
 Import it from `scripts.data.nt_benchmark` in a repository checkout. Verification reads the frozen release config.
 `PolicyGradientUpdater` accepts separate advantage and token-log-probability callables.
 
-## Reusing the proof components
+<a id="reusing-the-proof-components"></a>
+
+## Proof-component reuse
 
 The proof components connect theorem tasks, model observations, tactic actions and verifier outcomes.
 With `scripts/train` on the Python import path, import `LeanEpisode` from `rl_components.environment`, `render_observation` from `rl_components.observations`, and model sampling from `rl_components.generation`.
@@ -276,7 +284,9 @@ Branch handles belong to the live REPL and cannot be transferred across workers 
 <details>
 <summary>Possible search and value-learning extensions</summary>
 
-### Toward a larger prover
+<a id="toward-a-larger-prover"></a>
+
+### Proposed proof-search extensions
 
 [AlphaProof's published design](https://www.nature.com/articles/s41586-025-09833-y) combines policy/value learning with tree search that tracks multiple proof obligations.
 It is a design reference here. No connection to the AlphaProof service has been implemented or validated.
@@ -380,7 +390,9 @@ If a release contains split files, use the reassembly command in its release not
 Auxiliary metadata with private infrastructure identifiers uses redacted `.public.json` files.
 Weights and optimizer state retain their original contents.
 
-## Terms
+<a id="terms"></a>
+
+## Terminology
 
 | Term | Meaning |
 | --- | --- |

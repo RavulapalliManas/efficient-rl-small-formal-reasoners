@@ -18,7 +18,9 @@ See [AUD-002](EXPERIMENT_HISTORY.md#aud-002) for its experiment record and the [
 - Counts are copied from the run reports listed under "Sources". Recount them from the raw files on cpu-angad before you cite them in a paper.
 - The scorer fixes are in the working tree and match code folder `train_code_v9` on cpu-angad. They are not committed.
 
-## Terms
+<a id="terms"></a>
+
+## Terminology
 
 - Reward hacking: a policy gets reward without doing what the reward was meant to measure.
 - Exploit: a weakness in the scorer. An attack is a test input that tries one exploit.
@@ -34,7 +36,9 @@ See [AUD-002](EXPERIMENT_HISTORY.md#aud-002) for its experiment record and the [
 - Contamination: evaluation content in the training data, the prompts, or the RL theorems.
 - REPL: the Lean read-eval-print loop (leanprover-community/repl, tag `v4.10.0-rc1`). It checks each proof as one command in a loaded environment.
 
-## What the reward pays
+<a id="what-the-reward-pays"></a>
+
+## Reward definition
 
 The trainer gives reward 1.0 when `verify_group` returns status `accepted`, and 0.0 otherwise (`scripts/train/run_lean_grpo.py`, function `lean_reward`). The probe (`probe_nt_pool.py`) and the pass-rate map (`pass_rate_map.py`) call the same function.
 
@@ -59,7 +63,9 @@ Each reward component has one label.
 | RLP reward | Heuristic. No Lean check | Run in experiments 7, 8, 9, and 13 |
 | Local-action witness reward | Lean-verified for the witness only | Run in experiment 11 |
 
-## Findings at a glance
+<a id="findings-at-a-glance"></a>
+
+## Summary of findings
 
 | ID | What gets reward | Needs a scorer exploit | Status |
 | --- | --- | --- | --- |
@@ -89,7 +95,9 @@ Each reward component has one label.
 | N2 | Reward that depends on machine load | Not a gain | Open |
 | N3 | Reward that favors short outputs | Not a gain | Open |
 
-## Family S: the scorer accepted a non-proof
+<a id="family-s-the-scorer-accepted-a-non-proof"></a>
+
+## Family S: invalid proof submissions accepted by the scorer
 
 The attack script is `scripts/eval/check_checker_attacks.py`. It holds 29 attacks and 2 known-good controls. It runs each case on 3 train statements, so one run makes 93 checks.
 
@@ -109,7 +117,9 @@ Note on `sorryAx`: `FORBIDDEN` matches the word `sorry`, not `sorryAx`. Before t
 | S4 | `namespace_shadow` | `exact sorryAx _ false`, then `namespace Shadow` and `theorem <name> : True := trivial` | Inside the namespace, `#print axioms <name>` named `Shadow.<name>`. The scorer did not check which constant the report named |
 | P1 | `trailing_theorem` | A valid proof, then `theorem extra_thm : True := trivial` | Same cause as S3. This is a policy violation, not a false proof |
 
-### Fix
+<a id="fix"></a>
+
+### Scorer correction
 
 The fix has three rules, all in the shared scorer (`scripts/eval/bench_lean_verifier.py`, `scripts/eval/probe_start_depth.py`).
 
@@ -142,7 +152,9 @@ The 7 timeouts also occur on the scorer before the fix. They are accepted at a 1
 
 Result: no proof accepted in these runs used an exploit. The re-scoring report does not list the LeanDojo 43-theorem evaluations or the step-level search runs.
 
-## Family P: the scorer accepted a proof the project does not want paid
+<a id="family-p-the-scorer-accepted-a-proof-the-project-does-not-want-paid"></a>
+
+## Family P: proofs using restricted automation
 
 ### P2. Library search
 
@@ -160,7 +172,9 @@ The acceptance check accepts `exact?`. Lean exits with code 0, prints "Try this:
 - Open question: it matters only if the policy must name the lemma itself. Decision 3 under "Open decisions".
 - Evidence: `2026-10-10_trainer_checker_report.md`, "Remaining checker risks". The report cites `Mathlib/Tactic/Observe.lean`. No attack was run.
 
-## Family T: valid proofs of statements that carry no information
+<a id="family-t-valid-proofs-of-statements-that-carry-no-information"></a>
+
+## Family T: statement validity and task difficulty
 
 These entries need no scorer exploit. Lean accepts the proof, and the proof is correct. The reward measures the statement, not the policy.
 
@@ -217,7 +231,9 @@ Evidence: `2026-10-10_data_build_report.md`, Task 1 (`nt_false_hyp_v1/summary.js
 
 Evidence: `2026-10-10_engineering_audit.md` (W6), `2026-10-09_phase0_ledger.md` (Update 7).
 
-## Family L: valid proofs the policy can recall instead of find
+<a id="family-l-valid-proofs-the-policy-can-recall-instead-of-find"></a>
+
+## Family L: evaluation exposure and proof-reuse risks
 
 These entries need no scorer exploit. Reward rises because the policy recalls content, not because it proves something new.
 
@@ -254,11 +270,15 @@ Report this baseline next to every arm.
 
 The external proof check found 43 citations of evaluation theorem names in accepted proofs (13 distinct names). The detector misses dot notation. A proof that cites a held-out theorem is accepted by lookup. Rule: drop near-duplicate theorems and citing proofs before use.
 
-### L5. Dev set shares files with SFT data
+<a id="l5-dev-set-shares-files-with-sft-data"></a>
+
+### L5. Development and SFT file overlap
 
 For the LeanDojo dev sets, 147 of 148 theorems (v1) and 263 of 266 theorems (v2) share a file with `sft_train`. Decisions on those sets measure recall. The NT study uses a 300-statement dev slice carved from train that is in neither SFT nor RL.
 
-## Family W: a weaker check accepts a non-proof
+<a id="family-w-a-weaker-check-accepts-a-non-proof"></a>
+
+## Family W: inconsistent verification across execution modes
 
 ### W1. REPL tactic mode
 
@@ -281,7 +301,9 @@ The REPL tactic mode has no axiom check. In the step-level search over LeanDojo 
 
 `check_batch` in `verify_external_proofs.py` reads each axiom report by line, so S1 and S2 cannot work there. It has no one-command check. It scores only external proofs, not model output.
 
-## Family R: the reward covers part of the output
+<a id="family-r-the-reward-covers-part-of-the-output"></a>
+
+## Family R: partial-output reward coverage
 
 ### R1. Witness-only reward
 
@@ -302,7 +324,9 @@ Planned control: count a tactic only if the goal state changes. Keep the `R_step
 
 In experiment 9, the RLP reward rose while held-out accuracy fell from 42/108 to 21/108. The reward is heuristic and has no Lean check. A train/eval mismatch is a possible cause. No test isolated it.
 
-## Family N: reward noise and shaping that is not a gain
+<a id="family-n-reward-noise-and-shaping-that-is-not-a-gain"></a>
+
+## Family N: reward noise and heuristic shaping
 
 These entries do not pay for a non-proof. They change which proofs the policy is paid for.
 
@@ -310,7 +334,9 @@ These entries do not pay for a non-proof. They change which proofs the policy is
 - N2. Load-dependent timeouts. 7 of 1,689 SFT proofs need more than the 20 s limit under current load. At a 120 s limit they take 24.6 s to 84.1 s each. Single-tactic checks gave 23 timeouts and 11 REPL crashes in 31,050. A policy that avoids slow tactics gains reward. This is an inference, not a measurement.
 - N3. Length cap. 253 of 1,600 first errors (15.8%) of the SFT model were the 256-token cap. A binary reward pays outputs that stop early.
 
-## Limits of the fixes
+<a id="limits-of-the-fixes"></a>
+
+## Mitigation limitations
 
 - The attack list is finite. A zero count on 29 attacks does not prove the scorer is sound.
 - `FORBIDDEN` is a keyword filter. Rules 1 and 2 do not depend on it, and the ablation shows each rule is needed.
@@ -319,7 +345,9 @@ These entries do not pay for a non-proof. They change which proofs the policy is
 - Two older copies of `FORBIDDEN` remain. `scripts/data/replay_training_proofs.py` and `scripts/data/build_sft_data.py` define weaker patterns. They filter data. They do not score reward.
 - The unit tests do not cover Lean behavior. `tests/test_lean_scoring.py` runs without Lean. The attack script is the Lean-level test.
 
-## Checks to run before you report an RL gain
+<a id="checks-to-run-before-you-report-an-rl-gain"></a>
+
+## Verification requirements for reported RL gains
 
 1. Split the proved theorems of every arm into single-tactic, vacuous, near-duplicate, and other statements. Report the "other" rate as the headline.
 2. Report the nearest-proof baseline (L3) next to every arm.

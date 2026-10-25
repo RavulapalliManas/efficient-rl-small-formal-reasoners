@@ -9,7 +9,9 @@ The model proposes proof steps; Lean 4 checks the complete proof.
 
 [Research report](docs/tex/project_report.pdf) · [Script guide](scripts/README.md) · [Experiment records](docs/EXPERIMENTS.md)
 
-## Status
+<a id="status"></a>
+
+## Study status
 
 Experiments ended on 20 October 2026, without an established RL gain on unseen theorems.
 
@@ -20,7 +22,9 @@ Experiments ended on 20 October 2026, without an established RL gain on unseen t
 No variant met the promotion rule: at least a 5 percentage-point gain over its control, with a paired 95% interval excluding zero.
 The [report](docs/tex/project_report.pdf) gives methods and limitations. The [execution record](docs/EXPERIMENTS.md#execution-record) covers all 32 studies, including two follow-ups that did not run.
 
-## Setup
+<a id="setup"></a>
+
+## Local setup
 
 Install Python 3.12 and [uv](https://docs.astral.sh/uv/getting-started/installation/), then run from the repository root:
 
@@ -35,12 +39,16 @@ For training dependencies and Lean integration tests, see [Runtime and developme
 
 <a id="curriculum"></a>
 
-## Reproduce the main study
+<a id="reproduce-the-main-study"></a>
+
+## Study reproduction
 
 Follow the [reproduction guide](scripts/README.md#main-study-reproduction). It requires external data, checkpoints and the pinned Linux Lean runtime; some builders remain private.
 The helper checks files and prepares commands without running training or reproducing results.
 
-## Recreate datasets
+<a id="recreate-datasets"></a>
+
+## Dataset generation
 
 The [dataset workflow](scripts/README.md#dataset-recreation) verifies candidates from pinned sources and exports an exploratory release.
 It cannot reconstruct the original 506-theorem release or its action examples.

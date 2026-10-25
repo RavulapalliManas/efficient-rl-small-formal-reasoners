@@ -95,14 +95,14 @@ The midterm goal was to produce some complete proofs that Lean accepts.
 The longer-term goal is proof strategy on competition-style theorems.
 We seek more proofs within a fixed compute budget by studying which theorems the model practices, their order, and how rewards are assigned across proof actions.
 
-\paragraph{Why this setting.}
+\paragraph{Rationale.}
 Lean checks proofs during learning and supplies the proof reward without a human grader.
 This setting is called RL with verifiable rewards (RLVR); the name describes the reward, not the optimizer.
 A model trained without a checker can learn false statements.
 Here, the terminal proof reward is sparse: it arrives only after a complete accepted proof.
 The model writes informal reasoning and a Lean tactic in one response, avoiding the errors and compute of a separate translator.
 
-\paragraph{What Lean does.}
+\paragraph{Lean proof verification.}
 A Lean theorem consists of a statement and a proof.
 Tactics transform the remaining \emph{goals} until none remain.
 Table~\ref{tab:example} gives an illustrative proof; Figure~\ref{fig:checker} shows the acceptance checks.
@@ -141,7 +141,7 @@ Action & Goal before the action & Tactic (the action) & Effect \\
 \label{fig:checker}
 \end{figure}
 
-\paragraph{Setup.}
+\paragraph{Experimental setup.}
 We use \code{Qwen/Qwen2.5-0.5B-Instruct}~\cite{qwen25} (494,032,768 parameters), Lean \code{v4.10.0-rc1} and a fixed mathlib revision.
 Runs use one rented NVIDIA L40S GPU and a shared CPU server.
 
@@ -461,14 +461,14 @@ Promotion requires a paired gain of at least 5 points over E0 and a bootstrap 95
 E3 instead uses its SFT seed control, E5.
 The bootstrap resamples theorems with 10,000 replicates; TEST remains unused.
 
-\paragraph{What did not run.}
+\paragraph{Unexecuted and failed study arms.}
 E4 was to test SFT from B on the 1,880 base SFT examples plus 64 SFT examples mined from step search on TRAIN.
 Its SFT stage failed after 4\,s, because the mining script wrote rows without the \code{format} field that the trainer requires.
 The frozen lease program could not rerun the stage, so E4 needs a later approved lease.
 E1, step search without the automation fallback, was dropped before any paid run.
 Automation runs only after a failed policy attempt, so E1's model-only outcome equals E2's up to Lean timing.
 
-\paragraph{Cost.}
+\paragraph{Compute cost.}
 EXP-028 used an estimated USD 52.28 of instance compute against USD 165.32 reserved.
 The main run, which trained S, R and C, used an estimated USD 33.77 against USD 102.31 reserved.
 Both figures use the quoted on-demand rate and exclude storage and transfer.
@@ -619,7 +619,7 @@ E3 against its control E5 gains $+0.30$ points, with an interval of $[0.00, +0.9
 E2 and E3 prove the same theorem; E0 and E7 each prove a different one.
 This pattern fits sampling noise at the floor.
 
-\paragraph{Capability probe.}
+\paragraph{External prover evaluation.}
 To assess whether the selection set is beyond a small prover's capability, we test Kimina-Prover-Distill-0.6B, described as a distillation of Kimina-Prover-72B~\cite{kimina}.
 We use its model-card sampling settings and S's verifier path.
 In draw~1, Kimina proves 47 of 164 theorems within 8 attempts.
@@ -700,14 +700,14 @@ R and \code{RL\_filtered} also differ in theorem set (506 against 62 theorems), 
 \label{sec:oct19-curriculum}
 
 R and C start from S and complete 1,012 groups of 4 attempts on the same 506 TRAIN theorems, with no censored groups.
-Their configs differ only in identifiers and their commands only in task order: shuffled for R, twice through the prerequisite order for C.
+Their configurations differ only in identifiers and their commands only in task order: shuffled for R, twice through the prerequisite order for C.
 C accepts 255 of 4,048 attempts, and R accepts 164 of 4,048.
 C proves 93 of the 506 theorems, and R proves 63.
 Per theorem, C minus R is positive for 73 theorems and negative for 32 (paired sign-flip $p = 0.0002$).
 Each arm has one training run.
 The sign-flip test assumes independent theorems, so it omits run-to-run variation and dependence within theorem families.
 
-\paragraph{When the gain appears.}
+\paragraph{Training acceptance by epoch.}
 S's \code{pass\_rates} run gives a measurement before RL on the same theorems.
 C's first visits accept 130 of 2,024 attempts, against 84 for S ($p = 0.0019$).
 R's first visits accept 81 of 2,024 ($p = 0.87$ against S).
@@ -726,7 +726,7 @@ In quarter~4, C has 0 of 6 under the strict rule and 4 of 6 under the argument r
 S has 0 of 3 in quarter~4.
 The dated count did not record its tactic set; the recount uses a set that reproduces the recorded counts.
 
-\paragraph{Narrower actions.}
+\paragraph{Action length and tactic concentration.}
 Here a quarter is one quarter of a run's training actions, in training order.
 C's actions narrow over training (Figure~\ref{fig:oct19-curriculum}b and~c).
 C's format-error rate falls from 4.7\% of actions in the first quarter to 0.3\% in the last.
@@ -741,7 +741,7 @@ Under the argument rule, the remainders are 150 for C and 162 for R.
 So under the argument rule, C's TRAIN advantage over R does not remain outside automation-only attempts.
 These action analyses are exploratory, not registered metrics.
 
-\paragraph{No held-out contrast yet.}
+\paragraph{Development results and selection-set evaluation coverage.}
 B, S, R and C each prove 0 of 8 DEV theorems.
 \code{dev\_R} and \code{dev\_C} each accept 0 of 32 attempts.
 C has no selection-set evaluation in these records.
@@ -792,7 +792,7 @@ We examine five possible explanations using the saved records: the update, the r
 These analyses are exploratory and were chosen after observing the outcomes. They use no new Lean or model runs.
 The EXP-028 entry of 20 October in \pth{docs/EXPERIMENT_HISTORY.md} lists the scripts and their outputs.
 
-\paragraph{Design.}
+\paragraph{Analysis design.}
 A \emph{visit} is one group of 4 attempts on one TRAIN theorem.
 R and C visit each of the 506 TRAIN theorems twice, and \code{RL\_filtered} visits each of its 62 theorems 16 or 17 times.
 The \emph{S reference} of a theorem is the number of S's 4 attempts in \code{pass\_rates} that Lean accepts.
@@ -802,7 +802,7 @@ We split the theorems by whether the arm's first visit has at least one accepted
 If the policy equalled S, the second visit and the S reference would be exchangeable given the theorem, so selecting on the first visit would not bias their difference.
 The split does not isolate the update from each theorem's own first visit, because the policy also changes through training on other theorems.
 
-\paragraph{Acceptance rises where the reward is nonzero.}
+\paragraph{Acceptance conditional on initial proof success.}
 Figure~\ref{fig:oct20-signal} shows the split.
 On the 72 theorems where C's first visit has a proof, C's second visit accepts 95 of 288 attempts, against 54 for S ($p = 0.011$; 0.087 after a Bonferroni factor of 8).
 On the 46 such theorems for R, R's second visit accepts 55 of 184 attempts, against 42 for S ($p = 0.199$).
@@ -812,7 +812,7 @@ At the last visit, 31 of its 62 theorems have 4 of 4 accepted attempts, and 23 s
 C's first visits already beat S over all 506 theorems (130 against 84 accepted attempts), so part of C's second-visit excess can come from training on earlier theorems.
 The rise of \code{RL\_filtered} within its 62 theorems is the cleaner evidence.
 
-\paragraph{The reward is rarely nonzero.}
+\paragraph{Frequency of nonzero proof rewards.}
 S has no accepted attempt on 443 of the 506 TRAIN theorems.
 R's first visit has a proof on 46 of the 506 theorems, and C's has one on 72.
 On the other 460 theorems, R's second visit accepts 28 of 1,840 attempts, against 42 for S ($p = 0.136$).
@@ -836,7 +836,7 @@ A group with no proof gives every attempt an advantage of 0 (Section~\ref{sec:ze
 \label{fig:oct20-signal}
 \end{figure}
 
-\paragraph{S applies fewer tactics on held-out theorems.}
+\paragraph{Initial-policy tactic validity across data splits.}
 S applies at least one tactic in 105 of 326 held-out attempts (E0).
 On TRAIN, it applies one in 1,199 of 2,024 attempts (Figure~\ref{fig:oct20-why}a).
 By action, the counts are 156 of 1,953 held-out actions and 2,106 of 11,890 TRAIN actions.
@@ -846,7 +846,7 @@ No SFT example comes from a selection-set statement.
 On the selection set, 161 of S's 326 first actions start with \code{have} and have more than one line.
 Lean rejects 147 of them at the first tactic.
 
-\paragraph{RL concentrates on one action template.}
+\paragraph{Action-template concentration.}
 Of \code{RL\_filtered}'s 2,082 accepted training attempts, 1,627 close the proof with the first action (Figure~\ref{fig:oct20-why}c).
 S's 84 accepted TRAIN attempts close at every action from 1 to 6.
 Of the 1,627 closing first actions, 2 are a single fixed tactic without arguments.
@@ -857,14 +857,14 @@ On the selection set, 326 of \code{RL\_filtered}'s 328 first actions start with 
 Of these 326, Lean rejects 224 at the first tactic, 94 apply some tactics and then fail, 4 close the proof, and 4 are format errors.
 The learner has no KL, entropy or reference-model term that would keep the policy near S or keep its actions varied.
 
-\paragraph{The action limits act on R and S.}
+\paragraph{Action-limit violations in SFT and shuffled RL.}
 Figure~\ref{fig:oct20-why}b splits the selection-set format errors by cause.
 Of R's 1,288 format errors, 1,257 have more than 4 tactics, so the environment refuses them before Lean runs them.
 Of S's 373 format errors, 320 reach the 192-token limit.
 \code{RL\_filtered} makes 18 format errors.
 On TRAIN, 893 of S's 1,416 format errors reach the token limit, and 465 more have more than 4 tactics.
 
-\paragraph{The held-out test cannot detect the measured gain.}
+\paragraph{Power analysis for held-out comparisons.}
 We compute the power of the exact two-sided sign test at $\alpha = 0.05$ on theorems that one arm proves and the other does not.
 The computation uses two dependence assumptions: in the nested case, the arm proves every theorem that S proves; in the independent case, the two outcomes are independent.
 Negative dependence, where the arms prove disjoint theorems, is not computed, and it can give a lower power.
@@ -938,7 +938,7 @@ A transfer gain could remain undetected.
 
 \paragraph{Reproduction.}
 Full reproduction requires archived data, later-study weights and the pinned Linux Lean runtime.
-Several dataset builders and the original run configs remain private.
+Several dataset builders and the original run configurations remain private.
 The public helper checks supplied inputs and prepares commands from reconstructed settings; it has not been validated by a rerun.
 Appendix~\ref{sec:software-notes} describes the public tools and their limits; \pth{scripts/README.md} gives the commands.
 
@@ -986,7 +986,7 @@ The scripts and their outputs are in the private recount directory \pth{.private
 The analysis counts come from JSON files in \pth{out/}. Software notes appear at the end of the appendix.
 
 %----------------------------------------------------------------------
-\subsection{How to read this section}
+\subsection{Analysis scope and definitions}
 \label{sec:oct21-read}
 
 \begin{itemize}
@@ -1024,7 +1024,7 @@ Table~\ref{tab:oct21-scorecard} lists the measured changes that this section add
 Change & Measure & Before & After & n, test and file \\
 \midrule
 Better & Selection theorems with a valid step, S against \code{RL\_filtered} & 84 & 116 & 163 paired; McNemar 55 gains, 23 losses, $p = 0.00038$; \pth{p11_regressions} \\
-Better & Next visit repeats the winning first action, \code{RL\_filtered} & loser 0.023 & winner 0.286 & 51 theorems; sign-flip $p = 1.0 \times 10^{-10}$; \pth{p9_update_follow} \\
+Better & Next visit repeats the first action with positive advantage, \code{RL\_filtered} & negative advantage 0.023 & positive advantage 0.286 & 51 theorems; sign-flip $p = 1.0 \times 10^{-10}$; \pth{p9_update_follow} \\
 Better & TRAIN theorems proved where S had no accepted attempt; R and C had 8 attempts, S had 4 & S 0 & R 29; C 54 & 443 theorems; \pth{p12_positives} \\
 Worse & \code{RL\_filtered} TRAIN theorems proved, early half to late half & 50 & 40 & 62; McNemar 1 against 11, $p = 0.0063$; \pth{p6_coverage} \\
 Worse & R TRAIN theorems proved, S against R's first visit, 4 attempts each & 63 & 46 & 506; McNemar 20 gains, 37 losses, $p = 0.033$; \pth{p11_regressions} \\
@@ -1043,7 +1043,7 @@ Same & Accepted TRAIN proofs equal to an SFT reference & S 1 of 84 & \code{RL\_f
 \subsection{Failure patterns in the saved runs}
 \label{sec:oct21-harms}
 
-\paragraph{The learning signal is rare.}
+\paragraph{Frequency of nonzero sampled advantages.}
 A group gives a learning signal only if its 4 attempts get different returns.
 Of 1,012 groups, R has 81 mixed groups and 920 groups in which all 4 attempts fail.
 C has 103 mixed groups and 886 all-fail groups.
@@ -1059,7 +1059,7 @@ This rare signal is consistent with the missing held-out gain. No run changes th
 \label{fig:oct21-signal}
 \end{figure}
 
-\paragraph{The action limits cut off real proofs.}
+\paragraph{Reference-proof compatibility with action limits.}
 Section~\ref{sec:oct20-why} shows that the token and tactic limits cause most format errors.
 A greedy split of each proof into actions also shows how many known proofs fit the limits (Figure~\ref{fig:oct21-limits}).
 Under the current limits, 314 of 516 TRAIN reference proofs fit.
@@ -1078,7 +1078,7 @@ The greedy split does not show that a model would find these proofs under relaxe
 In quarter~1 of \code{RL\_filtered}, the feature ``1 action'' gets an advantage mass of $+46.96$.
 The feature ``6 actions'' gets $-100.84$, and ``0 tactics applied'' gets $-52.18$ (\pth{p7_reinforced}).
 The mean closing action of accepted attempts falls from 2.08 in quarter~1 to 1.14 in quarter~4, over 404 and 602 accepted attempts.
-After a mixed group, the next visit of \code{RL\_filtered} repeats the winning first action in a mean share of 0.286 of its first actions, and the losing one in 0.023.
+After a mixed group, the next visit of \code{RL\_filtered} repeats the first action with positive advantage in a mean share of 0.286 of its first actions, and an action with negative advantage in 0.023.
 Of 51 theorems, 37 are positive and 1 is negative (sign-flip $p = 1.0 \times 10^{-10}$; \pth{p9_update_follow}).
 R (46 theorems, $p = 1.0$) and C (71 theorems, $p = 0.3125$) show no detected effect of this kind (Figure~\ref{fig:oct21-update-follow}).
 Updates from other theorems happen between two visits, so this result is an association, not an isolated effect of one update.
@@ -1086,11 +1086,11 @@ Updates from other theorems happen between two visits, so this result is an asso
 \begin{figure}[!htbp]
 \centering
 \includegraphics[width=\textwidth]{fig_oct21_update_follow}
-\caption{Does the next visit repeat the winner of a mixed group? Each pair is a group with unequal returns and the next visit to the same theorem. x-axis: run, with R ($n = 46$ theorems), C ($n = 71$) and \code{RL\_filtered} ($n = 51$). y-axis: percentage of next-visit first actions that match the winning action (solid) or the losing action (hatched). Gray bars: S's samples on the same theorems. Left: exact first action. Right: first tactic head. $p$: exact sign-flip test on per-theorem means, winner against loser. No correction. Source: \pth{p9_update_follow}.}
+\caption{First-action repetition after mixed-reward groups. Each pair is a group with unequal returns and the next visit to the same theorem. x-axis: run, with R ($n = 46$ theorems), C ($n = 71$) and \code{RL\_filtered} ($n = 51$). y-axis: percentage of next-visit first actions that match an action with positive advantage (solid) or negative advantage (hatched). Gray bars: S's samples on the same theorems. Left: exact first action. Right: first tactic head. $p$: exact sign-flip test on per-theorem means, positive- versus negative-advantage actions. No correction. Source: \pth{p9_update_follow}.}
 \label{fig:oct21-update-follow}
 \end{figure}
 
-\paragraph{One template took over.}
+\paragraph{Automation-template concentration during training.}
 Section~\ref{sec:oct20-why} reports the template on the selection set.
 During training, its share of \code{RL\_filtered}'s first actions rises from 0.252 in decile~1 to 1.000 in decile~10 (Figure~\ref{fig:oct21-template}; \pth{p5_diversity}).
 On a theorem, the template first becomes the majority of first actions after the first accepted visit on 33 theorems, and before it on 3 (binomial $p = 2.3 \times 10^{-7}$; \pth{p7_spillover}). The test leaves out 15 theorems where both happen in the same visit and 11 theorems with no accepted attempt.
@@ -1175,7 +1175,7 @@ Comments do not change what Lean checks. We did not test whether their loss chan
 \label{fig:oct21-error-response}
 \end{figure}
 
-\paragraph{Invented lemma names on held-out theorems.}
+\paragraph{Unknown lemma identifiers on the selection set.}
 On the selection set, \code{RL\_filtered} makes an unknown-name first error in 45.02 of every 100 actions. S makes one in 23.91 of every 100 (\pth{p10_remedies}).
 Of \code{RL\_filtered}'s 1,919 failed selection actions, 877 are an unknown-name error and 948 are a failed named tactic, mostly \code{simp\_all} (614) and \code{omega} (298).
 For S, 467 of 1,534 failed actions are an unknown-name error (Figure~\ref{fig:oct21-heldout-errors}; \pth{p5_errors}).
@@ -1190,7 +1190,7 @@ A name counts as wholly invented if its normalized edit distance to the nearest 
 \label{fig:oct21-heldout-errors}
 \end{figure}
 
-\paragraph{The RL models' tactics are further from Kimina's than S's tactics.}
+\paragraph{Tactic-distribution distance from Kimina proofs.}
 Kimina proves 56 of 164 selection theorems with 16 samples each. S proves 1 of 163 (\pth{p6_coverage}).
 The Jensen-Shannon distance of top-level tactic heads to Kimina's is 0.473 for the SFT examples and 0.477 for S.
 It is 0.814 for R and 0.918 for \code{RL\_filtered} (Figure~\ref{fig:oct21-kimina}; \pth{p7_heldout}).
@@ -1205,7 +1205,7 @@ Kimina writes a whole proof in one output, with a larger token budget. The dista
 \label{fig:oct21-kimina}
 \end{figure}
 
-\paragraph{C's late acceptance drop is consistent with theorem order.}
+\paragraph{Late-training acceptance and theorem order.}
 C accepts 39 of 408 attempts in decile~1 and 4 of 404 in decile~10 (\pth{p5_diversity}).
 On about the same theorems, its first pass accepts 16 of 808 attempts and its second pass 9 of 808 (\pth{p11_regressions}).
 These counts are consistent with theorem order as the main source of the decile-10 drop. The same-theorem drop is smaller. Neither comparison has a test.
@@ -1246,7 +1246,7 @@ Positive & Result and test & Control & Caveat \\
 \midrule
 \code{RL\_filtered} held-out valid attempts beat two S models & Against E0: 82 theorems up, 31 down, $p = 1.2 \times 10^{-7}$. Against E5: 76 up, 40 down, $p = 0.00068$. 163 paired theorems; \pth{p12_positives} & E0 and E5. E5 against E0: 50 up, 31 down, $p = 0.030$ & Partial progress, not proofs. E6 proves 2 of 164 \\
 \code{RL\_filtered} has the most valid attempts of E0, E5 and E6 & 63 of the 98 theorems with a unique maximum, of 163; chance gives 32.667; exact $p = 3.8 \times 10^{-10}$ & E0 has the maximum on 12, E5 on 23 & Many valid steps are \code{simp\_all} steps that leave the goal open \\
-The updates follow the winner & Share 0.286 against 0.023; 37 up, 1 down of 51 theorems; $p = 1.0 \times 10^{-10}$; \pth{p9_update_follow} & The loser of the same group & Association. R and C show no detected effect \\
+Repetition of actions with positive advantage & Share 0.286 against 0.023; 37 up, 1 down of 51 theorems; $p = 1.0 \times 10^{-10}$; \pth{p9_update_follow} & Action with negative advantage in the same group & Association. R and C show no detected effect \\
 Learned proofs are new text & 0 of 2,082 accepted attempts equal an SFT reference. On the 27 learned theorems, 69 of 69 late distinct texts differ from the references; \pth{p5_recall}, \pth{p12_positives} & S: 1 of 84 equal a reference & Distinct text is not a distinct method. Most texts are the template \\
 New TRAIN proofs where S had none & Of 443 theorems, R proves 29 and C 54; C has 54 gains, 24 losses, McNemar $p = 0.0009$; \pth{p12_positives}, \pth{p11_regressions} & S with 4 attempts & R and C had 8 attempts, S had 4. R's gains equal its losses (29 and 29) \\
 Task filtering gives more signal & Mixed groups: \code{RL\_filtered} 207, R 81, C 103 of 1,012; \pth{p6_signal} & R and C, same start model and group count & 62 theorems, not 506. No held-out proof gain \\
@@ -1260,7 +1260,7 @@ Dense-reward weights can be inspected before training & 19,750 of 22,962 penalis
 \end{tabularx}
 \end{table}
 
-\paragraph{Held-out partial progress beyond seed noise.}
+\paragraph{Selection-set partial progress and SFT-seed variability.}
 Figure~\ref{fig:oct21-partial} shows valid steps on the selection set.
 The control is two S models: E0, and E5, a fresh SFT from B with SFT seed 2.
 On the 163 paired theorems, valid attempts are 105 for E0, 130 for E5, 183 for E6 and 146 for E7 (\pth{p12_positives}).
@@ -1278,14 +1278,14 @@ With 6 similar theorems, this check cannot detect a small effect.
 \end{figure}
 
 \paragraph{Changes in training error categories.}
-These fixes are on TRAIN only.
+These changes in error rates occur on TRAIN only.
 In R, the share of non-format actions with an unknown-name error falls from 0.146 at visit~1 to 0.0861 at visit~2. A sign test on the per-theorem rate over all actions gives 296 theorems that fall and 115 that rise ($p = 1.7 \times 10^{-19}$).
 R's format errors rise in the same comparison, from 0.164 to 0.2928 of actions (311 theorems rise, 138 fall, $p = 2.0 \times 10^{-16}$).
 \code{RL\_filtered}'s unknown-name rate is mixed.
 Per action, it rises from 0.1741 to 0.2328 (Fisher $p = 3.4 \times 10^{-10}$). Per theorem, it falls in 40 and rises in 22 ($p = 0.030$).
 On held-out theorems, \code{RL\_filtered} makes more unknown-name errors than S (Section~\ref{sec:oct21-harms}).
 
-\paragraph{Records.}
+\paragraph{Source records.}
 The archived inputs match their recorded hashes: 19 of 19 data members, 2 of 2 schedule members and 3 of 3 selection-set members (\pth{.private/ops/abhinav_data_handoff_20261020_v1/member_checks.txt}).
 The file \pth{runtime_order_manifest.json} has no recorded hash.
 One record chunk has an S3 expiry date of 18 November 2026. Without a copy, the records stop being reproducible after that date.
@@ -1369,7 +1369,7 @@ The EXP-023 deciles hold about 120 first actions, against about 404 in October. 
 \end{itemize}
 
 %----------------------------------------------------------------------
-\subsection{Open questions and the test for each}
+\subsection{Open research questions and proposed tests}
 \label{sec:oct21-open}
 
 No new run is planned. Each item names the test that would answer it.
@@ -1391,7 +1391,7 @@ No new run is planned. Each item names the test that would answer it.
 \paragraph{Reproduction.}
 The README and script guide give setup, input requirements and reproduction commands.
 \pth{scripts/reproduce.py} checks supplied files against recorded hashes and prepares SFT, DEV and RL command plans using \pth{configs/reproduction_v1.json}.
-The settings are reconstructed from the documented recipe of 18--19 October; they are not the original private config files or evidence of a rerun.
+The settings are reconstructed from the documented recipe of 18--19 October; they are not the original private configuration files or evidence of a rerun.
 The locked training dependency group follows the documented 19 October library combination, while the original main-run package receipts remain external.
 Full reproduction still requires the archived data, later-study weights and Linux Lean runtime, and several dataset builders remain private.
 The helper does not execute a model or Lean, and its file checks do not establish tokenizer equivalence.
@@ -1405,7 +1405,7 @@ New orders preserve task multiplicities, and prerequisite order requires explici
 These commands produce a new exploratory dataset, not the historical filtered release or its interactive action examples.
 The recorded local checks use synthetic JSON and Parquet data and scripted verifier outcomes; they establish neither a full public-corpus rebuild nor real Lean admission.
 
-\paragraph{Reuse in a larger prover.}
+\paragraph{Proof-component reuse and search extensions.}
 \pth{rl_components/environment.py} handles proof interaction and replay; \pth{rl_components/observations.py} renders observations.
 Builders can import them directly. The training command retains compatibility exports.
 The host still supplies the pinned checker, REPL context, admitted tasks and run records; these modules are not a portable prover service.
@@ -1445,7 +1445,7 @@ A cause is \emph{tested} when an experiment could have shown it to be false; oth
   \node[res=\c, right=0.5cm of e\y] (r\y) {\r};
   \draw[arr] (e\y) -- (r\y);
 }
-\foreach \a/\b/\w in {0/1/{try RL directly}, 1/2/{no Lean signal: teach knowledge first}, 2/3/{reward misleads: keep Lean, reduce the goal}, 3/4/{small goals work: teach Lean first}, 4/5/{whole proofs too hard: use single actions}, 5/6/{narrow gain: extend with a curriculum}, 6/7/{correct the environment and the tasks}}
+\foreach \a/\b/\w in {0/1/{direct whole-proof RL}, 1/2/{zero proof rewards: knowledge preparation}, 2/3/{reward--accuracy mismatch: local proof tasks}, 3/4/{local-task gains: supervised Lean training}, 4/5/{low proof acceptance: interactive actions}, 5/6/{limited transfer: curriculum extension}, 6/7/{environment and task corrections}}
   \draw[arr, gray] (e\a.south) -- node[pos=0.5, xshift=0.15cm, why] {\w} (e\b.north);
 \end{tikzpicture}
 \caption{Historical experiment sequence through 13 October 2026. Red: failure. Green: RL gain. Grey: planned at that reporting cutoff. Later outcomes appear in Section~\ref{sec:final-curriculum-outcome}.}
@@ -1496,7 +1496,7 @@ Validation stayed at 0 of 8 theorems.
 In Experiment~5, easier hand-written theorems gave 0 of 256 accepted proofs, so we did not train.
 In Experiment~6, with one expression missing from a given proof, Lean accepted 2 of 64 attempts, but only one theorem gave mixed groups, and held-out attempts stayed at 0 of 16.
 
-\emph{Why it failed} (\emph{tested}): every group had reward 0, so every update was 0 (Section~\ref{sec:zero}).
+\emph{Tested explanation}: every group had reward 0, so every update was 0 (Section~\ref{sec:zero}).
 Therefore Experiment~4 gives no information about curriculum order.
 
 %----------------------------------------------------------------------
@@ -1519,7 +1519,7 @@ Lean gave no signal, so we tried to teach knowledge first with the RLP reward.
 \label{fig:rlpdiv}
 \end{figure}
 
-\emph{Why it failed}: the reward pays for reasoning that makes the answer more probable, not for correct reasoning.
+\emph{Reward objective mismatch}: the reward pays for reasoning that makes the answer more probable, not for correct reasoning.
 This is \emph{reward hacking}.
 In Experiment~9, 17 incorrect answers received a positive advantage.
 A deliberately false line of reasoning increased the reward in both inspected examples.
@@ -1572,7 +1572,7 @@ The first errors of the final model were proof construction (43), unknown names 
 A parser fault rejected every action in a code block, so its interactive pilot made no update.
 Experiment~22 prepared PPO, but the GPU run failed before RL started.
 
-\emph{Why it failed} (\emph{candidates}): the low acceptance rate gives few mixed groups; the GRPO model concentrated on \code{simp\_all}, which closes only easy goals.
+\emph{Candidate explanations}: the low acceptance rate gives few mixed groups; the GRPO model concentrated on \code{simp\_all}, which closes only easy goals.
 The branches also had extra SFT stages and different data, so the comparison does not isolate RL.
 
 %----------------------------------------------------------------------
@@ -1603,18 +1603,18 @@ On 22 broader theorems, a short warm-start first increased accepted whole proofs
 Then an \emph{ordered} arm (answer given, one lemma, combined steps, whole proof) and a \emph{shuffled} arm trained on the same theorems.
 Neither arm improved on the parent.
 On broader DEV, all three models had 0 of 64.
-On easy retention, the parent had 24/48, ordered 20/48, and shuffled 21/48.
+On elementary DEV retention, the parent had 24/48, ordered 20/48, and shuffled 21/48.
 On non-trivial validation, the parent proved 3 of 392 and ordered RL 1 of 392; one of the parent's accepted statements has the empty set as an answer.
 The ordered model made more valid first moves than the parent (88 against 40), but it completed no proof in its first move (Figure~\ref{fig:curriculum}).
 
 \begin{figure}[!htbp]
 \centering
 \includegraphics[width=0.8\textwidth]{curriculum_outcome}
-\caption{Experiment 23. (a)~First action on the same 784 validation attempts. (b)~Easy retention, $n = 48$. Error bars: 95\% Wilson score intervals.}
+\caption{Experiment 23. (a)~First action on the same 784 validation attempts. (b)~Elementary DEV retention, $n = 48$. Error bars: 95\% Wilson score intervals.}
 \label{fig:curriculum}
 \end{figure}
 
-\emph{Why it failed} (four \emph{candidates}, not yet tested):
+\emph{Candidate explanations} (not yet tested):
 \begin{enumerate}
 \item A valid action is not progress. The model learned valid actions, not complete proofs.
 \item The curriculum had gaps: the lemma stage covered 9 of 22 theorems, the combined stage 11 of 22, and the early stages contained the answer.
@@ -1631,17 +1631,17 @@ The verifier audit found six ways to obtain the Lean reward without proof skill 
 \begin{figure}[!htbp]
 \centering
 \begin{tikzpicture}[leaf/.style={box, text width=4.5cm, align=left, font=\footnotesize, fill=#1}, leaf/.default=red!8]
-\node[box, text width=6cm, fill=gray!10] (root) at (0, 0) {\textbf{Ways to obtain the reward without proof skill}};
-\node[leaf] (a) at (-5.2, -1.9) {\textbf{1. Deceive the checker.} 27 of 87 attack checks passed before our fix; 0 after. \emph{Fixed}};
+\node[box, text width=6cm, fill=gray!10] (root) at (0, 0) {\textbf{Reward-verifier exploits and unintended reward eligibility}};
+\node[leaf] (a) at (-5.2, -1.9) {\textbf{1. Checker vulnerabilities.} 27 of 87 attack checks passed before correction; 0 after. \emph{Fixed}};
 \node[leaf] (b) at (0, -1.9) {\textbf{2. Library search.} \code{exact?} raised a no-model baseline from 9 to 13 of 43. \emph{Prohibited}};
 \node[leaf] (c) at (5.2, -1.9) {\textbf{3. Trivial statements.} One tactic proves 161 of 3,450 training statements; 23 statements across all splits have contradictory assumptions. \emph{Removed from RL}};
-\node[leaf] (d) at (-5.2, -4.0) {\textbf{4. Recall.} 826 of 1,007 early theorems shared files with test theorems; copying the nearest proof proves 22 of 392; some held-out theorems restated training statements. \emph{Filtered; baseline}};
-\node[leaf] (e) at (0, -4.0) {\textbf{5. Partial checking.} Lean checks one expression, not the explanation (Exp.~11). \emph{Observed}};
-\node[leaf] (f) at (5.2, -4.0) {\textbf{6. Reward noise.} 7 of 1,689 correct proofs exceed the time limit; 253 of 1,600 errors are the length limit. \emph{Partly open}};
+\node[leaf] (d) at (-5.2, -4.7) {\textbf{4. Proof reuse.} 826 of 1,007 early theorems shared files with test theorems; copying the nearest proof proves 22 of 392; some held-out theorems restated training statements. \emph{Filtered; baseline}};
+\node[leaf] (e) at (0, -4.7) {\textbf{5. Partial checking.} Lean checks one expression, not the explanation (Exp.~11). \emph{Observed}};
+\node[leaf] (f) at (5.2, -4.7) {\textbf{6. Reward noise.} 7 of 1,689 correct proofs exceed the time limit; 253 of 1,600 errors are the length limit. \emph{Partially unresolved}};
 \foreach \n in {a, b, c} \draw[arr] (root.south) -- (\n.north);
 \foreach \n/\m in {d/a, e/b, f/c} \draw[arr, gray] (\m.south) -- (\n.north);
 \end{tikzpicture}
-\caption{Six types of reward without real proof skill, with measurements and status.}
+\caption{Six sources of unintended reward, with measurements and mitigation status.}
 \label{fig:cheat}
 \end{figure}
 
@@ -1742,7 +1742,7 @@ Parser & A restated declaration through \code{:= by} is dropped without executio
 Version 2.1 drops the policy \code{backtrack k} action from the default arm.
 No reviewed RL prover gives the policy a backtrack action, so the default puts search in the harness and keeps the policy backtrack as an ablation.
 
-\paragraph{Why the environment changed.}
+\paragraph{Rationale for environment revisions.}
 The first move, from Formulation A to version 1, was statistical: with a terminal reward, a group updates only if it contains both an accepted and a rejected attempt (Section~\ref{sec:zero}).
 Experiments 4 to 6 produced almost no mixed groups.
 Version 1 made the action small enough to produce them, and Experiment 19 gave the first gain.
@@ -1757,23 +1757,23 @@ COPRA puts the error in the state~\cite{copra}.
 InternLM2.5-StepProver keeps the preceding tactics~\cite{internlm}.
 AlphaProof uses a step cost~\cite{alphaproof}; the discount plays that role here, but the equivalence is an inference, not a result.
 No reviewed RL prover gives the policy a backtrack action.
-Table~\ref{tab:mdp-why} states what each change bought and what it cost.
+Table~\ref{tab:mdp-why} summarizes the benefits and limitations of each revision.
 
 \begin{table}[!htbp]
 \centering
 \small
-\caption{What each change to the formulation bought and what it cost.}
+\caption{Benefits and limitations of formulation revisions.}
 \label{tab:mdp-why}
 \begin{tabularx}{\textwidth}{@{}P{2.2cm}P{3.8cm}P{3.3cm}Y@{}}
 \toprule
-Need & Change & What it bought & What it cost \\
+Requirement & Change & Benefit & Limitation \\
 \midrule
 Verifiable reward & Terminal Lean-only reward; forbidden constructs; full replay & Reward means proof & Very sparse signal \\
 Mixed groups & Whole proof $\rightarrow$ tactic step; later tactic chunks & Signal becomes possible & Partial observability; longer horizon \\
 Markov state & Full state, remaining actions, discount & Decisions use history & Prompt cap; hidden history; truncation ends episodes \\
-Informative failure & Self-loop, first-error truncation, harness revert & One typo no longer kills credit & No-op loops; the harness owns search \\
+Informative failure & Self-loop, first-error truncation, harness revert & Error recovery preserves the valid prefix & No-op loops; search controlled by the harness \\
 Bounded cost & 4-tactic chunks; 192 tokens; 6 actions; 20\,s & Fewer Lean calls; shorter horizon & 202 of 516 TRAIN reference proofs do not fit the limits \\
-Clean measurement & Replay, censoring, status categories & Missing data is not counted as failure & Still low power at 164 theorems \\
+Clean measurement & Replay, censoring, status categories & Missing data is not counted as failure & Low statistical power at 164 theorems \\
 Dense signal & EXP-030 per-action penalties (not run; Section~\ref{sec:oct20-not-run}) & Gradient from errors & Heuristic; error avoidance is not proof skill \\
 \bottomrule
 \end{tabularx}
@@ -1826,7 +1826,7 @@ Within the training set, exact duplicates were removed, which leaves 192 trainin
 \label{fig:stairs}
 \end{figure}
 
-\paragraph{Cleaning the held-out set.}
+\paragraph{Held-out set overlap exclusions.}
 A semantic check compared held-out theorems with the statements behind the SFT data.
 In the first panel, it found 26 held-out--training pairs with the same content and 3 near-transfers; for example, \code{ho\_coprimechain\_01} restates \code{lean\_workbook\_22701}.
 We removed 35 theorems, which left 61 clean theorems.
@@ -1835,7 +1835,7 @@ We then dropped the 5 remaining held-out theorems rated ``related''.
 The final held-out set has 152 theorems: the 61 original clean theorems and 91 new ones.
 On the 61 original clean theorems, the SFT parent (environment version 1) proved 6, with 8 of 488 attempts accepted.
 
-\paragraph{Can RL start on these stages?}
+\paragraph{Curriculum-stage training readiness.}
 Before training, we ran the SFT parent 8 times on each S0 to S2 theorem of the first template set, with the version~1 prompt (Figure~\ref{fig:probe}).
 With the relabelled stages, S0 had 187 of 448 attempts accepted (44 of 56 theorems mixed), S1 26 of 256 (14 of 32 mixed), and S2 10 of 256 (8 of 32 mixed).
 Every stage has mixed groups, so RL has a signal, but the signal is weak in S2.
@@ -1852,7 +1852,7 @@ Its data has 1,969 training rows on 468 theorems, each traced again through the 
 \label{fig:probe}
 \end{figure}
 
-\paragraph{The frozen plan for the final run.}
+\paragraph{Registered final-run protocol.}
 We recorded this protocol before the launch, when no result was available.
 The subsequent outcome belongs to the EXP-023 completion handoff in \pth{docs/EXPERIMENT_HISTORY.md}; the protocol below remains historical.
 The run tests two claims: RL improves the model over its SFT model W on held-out theorems, and a curriculum makes RL more efficient (Figure~\ref{fig:design}).
@@ -1915,11 +1915,11 @@ The family-level tests find no overall held-out benefit after Holm correction; e
 The familiar-family tests support higher sampled reliability, but this is a secondary panel from a single training seed.
 It does not establish broad acquisition of number-theory proofs.
 
-\paragraph{What the comparison does not explain.}
+\paragraph{Limits of the comparison.}
 The training record contains no group from the hardest stage S4.
 On held-out S4 statements, W accepts 14/240 attempts; A accepts 1/240, B accepts 7/240, and C accepts 0/240.
 Missing practice is a candidate explanation, but no causal ablation tests it.
-Actual generated training tokens differ across arms, so the registered token gate rejects the efficiency claim.
+Actual generated training tokens differ across arms, so the registered token-budget criterion rejects the efficiency claim.
 Earlier supervised exposure required benchmark removals; remaining semantic and pretraining familiarity are not certified absent.
 These limits prevent an explanation that attributes the transfer result to a specific missing skill or optimizer property.
 
@@ -1957,7 +1957,7 @@ Curriculum, EXP-027 & Shuffled RL; prerequisite-ordered RL, from the same SFT ch
 \end{tabularx}
 \end{table}
 
-\subsection{Experiment 1: generalization across training stages}
+\subsection{Training-stage generalization (EXP-026)}
 
 The first experiment asks what SFT and RLVR add to the model's proof capability.
 Its conditions are B, the unchanged model; S, B after project SFT; and R, the exact S checkpoint after RLVR.
@@ -2015,7 +2015,7 @@ Keep current TRAIN, DEV and TEST membership unchanged.
 Any required expansion needs a separately versioned release.
 If a panel cannot be supported, report that limitation and retain an explicitly labelled pilot.
 
-\subsection{Experiment 2: curriculum effects on performance and generalization}
+\subsection{Curriculum effects on proof completion (EXP-027)}
 
 The second experiment holds the SFT checkpoint S and RLVR implementation fixed.
 Its conditions are R, shuffled RL practice, and C, prerequisite-ordered RL practice.
@@ -2116,7 +2116,7 @@ Manas delivers the R/C table with familiar performance, generalization and measu
 
 Use optimizer-disabled TRAIN/DEV calibration before fixing training settings.
 The existing \pth{--assessment-only} interface uses \pth{--assessment-split} \code{validation} for DEV and \code{test} for TEST.
-Preserve configs, source identities, raw attempts, consumed schedules, failures and checkpoint provenance.
+Preserve configurations, source identities, raw attempts, consumed schedules, failures and checkpoint provenance.
 Resolve panel counts, model revisions, learning settings, seeds, resource caps and launch costs before execution.
 The guides are in EXP-026 and EXP-027 of \pth{docs/EXPERIMENT_HISTORY.md}.
 These arm definitions do not themselves authorize training or new source admission.
@@ -2130,7 +2130,7 @@ Use the interactive REINFORCE implementation for both branches, with whole-theor
 The separate small PPO comparison tests optimizer feasibility under its own interface.
 It cannot supply R for this curriculum study.
 
-\paragraph{Data before theorem difficulty.}
+\paragraph{Dataset validity before difficulty assessment.}
 Broad prerequisite coverage takes priority over selecting theorems the model already proves.
 Keep the checked interactive action corpus separate from the checked complete-proof corpus.
 Action SFT targets responses to live states, including format and Lean-error recovery.
@@ -2195,7 +2195,7 @@ The review therefore distinguishes observed source coverage, missing annotations
 The fixed order comparison does not consume a curriculum-validation set or use adaptive stage promotion.
 A distinct curriculum-validation reservation remains required before an adaptive extension.
 
-\paragraph{Bind S and the comparison.}
+\paragraph{SFT checkpoint identity and comparison controls.}
 The historical SFT checkpoint is ineligible for the clean primary comparison.
 Its recorded training examples explicitly invoke \pth{Nat.factorial_mul_factorial_dvd_factorial}, which proves a reserved DEV target up to product order.
 Removing the source examples cannot remove their prior effect on those weights.

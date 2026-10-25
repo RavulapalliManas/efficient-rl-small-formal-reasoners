@@ -39,7 +39,7 @@
 \title{Reinforcement Learning for Lean Proofs\\with a Small Language Model\\[4pt]
 \large Midterm research report}
 \author{Manas Ravulapalli}
-\date{Revised 24 October 2026}
+\date{Revised 25 October 2026}
 
 \hypersetup{
   pdftitle={Reinforcement Learning for Lean Proofs with a Small Language Model},
@@ -62,14 +62,14 @@ Exploratory analyses of the saved runs show sparse rewards and increasingly narr
 The report records failed runs, verifier faults and limits on reproduction alongside the measured results.
 \end{abstract}
 
-\paragraph{Scope and reading guide.}
-The main results are in Section~\ref{sec:oct19-results}; Section~\ref{sec:oct20-why} and Appendix~\ref{sec:oct21-analyses} analyze the saved records.
-These analyses are exploratory, with one training run per arm.
+\paragraph{Reading guide.}
+Section~\ref{sec:oct19-results} reports the main study.
+Section~\ref{sec:oct20-why} examines possible explanations; Appendix~\ref{sec:oct21-analyses} gives the detailed exploratory analyses.
 Earlier experiments and historical protocols remain in Appendices~\ref{sec:experiments}, \ref{sec:next} and~\ref{sec:curriculum-generalization}.
 Appendix~\ref{sec:oct20-not-run} records two follow-up designs that did not run.
 Appendix~\ref{app:evaluation-questions} describes the larger evaluation review pack, which is distinct from the main study's final DEV and TEST sets.
 Experiment execution stopped on 20 October 2026; the post-hoc analyses use saved records.
-Current execution status is in the README; protocols and evidence links are in \pth{docs/EXPERIMENTS.md}.
+The README gives current execution status. \pth{docs/EXPERIMENTS.md} indexes the protocols and evidence in \pth{docs/EXPERIMENT_HISTORY.md}.
 
 \paragraph{Models and measures.}
 B is the unchanged model; S is B after SFT.
@@ -458,7 +458,7 @@ The run outcome counts below were recounted from the saved run records, without 
 Costs and the selection-set construction counts come from the dated record.
 Sign-flip $p$-values below are exact.
 The original dated entries give Monte Carlo values, and the recount entry of 19 October gives the exact values.
-The dated records are in EXP-028 of \pth{docs/EXPERIMENTS.md}.
+The dated records are in EXP-028 of \pth{docs/EXPERIMENT_HISTORY.md}.
 
 \paragraph{Selection set and decision rule.}
 The EXP-028 selection set comes from the existing corpus.
@@ -519,7 +519,7 @@ R and C training & S & Same theorem multiset; R in shuffled order, C in prerequi
 Every run in this section uses environment version~2.2 (Section~\ref{sec:next}).
 Table~\ref{tab:mdp-v22} defines it with the settings of these runs.
 Figure~\ref{fig:v22-action} shows how the environment processes one action.
-The settings come from the recorded run configurations. The EXP-030 record in \pth{docs/EXPERIMENTS.md} names the keys in which its configuration differs from R's.
+The settings come from the recorded run configurations. The EXP-030 record in \pth{docs/EXPERIMENT_HISTORY.md} names the keys in which its configuration differs from R's.
 The status names in Figure~\ref{fig:v22-action} are the action categories of Figure~\ref{fig:oct19-actions} and Section~\ref{sec:oct20-why}.
 
 The learner uses the REINFORCE estimator of Equation~\eqref{eq:pg} with a leave-one-out baseline on discounted returns.
@@ -811,16 +811,14 @@ The dated record names REINFORCE without a KL or entropy term as a likely contri
 \end{figure}
 
 %----------------------------------------------------------------------
-\subsection{Why the TRAIN gain does not reach held-out theorems}
+\subsection{Possible explanations for the missing held-out gain}
 \label{sec:oct20-why}
 
 RL raises acceptance on the theorems that it trains on (Sections~\ref{sec:oct19-rl-filtered} and~\ref{sec:oct19-curriculum}).
 No arm shows a detected held-out gain (Section~\ref{sec:oct19-heldout}).
-On 20 October, Manas asked whether this comes from the RL update or from the reward.
-This subsection answers from the saved records of the runs above, with no new Lean or model run.
-We consider five candidate causes: the update, the reward, the starting policy S, the held-out measurement, and the change in the policy's actions.
-Every result here is exploratory and a postdiction, and none is a registered metric.
-The EXP-028 entry of 20 October in \pth{docs/EXPERIMENTS.md} lists the scripts and their outputs.
+We examine five possible explanations using the saved records: the update, the reward, the starting policy S, the held-out measurement, and changes in tactic choice.
+These analyses are exploratory and were chosen after observing the outcomes. They use no new Lean or model runs.
+The EXP-028 entry of 20 October in \pth{docs/EXPERIMENT_HISTORY.md} lists the scripts and their outputs.
 
 \paragraph{Design.}
 A \emph{visit} is one group of 4 attempts on one TRAIN theorem.
@@ -934,18 +932,15 @@ Under a Bonferroni factor of 8, C's first-visit gain over S stays below 0.05 (0.
 \subsection{What the results show}
 \label{sec:oct19-summary}
 
-Measured contrasts:
-\begin{itemize}
-\item \code{RL\_filtered} raises acceptance on its 62 trained theorems, from a mean of 0.306 at the first visit to 0.597 at the last ($p < 0.001$).
-\item C accepts more TRAIN attempts than R, 255 against 164 of 4,048 ($p = 0.0002$), in one training run per arm.
-\item C's first epoch accepts more attempts than S on the same theorems ($p = 0.0019$).
-\item R shows no detected rise on TRAIN.
-\item No arm shows a detected held-out gain: no paired interval on the selection set excludes 0.
-\item B, S, R and C each prove 0 of 8 DEV theorems.
-\item RL shortens the actions. R also makes more format errors, and C concentrates on three automation tactics. These action results are exploratory.
-\item Where an arm's first visit to a TRAIN theorem has no proof, the second visit shows no detected gain over S on that theorem, for R or for C. Where it has one, C's second visit gains over S ($p = 0.011$; 0.087 after a Bonferroni factor of 8). This split is exploratory (Section~\ref{sec:oct20-why}).
-\item \code{RL\_filtered} starts 326 of its 328 held-out attempts with \code{simp\_all} and a lemma list. This count is exploratory.
-\end{itemize}
+\code{RL\_filtered} improves acceptance on its 62 training theorems, and C accepts more TRAIN attempts than R in one run per arm.
+C also exceeds S on its first epoch; R shows no detected rise on TRAIN.
+None of these comparisons establishes a held-out gain: the selection-set intervals include zero, and all four main models prove 0 of 8 DEV theorems.
+The preceding subsections give the counts and tests.
+
+The exploratory analyses show shorter actions, more format errors for R and concentration on automation tactics for C.
+C's second-visit gain over S appears on theorems with an initial proof, but does not survive the stated multiple-test correction.
+\code{RL\_filtered} also concentrates its held-out first actions on \code{simp\_all} with lemma lists.
+These observations describe the saved runs; they do not isolate a cause of the missing transfer.
 
 Hypotheses, not tested:
 \begin{itemize}
@@ -957,7 +952,7 @@ Hypotheses, not tested:
 S proves 1 of 163 selection theorems and 0 of 8 DEV theorems.
 The promotion rule needs a paired gain of at least 5 points, so a smaller held-out gain cannot pass it.
 At the observed rates and 164 theorems, an exact sign test has a power of 0.001 to 0.006 (Section~\ref{sec:oct20-why}).
-No detected gain does not show that RL gives no transfer.
+A transfer gain could remain undetected.
 
 %======================================================================
 \section{Limitations}
@@ -968,40 +963,18 @@ No detected gain does not show that RL gives no transfer.
 \item AI reviewers graded the natural-language answers in Experiments 9, 10, 11, and 13.
 \item The sample-size values come from simulations with assumed parameters.
 \item The numbers come from recorded run outputs; we did not repeat experiments for this report.
-\item The EXP-028 selection set and the 8 DEV theorems sit near the measurement floor: S proves 1 of 163 selection theorems and 0 of 8 DEV theorems. The promotion rule needs a paired gain of at least 5 points, so a smaller held-out gain cannot pass it.
-\item Section~\ref{sec:oct20-why} is a postdiction from one training run per arm. No run tests its account of the missing held-out gain.
+\item Low baseline acceptance and the promotion threshold limit sensitivity to smaller held-out gains (Section~\ref{sec:oct19-summary}).
+\item The explanations in Section~\ref{sec:oct20-why} come from one training run per arm. No controlled run tests them.
 \end{itemize}
 
 \paragraph{Reproduction.}
-The README gives an entry path for a new reader; the script guide holds the main-study reproduction procedure, data roles and local checks.
-\pth{scripts/reproduce.py} checks supplied files against recorded hashes and prepares SFT, DEV and RL command plans using \pth{configs/reproduction_v1.json}.
-The settings are reconstructed from the documented recipe of 18--19 October; they are not the original private config files or evidence of a rerun.
-The locked training dependency group follows the documented 19 October library combination, while the original main-run package receipts remain external.
-Full reproduction still requires the archived data, later-study weights and Linux Lean runtime, and several dataset builders remain private.
-The helper does not execute a model or Lean, and its file checks do not establish tokenizer equivalence.
-
-\paragraph{Public dataset rebuilding.}
-\pth{scripts/data/rebuild_nt_dataset.py} adds source fetching, corpus assembly, verifier identity receipts and task-order construction.
-\pth{configs/data/nt_sources_v1.json} pins public files by full revision and SHA-256.
-The corpus retains proof candidates without claiming Lean verification; the existing benchmark stages assign duplicate-aware splits, replay references, screen fixed tactics and export full-proof SFT and RL inputs.
-The strict screen excludes forbidden tactics, including \code{exact?}; old selections containing unsupported screen tactics require a new selection.
-New orders preserve task multiplicities, and prerequisite order requires explicit annotations.
-These commands produce a new exploratory dataset, not the historical filtered release or its interactive action examples.
-The recorded local checks use synthetic JSON and Parquet data and scripted verifier outcomes; they establish neither a full public-corpus rebuild nor real Lean admission.
-
-\paragraph{Reuse in a larger prover.}
-Proof interaction and replay acceptance now reside in \pth{rl_components/environment.py}; the shared observation renderer resides in \pth{rl_components/observations.py}.
-Data builders can use these components without importing the training command, and the command retains compatibility exports.
-The host still supplies the pinned checker, REPL context, admitted tasks and run records; these modules are not a portable prover service.
-AlphaProof's policy/value-guided tree search~\cite{alphaproof} is an architectural reference, not a validated integration.
-The existing finite-catalogue candidate critic does not supply a general value model or AND--OR search over proof obligations.
-A prospective extension should first validate the pinned runtime, freeze data and budget controls, then register bounded-search and value-learning comparisons against independent sampling.
-Search-selected actions require an appropriate learning objective rather than being treated as on-policy samples.
-Only fresh whole-proof acceptance establishes a proof: goal-text progress remains heuristic, and live REPL state handles are not portable state identities.
-No new experiment or performance claim follows from this refactoring.
+Full reproduction requires archived data, later-study weights and the pinned Linux Lean runtime.
+Several dataset builders and the original run configs remain private.
+The public helper checks supplied inputs and prepares commands from reconstructed settings; it has not been validated by a rerun.
+Appendix~\ref{sec:software-notes} describes the public tools and their limits; \pth{scripts/README.md} gives the commands.
 
 \paragraph{Sources.}
-Each experiment has a record in \pth{docs/EXPERIMENTS.md}.
+Each experiment has a record in \pth{docs/EXPERIMENT_HISTORY.md}.
 The earlier detailed report (Git commit \code{e3b7747}) contains every count of Experiments 1 to 13 and the full checker audit.
 The reward exploits are in \pth{docs/REWARD_HACKING.md}.
 The script \pth{scripts/report/make_report_figures.py} rebuilds 12 plots from counts recorded in its source, with pointers to their records.
@@ -1042,7 +1015,7 @@ Each one reads the saved run records of Section~\ref{sec:oct19-results}.
 The analyses measure changes in proof acceptance, tactic choice and responses to Lean errors.
 Sections~\ref{sec:oct19-results} and~\ref{sec:oct20-why} give the primary comparisons and their interpretation.
 The scripts and their outputs are in the private recount directory \pth{.private/ops/report_recount_20261019_v1/}, in \pth{scripts/} and \pth{out/}.
-Every number below comes from a JSON file in \pth{out/}.
+The analysis counts come from JSON files in \pth{out/}. Software notes appear at the end of the appendix.
 
 %----------------------------------------------------------------------
 \subsection{How to read this section}
@@ -1442,6 +1415,38 @@ No new run is planned. Each item names the test that would answer it.
 \item Is there a held-out gain too small to detect? Test: evaluate S and \code{RL\_filtered} on a held-out set large enough for the observed rates (Section~\ref{sec:oct20-why} gives the power).
 \item Does the dense reward help? Test: check the estimator against the intended discounted objective, then compare complete-proof acceptance under the registered matched-run protocol. The signs in \pth{p9_counterfactual} alone do not determine whether the baseline needs changing.
 \end{enumerate}
+
+%----------------------------------------------------------------------
+\subsection{Software and reproduction notes}
+\label{sec:software-notes}
+
+\paragraph{Reproduction.}
+The README gives an entry path for a new reader; the script guide holds the main-study reproduction procedure, data roles and local checks.
+\pth{scripts/reproduce.py} checks supplied files against recorded hashes and prepares SFT, DEV and RL command plans using \pth{configs/reproduction_v1.json}.
+The settings are reconstructed from the documented recipe of 18--19 October; they are not the original private config files or evidence of a rerun.
+The locked training dependency group follows the documented 19 October library combination, while the original main-run package receipts remain external.
+Full reproduction still requires the archived data, later-study weights and Linux Lean runtime, and several dataset builders remain private.
+The helper does not execute a model or Lean, and its file checks do not establish tokenizer equivalence.
+
+\paragraph{Public dataset rebuilding.}
+\pth{scripts/data/rebuild_nt_dataset.py} adds source fetching, corpus assembly, verifier identity receipts and task-order construction.
+\pth{configs/data/nt_sources_v1.json} pins public files by full revision and SHA-256.
+The corpus retains proof candidates without claiming Lean verification; the existing benchmark stages assign duplicate-aware splits, replay references, screen fixed tactics and export full-proof SFT and RL inputs.
+The strict screen excludes forbidden tactics, including \code{exact?}; old selections containing unsupported screen tactics require a new selection.
+New orders preserve task multiplicities, and prerequisite order requires explicit annotations.
+These commands produce a new exploratory dataset, not the historical filtered release or its interactive action examples.
+The recorded local checks use synthetic JSON and Parquet data and scripted verifier outcomes; they establish neither a full public-corpus rebuild nor real Lean admission.
+
+\paragraph{Reuse in a larger prover.}
+Proof interaction and replay acceptance now reside in \pth{rl_components/environment.py}; the shared observation renderer resides in \pth{rl_components/observations.py}.
+Data builders can use these components without importing the training command, and the command retains compatibility exports.
+The host still supplies the pinned checker, REPL context, admitted tasks and run records; these modules are not a portable prover service.
+AlphaProof's policy/value-guided tree search~\cite{alphaproof} is an architectural reference, not a validated integration.
+The existing finite-catalogue candidate critic does not supply a general value model or AND--OR search over proof obligations.
+A prospective extension should first validate the pinned runtime, freeze data and budget controls, then register bounded-search and value-learning comparisons against independent sampling.
+Search-selected actions require an appropriate learning objective rather than being treated as on-policy samples.
+Only fresh whole-proof acceptance establishes a proof: goal-text progress remains heuristic, and live REPL state handles are not portable state identities.
+No new experiment or performance claim follows from this refactoring.
 
 %======================================================================
 \clearpage
@@ -1881,7 +1886,7 @@ Its data has 1,969 training rows on 468 theorems, each traced again through the 
 
 \paragraph{The frozen plan for the final run.}
 We recorded this protocol before the launch, when no result was available.
-The subsequent outcome belongs to the EXP-023 completion handoff in \pth{docs/EXPERIMENTS.md}; the protocol below remains historical.
+The subsequent outcome belongs to the EXP-023 completion handoff in \pth{docs/EXPERIMENT_HISTORY.md}; the protocol below remains historical.
 The run tests two claims: RL improves the model over its SFT model W on held-out theorems, and a curriculum makes RL more efficient (Figure~\ref{fig:design}).
 
 \begin{figure}[!htbp]
@@ -1953,7 +1958,7 @@ These limits prevent an explanation that attributes the transfer result to a spe
 \paragraph{Evidence boundary.}
 The recount reads saved strict-replay verdicts; it does not run fresh Lean replay or model inference.
 The raw inputs and counted denominators are recorded in \pth{nt_wednesday_evidence_20261018_v1/recount.json}, with their source paths and planted counter controls.
-The original final-run results and amendments remain in \pth{docs/EXPERIMENTS.md}.
+The original final-run results and amendments remain in \pth{docs/EXPERIMENT_HISTORY.md}.
 This REINFORCE comparison does not measure PPO or the later candidate-selection policy.
 
 %======================================================================
@@ -2145,7 +2150,7 @@ Use optimizer-disabled TRAIN/DEV calibration before fixing training settings.
 The existing \pth{--assessment-only} interface uses \pth{--assessment-split} \code{validation} for DEV and \code{test} for TEST.
 Preserve configs, source identities, raw attempts, consumed schedules, failures and checkpoint provenance.
 Resolve panel counts, model revisions, learning settings, seeds, resource caps and launch costs before execution.
-The guides are in EXP-026 and EXP-027 of \pth{docs/EXPERIMENTS.md}.
+The guides are in EXP-026 and EXP-027 of \pth{docs/EXPERIMENT_HISTORY.md}.
 These arm definitions do not themselves authorize training or new source admission.
 
 \subsection{Execution plan for the number theory study}
@@ -2271,7 +2276,7 @@ Two follow-up designs were registered on 19 and 20 October and prepared up to a 
 On 20 October, Manas stopped all experiments before any launch.
 Neither design ran, so neither has a result or a GPU cost.
 This section records their motivation and setup, because they state the open questions.
-Their programs, configurations and dry-run quotes are in the EXP-029 and EXP-030 records of \pth{docs/EXPERIMENTS.md}.
+Their programs, configurations and dry-run quotes are in the EXP-029 and EXP-030 records of \pth{docs/EXPERIMENT_HISTORY.md}.
 
 \paragraph{EXP-029: more attempts, screened strata and the action limits.}
 Three observations motivate EXP-029:
@@ -2348,7 +2353,7 @@ It preserves their source order, mathematical domains and task IDs.
 The source contains 34 DEV theorems and 82 TEST theorems.
 A description explains the statement; it does not repair or certify its intended mathematical meaning.
 Existing semantic concerns remain next to the affected theorem.
-Theorems without a warning still need the source-intent and exposure reviews recorded in \pth{docs/EXPERIMENTS.md}.
+Theorems without a warning still need the source-intent and exposure reviews recorded in \pth{docs/EXPERIMENT_HISTORY.md}.
 
 Every expected answer is a complete Lean proof of the unchanged statement under the pinned verifier.
 Existence theorems require witnesses with proofs of their conditions.

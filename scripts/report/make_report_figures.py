@@ -109,7 +109,7 @@ def fig_rlp():
 
 
 def fig_interleaved():
-    """Experiment 20. Source: docs/EXPERIMENTS.md, 'EXP-020 validation recount, 11 October 2026'."""
+    """Experiment 20. Source: docs/EXPERIMENT_HISTORY.md, 'EXP-020 validation recount, 11 October 2026'."""
     rows = [
         ("One fixed tactic (no model)", 0, GREY),
         ("SFT v2 (start)", 0, PARENT),
@@ -132,7 +132,7 @@ def fig_interleaved():
 
 
 def fig_mixed():
-    """Experiment 19 fixed-mixture run. Source: docs/EXPERIMENTS.md, 'Fixed-mixture midterm completion'."""
+    """Experiment 19 fixed-mixture run. Source: docs/EXPERIMENT_HISTORY.md, 'Fixed-mixture midterm completion'."""
     rows = [
         ("DEV, seed 1", 9, 13, 24),
         ("DEV, seed 2", 9, 13, 24),
@@ -194,7 +194,7 @@ def fig_curriculum():
 
 
 def fig_probe():
-    """Stage probe, v1 prompt. Sources: docs/EXPERIMENTS.md, 'Probe result, v1 prompt, 13 October 2026'
+    """Stage probe, v1 prompt. Sources: docs/EXPERIMENT_HISTORY.md, 'Probe result, v1 prompt, 13 October 2026'
     (per-family counts, original labels) and 'Corrections from the numbers audit' (final stage labels)."""
     fig, (a, b) = plt.subplots(1, 2, figsize=(160 * MM, 55 * MM),
                                gridspec_kw={"width_ratios": [1, 1.25], "wspace": 0.55})
@@ -234,24 +234,24 @@ def fig_oct19_heldout():
                                gridspec_kw={"width_ratios": [1.35, 1], "wspace": 0.6})
     # (a) Selection theorems solved within 2 attempts, as (name, solved, theorems assessed, colour).
     rows = [
-        # docs/EXPERIMENTS.md, "E0 result, 18 October 2026 IST"
+        # docs/EXPERIMENT_HISTORY.md, "E0 result, 18 October 2026 IST"
         ("S (E0)", 1, 163, PARENT),
-        # docs/EXPERIMENTS.md, "E2 result and lemma data, 18 October 2026 IST"
+        # docs/EXPERIMENT_HISTORY.md, "E2 result and lemma data, 18 October 2026 IST"
         ("S + step search (E2)", 1, 163, PARENT),
-        # docs/EXPERIMENTS.md, "R result and E3 result, 19 October 2026 IST"
+        # docs/EXPERIMENT_HISTORY.md, "R result and E3 result, 19 October 2026 IST"
         ("Lemma-section SFT from B (E3)", 1, 164, PARENT),
-        # docs/EXPERIMENTS.md, "E5 result and the E3 comparison, 19 October 2026 IST"
+        # docs/EXPERIMENT_HISTORY.md, "E5 result and the E3 comparison, 19 October 2026 IST"
         ("SFT seed 2 from B (E5)", 0, 164, PARENT),
-        # docs/EXPERIMENTS.md, "E7 result: R on the selection set, 19 October 2026 IST"
+        # docs/EXPERIMENT_HISTORY.md, "E7 result: R on the selection set, 19 October 2026 IST"
         ("R (E7)", 1, 164, RL),
-        # docs/EXPERIMENTS.md, "E6 result: filtered RL on the selection set, 19 October 2026 IST"
+        # docs/EXPERIMENT_HISTORY.md, "E6 result: filtered RL on the selection set, 19 October 2026 IST"
         ("RL_filtered (E6)", 2, 164, RL),
     ]
     # Kimina-Prover-Distill-0.6B, unbiased pass@2 (%) from 8 samples on each of 164 theorems; not a k/n count.
     kimina = [
-        # docs/EXPERIMENTS.md, "Kimina capability probe result, 19 October 2026 IST" (Lease 3, 11.35%)
+        # docs/EXPERIMENT_HISTORY.md, "Kimina capability probe result, 19 October 2026 IST" (Lease 3, 11.35%)
         ("Kimina, draw 1", 11.345818815331011),
-        # docs/EXPERIMENTS.md, "Report recount of the 18 and 19 October results, 19 October 2026 IST";
+        # docs/EXPERIMENT_HISTORY.md, "Report recount of the 18 and 19 October results, 19 October 2026 IST";
         # recount in .private/ops/report_recount_20261019_v1/ (Lease 4)
         ("Kimina, draw 2", 11.67247386759582),
     ]
@@ -273,9 +273,9 @@ def fig_oct19_heldout():
     label(a, "a")
     # (b) Kimina theorems solved within 8 samples, by reference-proof length, as (theorems, solved).
     bins = ("≤20 lines", "21–40", ">40")
-    # docs/EXPERIMENTS.md, "Kimina capability probe result, 19 October 2026 IST", length rows of the table
+    # docs/EXPERIMENT_HISTORY.md, "Kimina capability probe result, 19 October 2026 IST", length rows of the table
     draw1 = ((62, 28), (42, 13), (60, 6))
-    # docs/EXPERIMENTS.md, "Report recount of the 18 and 19 October results, 19 October 2026 IST";
+    # docs/EXPERIMENT_HISTORY.md, "Report recount of the 18 and 19 October results, 19 October 2026 IST";
     # recount in .private/ops/report_recount_20261019_v1/ (Lease 4 length bins)
     draw2 = ((62, 20), (42, 12), (60, 8))
     assert [n for n, _ in draw1] == [n for n, _ in draw2] and sum(n for n, _ in draw1) == 164
@@ -302,7 +302,7 @@ def fig_oct19_rl_filtered():
     fig, (a, b) = plt.subplots(1, 2, figsize=(165 * MM, 60 * MM),
                                gridspec_kw={"width_ratios": [1.25, 1], "wspace": 0.4})
     # (a) Accepted attempts per training quarter, of 1,012 attempts each.
-    # docs/EXPERIMENTS.md, "RL_filtered result: learning on the 62 filtered TRAIN tasks, 19 October 2026 IST"
+    # docs/EXPERIMENT_HISTORY.md, "RL_filtered result: learning on the 62 filtered TRAIN tasks, 19 October 2026 IST"
     quarters = (404, 500, 576, 602)
     # Same section: 2,082 of 4,048 attempts.
     assert sum(quarters) == 2082 and 4 * 1012 == 4048
@@ -313,7 +313,7 @@ def fig_oct19_rl_filtered():
                    capsize=2, elinewidth=0.8, lw=0)
         a.text(i, 100 * hi + 1.5, str(k), ha="center", va="bottom", fontsize=7)
     # S before RL on the same 62 tasks: tasks by accepted attempts of 4 in pass_rates, {accepted: tasks}.
-    # docs/EXPERIMENTS.md, "Rollout speed result and pass-rate map, 19 October 2026 IST"
+    # docs/EXPERIMENT_HISTORY.md, "Rollout speed result and pass-rate map, 19 October 2026 IST"
     s_tasks = {1: 48, 2: 10, 3: 4}
     s_acc, s_att = sum(k * t for k, t in s_tasks.items()), 4 * sum(s_tasks.values())
     # 80 of 248 attempts; "RL_filtered result" states the mean as 0.323.
@@ -327,7 +327,7 @@ def fig_oct19_rl_filtered():
     a.set_ylabel("Accepted attempts (%)")
     label(a, "a")
     # (b) Tasks by accepted attempts of 4 at the first visit (row index) and the last visit (column index).
-    # docs/EXPERIMENTS.md, "Report recount of the 18 and 19 October results, 19 October 2026 IST";
+    # docs/EXPERIMENT_HISTORY.md, "Report recount of the 18 and 19 October results, 19 October 2026 IST";
     # recount in .private/ops/report_recount_20261019_v1/ (per-task first and last visit table)
     visits = (
         (17, 0, 0, 1, 7),
@@ -374,10 +374,10 @@ def fig_oct19_curriculum():
     fig, (a, b, c) = plt.subplots(1, 3, figsize=(165 * MM, 55 * MM), gridspec_kw={"wspace": 0.55})
     quarters = ["Q1", "Q2", "Q3", "Q4"]
     # (a) Accepted attempts by quarter of C's first-pass task order (126, 126, 126 and 128 tasks, 4 attempts each).
-    # docs/EXPERIMENTS.md, "Report recount of the 18 and 19 October results, 19 October 2026 IST";
+    # docs/EXPERIMENT_HISTORY.md, "Report recount of the 18 and 19 October results, 19 October 2026 IST";
     # recount in .private/ops/report_recount_20261019_v1/ (quarter denominators)
     den = (504, 504, 504, 512)
-    # docs/EXPERIMENTS.md, "C result: curriculum order raises TRAIN acceptance and narrows the policy, 19 October 2026 IST"
+    # docs/EXPERIMENT_HISTORY.md, "C result: curriculum order raises TRAIN acceptance and narrows the policy, 19 October 2026 IST"
     s_q = (42, 27, 12, 3)
     c_q = (56, 35, 33, 6)
     # Same section: S accepts 84 of 2,024 and C's first pass 130 of 2,024.
@@ -396,9 +396,9 @@ def fig_oct19_curriculum():
     label(a, "a")
     # (b) Format errors by quarter of training actions: rows in group order, 4 blocks of q = n // 4 rows.
     # C has 23,381 actions, so q = 5,845 and the last row (a Lean rejection) is outside the 4 blocks.
-    # Q1 and Q4 rates of C and R (4.7%, 0.3%, 18.1%, 47.9%): docs/EXPERIMENTS.md,
+    # Q1 and Q4 rates of C and R (4.7%, 0.3%, 18.1%, 47.9%): docs/EXPERIMENT_HISTORY.md,
     # "C result: curriculum order raises TRAIN acceptance and narrows the policy, 19 October 2026 IST".
-    # R rates of all quarters: docs/EXPERIMENTS.md, "Report recount of the 18 and 19 October results, 19 October 2026 IST".
+    # R rates of all quarters: docs/EXPERIMENT_HISTORY.md, "Report recount of the 18 and 19 October results, 19 October 2026 IST".
     # Counts, and C rates of Q2 and Q3: the same recount section; recount in .private/ops/report_recount_20261019_v1/
     c_act, c_fe = 5845, (274, 272, 95, 18)
     r_act, r_fe = 5935, (1077, 396, 1105, 2842)
@@ -440,29 +440,29 @@ def fig_oct19_actions():
         ("Proof closed", RL, "white"),
     )
     e0 = {
-        # docs/EXPERIMENTS.md, "E7 result: R on the selection set, 19 October 2026 IST" (95.8 tokens)
+        # docs/EXPERIMENT_HISTORY.md, "E7 result: R on the selection set, 19 October 2026 IST" (95.8 tokens)
         "total": 1953, "format_error": 373, "rejected": 1411, "tokens": 95.83922171018945,
-        # docs/EXPERIMENTS.md, "Report recount of the 18 and 19 October results, 19 October 2026 IST"
+        # docs/EXPERIMENT_HISTORY.md, "Report recount of the 18 and 19 October results, 19 October 2026 IST"
         "partial": 123,
-        # docs/EXPERIMENTS.md, "Report recount of the 18 and 19 October results, 19 October 2026 IST";
+        # docs/EXPERIMENT_HISTORY.md, "Report recount of the 18 and 19 October results, 19 October 2026 IST";
         # recount in .private/ops/report_recount_20261019_v1/
         "changed": 32, "no_progress": 12, "forbidden": 1, "accepted": 1,
     }
     e7 = {
-        # docs/EXPERIMENTS.md, "E7 result: R on the selection set, 19 October 2026 IST" (34.6 tokens)
+        # docs/EXPERIMENT_HISTORY.md, "E7 result: R on the selection set, 19 October 2026 IST" (34.6 tokens)
         "total": 1963, "format_error": 1288, "rejected": 468, "tokens": 34.61079979623026,
-        # docs/EXPERIMENTS.md, "Report recount of the 18 and 19 October results, 19 October 2026 IST"
+        # docs/EXPERIMENT_HISTORY.md, "Report recount of the 18 and 19 October results, 19 October 2026 IST"
         "partial": 191,
-        # docs/EXPERIMENTS.md, "Report recount of the 18 and 19 October results, 19 October 2026 IST";
+        # docs/EXPERIMENT_HISTORY.md, "Report recount of the 18 and 19 October results, 19 October 2026 IST";
         # recount in .private/ops/report_recount_20261019_v1/
         "changed": 13, "no_progress": 2, "forbidden": 0, "accepted": 1,
     }
     e6 = {
-        # docs/EXPERIMENTS.md, "E6 result: filtered RL on the selection set, 19 October 2026 IST" (30.8 tokens)
+        # docs/EXPERIMENT_HISTORY.md, "E6 result: filtered RL on the selection set, 19 October 2026 IST" (30.8 tokens)
         "total": 1948, "format_error": 18, "rejected": 1636, "tokens": 30.777207392197127,
-        # docs/EXPERIMENTS.md, "Report recount of the 18 and 19 October results, 19 October 2026 IST"
+        # docs/EXPERIMENT_HISTORY.md, "Report recount of the 18 and 19 October results, 19 October 2026 IST"
         "partial": 283,
-        # docs/EXPERIMENTS.md, "Report recount of the 18 and 19 October results, 19 October 2026 IST";
+        # docs/EXPERIMENT_HISTORY.md, "Report recount of the 18 and 19 October results, 19 October 2026 IST";
         # recount in .private/ops/report_recount_20261019_v1/
         "changed": 5, "no_progress": 2, "forbidden": 0, "accepted": 4,
     }
@@ -493,7 +493,7 @@ def fig_oct19_actions():
 
 def fig_oct20_why():
     """Why the TRAIN gain does not reach held-out theorems: tactic application, format-error causes, proof length."""
-    # src: docs/EXPERIMENTS.md, "Analysis: why RL raises TRAIN acceptance without a held-out gain, 20 October 2026 IST"
+    # src: docs/EXPERIMENT_HISTORY.md, "Analysis: why RL raises TRAIN acceptance without a held-out gain, 20 October 2026 IST"
     fig, (a, b, c) = plt.subplots(1, 3, figsize=(165 * MM, 58 * MM),
                                   gridspec_kw={"width_ratios": [1.2, 1.15, 1.25], "wspace": 0.55})
     # (a) Episodes in which at least one tactic applies, of all episodes. Source: src, Result 3.

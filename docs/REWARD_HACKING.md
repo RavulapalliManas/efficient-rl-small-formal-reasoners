@@ -2,12 +2,12 @@
 
 <a id="reward-hacking-through-the-lean-reward"></a>
 
-Snapshot date: 2026-10-10. Scorer snapshot: `train_code_v9`.
-Catalogue record: [AUD-002](EXPERIMENTS.md#aud-002). Current execution status: [README](../README.md#status).
-The later decision log adopts `train_code_v11`. This inventory retains its earlier findings until source-based reconciliation.
-Its fix and open-item labels describe this snapshot. They are not a current scorer assessment.
+This audit describes `train_code_v9` on 10 October 2026.
+The [decision log](EXPERIMENT_HISTORY.md#decision-log) later records adoption of `train_code_v11`.
+Findings, fixes and open items below describe the earlier snapshot; they have not been reconciled against the later scorer.
 
-The audit records scorer exploits, data exposure and reward weaknesses. Each finding links the evidence, the fix and the remaining limits.
+The audit covers scorer exploits, data exposure and reward weaknesses.
+See [AUD-002](EXPERIMENT_HISTORY.md#aud-002) for its experiment record and the [README](../README.md#status) for current execution status.
 
 [Findings](#findings-at-a-glance) · [Limits of the fixes](#limits-of-the-fixes) · [Source records](#sources)
 

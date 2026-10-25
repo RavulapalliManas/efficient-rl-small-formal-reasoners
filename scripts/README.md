@@ -21,7 +21,7 @@ The 18–19 October study (EXP-026 to EXP-028) follows this workflow:
 
 | Step | Entry point | What it does |
 | --- | --- | --- |
-| Fetch data | [Data handoff](../docs/EXPERIMENTS.md#6-step-by-step-fetch-and-verify-the-data) | Fetch and verify frozen releases. Several builders are private, so a fresh clone cannot rebuild the full chain |
+| Fetch data | [Data handoff](../docs/EXPERIMENT_HISTORY.md#6-step-by-step-fetch-and-verify-the-data) | Fetch and verify the archived inputs |
 | Rebuild a new dataset | [Dataset recreation](#dataset-recreation) | Fetch pinned public sources, assemble a corpus, verify a new partition and create orders |
 | Train SFT | [train/run_sft.py](train/run_sft.py) | Learn proof actions from supervised examples |
 | Train RL | [train/run_tactic_rl.py](train/run_tactic_rl.py) | Sample proof attempts, check actions in Lean and update the model with REINFORCE |
@@ -30,9 +30,8 @@ The 18–19 October study (EXP-026 to EXP-028) follows this workflow:
 
 The figure script rebuilds 12 plots from counts recorded in its source. The dense-reward plot preserves the counts from its earlier PDF. The other `fig_oct21_*` PDFs are checked in, but their builders and recount inputs remain in the private directory named in the report.
 
-The [run guide](../docs/EXPERIMENTS.md#7-step-by-step-run-with-this-data-as-the-main-run-did) holds the commands and settings used by the main run.
-The original run configs are private. [`reproduction_v1.json`](../configs/reproduction_v1.json) reconstructs the documented settings for the reproduction helper; it has not been validated by a rerun.
-Other public configs include older experiments and unrun proposals; check their experiment records before use.
+Use [Main-study reproduction](#main-study-reproduction) for the recorded study.
+Public configs also cover older experiments and unrun proposals; match them through the [config guide](../configs/README.md).
 [`data/build_nt_benchmark.py`](data/build_nt_benchmark.py) builds the earlier EXP-025 releases from which the later data derives.
 
 ## Main-study reproduction
@@ -45,8 +44,11 @@ S -> RL with shuffled theorem order          -> R
 S -> RL with prerequisite-first order        -> C
 ```
 
-All four have the same model architecture. They differ in the training applied to their weights.
-Compare them on the same DEV statements and attempt budget. A model response proposes tactics; Lean decides whether the complete proof is accepted.
+All four use the same architecture. Compare their complete-proof acceptance on the same DEV statements and attempt budget.
+
+Original data, weights, runtime and configs are external; several dataset builders remain private.
+[`reproduction_v1.json`](../configs/reproduction_v1.json) reconstructs the [recorded recipe](../docs/EXPERIMENT_HISTORY.md#7-step-by-step-run-with-this-data-as-the-main-run-did).
+It has not been validated by a rerun. The helper checks inputs and prepares commands; you must execute those commands separately.
 
 ### 1. Inspect the project locally
 
@@ -55,8 +57,7 @@ Follow [one proof attempt](#proof-execution) to see how the implementation fits 
 
 ### 2. Obtain the frozen inputs
 
-Ask the project owner for the [archived data, runtime and model directories](../docs/EXPERIMENTS.md#6-step-by-step-fetch-and-verify-the-data).
-Some dataset builders and the original main-run configs are private, so a clone alone cannot reproduce the full study.
+Ask the project owner for the [archived data, runtime and model directories](../docs/EXPERIMENT_HISTORY.md#6-step-by-step-fetch-and-verify-the-data).
 The older [GitHub checkpoint releases](../README.md#checkpoints) are separate experiments.
 
 | Input | Meaning and use |
@@ -70,7 +71,7 @@ The older [GitHub checkpoint releases](../README.md#checkpoints) are separate ex
 | `models/B`, `models/S`, `models/R`, `models/C` | Complete checkpoint folders, including weights, tokenizer and model metadata |
 | `runtime/inputs/`, `lean_env/` | Archived checker, REPL, identity receipt, Lean and compiled mathlib |
 
-JSONL stores one JSON object per line. The [data handoff](../docs/EXPERIMENTS.md#4-the-datasets-you-use) describes fields and provenance.
+JSONL stores one JSON object per line. The [data handoff](../docs/EXPERIMENT_HISTORY.md#4-the-datasets-you-use) describes fields and provenance.
 Keep the 21 TEST theorems reserved. The 164-theorem EXP-028 selection set is a separate exploratory set.
 
 Place the extracted inputs outside Git in this layout. Here `/absolute/path/to/study` is a directory you choose:
@@ -101,10 +102,10 @@ uv run python scripts/reproduce.py prepare --root /absolute/path/to/study --stag
 ```
 
 `check` returns a nonzero exit code for missing or mismatched inputs. It compares recorded file hashes, row counts, runtime layout and selected package versions.
-It checks metadata presence but does not establish tokenizer equivalence, execute Lean or load a model.
+Metadata checks confirm presence, not tokenizer equivalence. The checker neither executes Lean nor loads a model.
 The model hash check identifies the archived reference checkpoint; a newly trained checkpoint will have a different identity.
 
-`prepare` writes `config.json`, `command.txt` and `plan.json` into a new directory outside Git. It never launches a job.
+`prepare` writes `config.json`, `command.txt` and `plan.json` into a new directory outside Git.
 The plan includes input-check failures, source revision, whether the checkout has edits, and the intended output directory.
 Review those files before execution. Training needs the managed runner, resource caps, a registered run and approval of the quoted GPU cost.
 The managed runner must enforce the SFT wall cap; `run_sft.py` does not enforce it itself.
@@ -116,8 +117,6 @@ The managed runner must enforce the SFT wall cap; `run_sft.py` does not enforce 
 | `rl-curriculum` | S | A new C checkpoint |
 | `dev` | B, S, R or C | Proof attempts and aggregate counts; no optimizer update |
 
-The versioned [reproduction specification](../configs/reproduction_v1.json) holds the file identities and reconstructed settings.
-These settings come from the [recorded recipe](../docs/EXPERIMENTS.md#7-step-by-step-run-with-this-data-as-the-main-run-did); they are not copies of the private configs, and no rerun is established by preparing them.
 Compare scientific outcomes from run artifacts: `run.json` holds resolved settings and counters, `steps.jsonl` holds group outcomes, and `rollouts.jsonl` holds actions.
 `counts.accepted` counts accepted attempts; the length of `solved_names` counts distinct proved theorems.
 
@@ -255,10 +254,10 @@ Import it from `scripts.data.nt_benchmark` in a repository checkout. Verificatio
 
 ## Reusing the proof components
 
-The reusable boundary is a theorem, an observation, a tactic action and a verifier outcome.
+The proof components connect theorem tasks, model observations, tactic actions and verifier outcomes.
 With `scripts/train` on the Python import path, import `LeanEpisode` from `rl_components.environment`, `render_observation` from `rl_components.observations`, and model sampling from `rl_components.generation`.
 Observation rendering needs neither Lean nor model libraries. The environment loads the existing verifier transport but no model or optimizer.
-This is a repository-level interface; it is not yet an installed SDK.
+These modules are imported from the repository checkout.
 
 A host must supply the pinned checker/REPL context, admitted theorem task, output directory and shared verifier counters.
 Use the context setup in `run_tactic_rl.py` as the runtime reference: construct an episode, call `reset()`, sample an action from its observation, call `step(action, bonus)`, and always call `close()` in a `finally` block.
@@ -292,17 +291,15 @@ Literal integration into another service also requires its documented input/outp
 
 ## Import structure
 
-The scripts are not an installed package.
-Most scripts add sibling folders such as `scripts/data` and `scripts/eval` to `sys.path` and import other scripts by file name.
-Some command scripts therefore also hold code that many other scripts import.
-The command modules retain their existing import interfaces.
+Most scripts add sibling folders such as `scripts/data` and `scripts/eval` to `sys.path` and import scripts by file name.
+Some command modules also provide shared functions.
 New callers should import environment, observation, action, objective, generation and configuration helpers from their owning modules.
 The trainer retains its old names as compatibility exports. Tests that replace verifier functions should patch `rl_components.environment`, where episodes resolve those functions.
 Update callers and source receipts when moving code; private run packages must include the full component directory.
 
 The Lean checker module `checker.py` is not in Git.
 Scripts that check proofs take its path with `--checker` and load it with `load_checker`.
-[Section 4.10 of the data handoff](../docs/EXPERIMENTS.md#410-the-lean-runtime-environment-repl-checker-and-identity) lists its archived copy, with the REPL binary and the Lean environment.
+[Section 4.10 of the data handoff](../docs/EXPERIMENT_HISTORY.md#410-the-lean-runtime-environment-repl-checker-and-identity) lists its archived copy, with the REPL binary and the Lean environment.
 
 | Shared file | What other scripts import from it |
 | --- | --- |
@@ -352,7 +349,7 @@ Keep human authorship in commits and documents. Software and automated methods b
 The following checkpoints belong to the earlier 5–9 October experiments. They are not S, R or C from the 18–19 October main study.
 Their weights and tokenizer files are available through [GitHub Releases](https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/releases).
 The [download index](../configs/checkpoints.json) records source files, asset sizes, and GitHub digests.
-For the later study, use the [archived weights](../docs/EXPERIMENTS.md#49-model-weights) and identities in [reproduction_v1.json](../configs/reproduction_v1.json).
+For the later study, use the [archived weights](../docs/EXPERIMENT_HISTORY.md#49-model-weights) and identities in [reproduction_v1.json](../configs/reproduction_v1.json).
 
 | Checkpoint | Download |
 | --- | --- |
@@ -391,7 +388,7 @@ Weights and optimizer state retain their original contents.
 | Filtered RL | In EXP-028, RL on 62 TRAIN theorems that the SFT model proves in 1 to 3 of 4 initial attempts |
 
 Model letters are local to each study. Their definitions appear in the corresponding protocol.
-The [handoff terminology table](../docs/EXPERIMENTS.md#start-here-one-page-for-abhinav) maps older names to these terms.
+The [handoff terminology table](../docs/EXPERIMENT_HISTORY.md#start-here-one-page-for-abhinav) maps older names to these terms.
 
 <a id="every-script"></a>
 
@@ -399,8 +396,8 @@ The [handoff terminology table](../docs/EXPERIMENTS.md#start-here-one-page-for-a
 
 The index covers 116 command entry points and shared modules, grouped by folder.
 
-- Purpose summarizes the script's first docstring line, using the current names from the [handoff terminology table](../docs/EXPERIMENTS.md#start-here-one-page-for-abhinav).
-- Experiments lists catalogue entries and README status rows that name the script. A dash means no association is recorded. Shared scripts can serve several experiments.
+Purpose describes the script. Experiments lists recorded uses; a dash means no association is recorded.
+Shared scripts can serve several experiments.
 
 ### Reproduction
 

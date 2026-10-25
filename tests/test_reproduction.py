@@ -59,8 +59,9 @@ class ReproductionTest(unittest.TestCase):
         return reproduce.check_inputs(self.contract, self.root, stage, model, self.root / 'models' / model)
 
     def test_contract_identifies_recorded_files_and_usable_rl_settings(self):
-        catalogue = (reproduce.REPOSITORY / 'docs/EXPERIMENTS.md').read_text()
         contract = reproduce.load_contract()
+        source_path = contract['source'].split('#', 1)[0]
+        catalogue = (reproduce.REPOSITORY / source_path).read_text()
         for entry in [*contract['artifacts'], *contract['models'].values()]:
             self.assertRegex(entry['sha256'], r'^[0-9a-f]{64}$')
             self.assertIn(entry['sha256'], catalogue)

@@ -1,6 +1,6 @@
 {
   "version": "main-study-reproduction-v1",
-  "source": "docs/EXPERIMENTS.md#7-step-by-step-run-with-this-data-as-the-main-run-did",
+  "source": "docs/EXPERIMENT_HISTORY.md#7-step-by-step-run-with-this-data-as-the-main-run-did",
   "recipe_status": "Reconstructed from the documented 18-19 October recipe; not the original private config bytes or a verified rerun.",
   "software_status": "The training dependency group follows the documented 19 October library combination. Exact main-run package receipts remain external.",
   "base_model": {

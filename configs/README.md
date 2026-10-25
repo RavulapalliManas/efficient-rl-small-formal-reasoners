@@ -34,14 +34,13 @@ SFT means supervised fine-tuning. RLP rewards reasoning that makes a hidden answ
 <details>
 <summary>How experiment assignments are recorded</summary>
 
-**Purpose** summarizes the config's `purpose` field. A dash means the field is absent.
-Older terms use the names in the [handoff terminology table](../docs/EXPERIMENTS.md#start-here-one-page-for-abhinav).
+**Purpose** describes settings from the config fields and linked experiment records.
 **Source** explains the experiment assignment. Prefer the first available source:
 
 1. The config's `experiment_id` or `experiment` field.
 2. Its `run_id` prefix, such as `exp019-` for EXP-019.
-3. A catalogue entry or README status row that names it.
-4. A filename pattern in that entry or row, restricted to files tracked when the pattern was written.
+3. An experiment record that names it.
+4. A filename pattern in that record, restricted to files tracked when the pattern was written.
 
 `not recorded` means no source names an experiment for that config.
 A catalogue line uses the experiment in its heading, or the one explicit ID on the line when the heading names none.
@@ -69,12 +68,12 @@ Inputs of dataset builds and selections.
 
 | Config | Purpose | Experiment | Source |
 | --- | --- | --- | --- |
-| [`data/highschool_prerequisites_v1.json`](data/highschool_prerequisites_v1.json) | – | EXP-019 | declared `experiment_id` |
-| [`data/leandojo_nat_v1.json`](data/leandojo_nat_v1.json) | – | EXP-001 | README pattern and catalogue pattern |
-| [`data/leandojo_number_theory_v2.json`](data/leandojo_number_theory_v2.json) | – | EXP-001 | README pattern and catalogue pattern |
+| [`data/highschool_prerequisites_v1.json`](data/highschool_prerequisites_v1.json) | High-school mathematics sources and subject/level splits for prerequisite preparation | EXP-019 | declared `experiment_id` |
+| [`data/leandojo_nat_v1.json`](data/leandojo_nat_v1.json) | LeanDojo selection of natural-number proofs from pinned mathlib sources | EXP-001 | README pattern and catalogue pattern |
+| [`data/leandojo_number_theory_v2.json`](data/leandojo_number_theory_v2.json) | Broader LeanDojo selection spanning number theory and its logic and algebra prerequisites | EXP-001 | README pattern and catalogue pattern |
 | [`data/leandojo_short_proofs.json`](data/leandojo_short_proofs.json) | Original LeanDojo TRAIN short proofs for binary-reward interactive RL preparation. | not recorded | not recorded |
-| [`data/local_operators_v1.json`](data/local_operators_v1.json) | – | not recorded | not recorded |
-| [`data/mathematical_rlp_review_v1.json`](data/mathematical_rlp_review_v1.json) | – | EXP-012 | catalogue and README |
+| [`data/local_operators_v1.json`](data/local_operators_v1.json) | Local-action examples with algebraic-template validation and supplied-action composition tasks | not recorded | not recorded |
+| [`data/mathematical_rlp_review_v1.json`](data/mathematical_rlp_review_v1.json) | Reviewed RLP templates, hypotheses, operation labels, masks and arithmetic checks | EXP-012 | catalogue and README |
 | [`data/nt_benchmark_v1.json`](data/nt_benchmark_v1.json) | Bounded exploratory benchmark build from the existing broader corpus. | EXP-025 | declared `experiment` |
 | [`data/nt_benchmark_v2.json`](data/nt_benchmark_v2.json) | Expanded exploratory SFT/RL dataset from the existing broader corpus. | EXP-025 | declared `experiment` |
 | [`data/nt_expanded_tactic_v1.json`](data/nt_expanded_tactic_v1.json) | Freeze broader TRAIN-source theorems and separate DEV theorems before model sampling. | EXP-023 | declared `experiment_id` |
@@ -82,7 +81,7 @@ Inputs of dataset builds and selections.
 | [`data/nt_sources_v1.json`](data/nt_sources_v1.json) | Immutable upstream file identities for the public dataset rebuild | EXP-025 | 21 October rebuild decision |
 | [`data/nt_sft_recovery_v1.json`](data/nt_sft_recovery_v1.json) | Separate recovery-augmented action dataset; no active pilot change or model launch. | not recorded | not recorded |
 | [`data/nt_validation_v1.json`](data/nt_validation_v1.json) | Held-out selection set for EXP-028 screening. | EXP-028 | declared `experiment` |
-| [`data/undergrad_nt_v1.json`](data/undergrad_nt_v1.json) | – | EXP-024 | declared `experiment` |
+| [`data/undergrad_nt_v1.json`](data/undergrad_nt_v1.json) | Undergraduate number-theory families, topics, capabilities and held-out splits | EXP-024 | declared `experiment` |
 
 </details>
 
@@ -95,13 +94,13 @@ Settings of evaluations, probes and grading.
 
 | Config | Purpose | Experiment | Source |
 | --- | --- | --- | --- |
-| [`eval/acquisition_probe_v1.json`](eval/acquisition_probe_v1.json) | – | EXP-010 | catalogue |
+| [`eval/acquisition_probe_v1.json`](eval/acquisition_probe_v1.json) | Exploratory recognition, recall and application probes after the historical RLP runs | EXP-010 | catalogue |
 | [`eval/decomposition_grading_v2.json`](eval/decomposition_grading_v2.json) | User-requested exploratory regrading of all checkpoints with partial credit and separate ancillary errors. | not recorded | not recorded |
-| [`eval/decomposition_notation_check.json`](eval/decomposition_notation_check.json) | – | not recorded | not recorded |
-| [`eval/decomposition_probe_v2.json`](eval/decomposition_probe_v2.json) | – | EXP-010 | catalogue |
-| [`eval/knowledge_inventory_v1.json`](eval/knowledge_inventory_v1.json) | – | EXP-010 | catalogue |
-| [`eval/local_operator_probe_v1.json`](eval/local_operator_probe_v1.json) | – | not recorded | not recorded |
-| [`eval/mathematical_grader_calibration_v1.json`](eval/mathematical_grader_calibration_v1.json) | – | not recorded | not recorded |
+| [`eval/decomposition_notation_check.json`](eval/decomposition_notation_check.json) | Post-hoc variable-renaming check for a notation error in the decomposition probe | not recorded | not recorded |
+| [`eval/decomposition_probe_v2.json`](eval/decomposition_probe_v2.json) | Informal mathematics decomposition probe; outcomes are not Lean proof checks | EXP-010 | catalogue |
+| [`eval/knowledge_inventory_v1.json`](eval/knowledge_inventory_v1.json) | Exploratory inventory of mathematical knowledge and operators | EXP-010 | catalogue |
+| [`eval/local_operator_probe_v1.json`](eval/local_operator_probe_v1.json) | Greedy expression-format diagnostic on local-operator training fixtures | not recorded | not recorded |
+| [`eval/mathematical_grader_calibration_v1.json`](eval/mathematical_grader_calibration_v1.json) | Development controls for grader calibration; gold labels need independent review | not recorded | not recorded |
 | [`eval/mathematical_grading_v1.json`](eval/mathematical_grading_v1.json) | Development calibration and reference-informed mathematical admission/evaluation. | not recorded | not recorded |
 | [`eval/qwen_05b_curriculum_stage_probe_v1prompt.json`](eval/qwen_05b_curriculum_stage_probe_v1prompt.json) | EXP-023 stage-achievability probe. | EXP-023 | declared `experiment_id` |
 | [`eval/qwen_05b_curriculum_stage_probe_v21prompt.json`](eval/qwen_05b_curriculum_stage_probe_v21prompt.json) | EXP-023 stage-achievability probe. | EXP-023 | declared `experiment_id` |
@@ -112,8 +111,8 @@ Settings of evaluations, probes and grading.
 | [`eval/qwen_05b_nt_retention_dev.json`](eval/qwen_05b_nt_retention_dev.json) | Frozen elementary DEV retention panel from the completed mixed RL study. | EXP-023 | declared `experiment_id` |
 | [`eval/qwen_05b_prerequisite_sft_dev_v1.json`](eval/qwen_05b_prerequisite_sft_dev_v1.json) | Matched optimizer-disabled pilot evaluation of the fresh parent and final interactive SFT checkpoint on all retained release_v3 DEV statements. | EXP-026 | declared `experiment_id` |
 | [`eval/qwen_05b_prerequisite_sft_dev_v2.json`](eval/qwen_05b_prerequisite_sft_dev_v2.json) | Matched optimizer-disabled pilot evaluation of the fresh parent and final interactive SFT checkpoint on all retained release_v3 DEV statements. | EXP-026 | declared `experiment_id` |
-| [`eval/qwen_05b_probe.json`](eval/qwen_05b_probe.json) | – | EXP-002, EXP-003 | catalogue and README |
-| [`eval/qwen_05b_tactic_burdens.json`](eval/qwen_05b_tactic_burdens.json) | – | EXP-019 | `run_id` prefix |
+| [`eval/qwen_05b_probe.json`](eval/qwen_05b_probe.json) | Qwen baseline probes on GSM8K, MATH and Lean statements | EXP-002, EXP-003 | catalogue and README |
+| [`eval/qwen_05b_tactic_burdens.json`](eval/qwen_05b_tactic_burdens.json) | Frozen DEV probe with curated premise assistance | EXP-019 | `run_id` prefix |
 | [`eval/qwen_05b_tactic_comparison_dev.json`](eval/qwen_05b_tactic_comparison_dev.json) | Matched unassisted DEV evaluation for EXP019 comparison; no optimizer. | EXP-019 | `run_id` prefix |
 | [`eval/qwen_05b_tactic_curriculum_signal.json`](eval/qwen_05b_tactic_curriculum_signal.json) | Frozen training-state signal assessment. | EXP-019 | `run_id` prefix |
 | [`eval/qwen_05b_tactic_dev.json`](eval/qwen_05b_tactic_dev.json) | Frozen DEV interactive proof evaluation; no optimizer; statements without proof prefixes | EXP-019 | `run_id` prefix |
@@ -131,8 +130,8 @@ RLP training on number-theory text.
 
 | Config | Purpose | Experiment | Source |
 | --- | --- | --- | --- |
-| [`pretrain/qwen_05b_number_theory_rlp.json`](pretrain/qwen_05b_number_theory_rlp.json) | – | EXP-007 | README pattern and catalogue pattern |
-| [`pretrain/qwen_05b_number_theory_rlp_continuation.json`](pretrain/qwen_05b_number_theory_rlp_continuation.json) | – | EXP-007 | README pattern and catalogue pattern |
+| [`pretrain/qwen_05b_number_theory_rlp.json`](pretrain/qwen_05b_number_theory_rlp.json) | Bounded number-theory RLP adaptation from the pinned Instruct model | EXP-007 | README pattern and catalogue pattern |
+| [`pretrain/qwen_05b_number_theory_rlp_continuation.json`](pretrain/qwen_05b_number_theory_rlp_continuation.json) | Continue the saved number-theory RLP policy and EMA with a fresh optimizer | EXP-007 | README pattern and catalogue pattern |
 
 </details>
 
@@ -145,10 +144,10 @@ SFT, RLP and interleaved training runs.
 
 | Config | Purpose | Experiment | Source |
 | --- | --- | --- | --- |
-| [`midtrain/qwen_05b_controlled_rlp.json`](midtrain/qwen_05b_controlled_rlp.json) | – | EXP-013 | catalogue and README |
-| [`midtrain/qwen_05b_gsm8k_lora.yaml`](midtrain/qwen_05b_gsm8k_lora.yaml) | – | EXP-002 | catalogue |
+| [`midtrain/qwen_05b_controlled_rlp.json`](midtrain/qwen_05b_controlled_rlp.json) | Controlled mathematical-span RLP from the primitive-RLP checkpoint | EXP-013 | catalogue and README |
+| [`midtrain/qwen_05b_gsm8k_lora.yaml`](midtrain/qwen_05b_gsm8k_lora.yaml) | Exploratory GSM8K supervised fine-tuning with LoRA | EXP-002 | catalogue |
 | [`midtrain/qwen_05b_gsm8k_rlp_preparation.json`](midtrain/qwen_05b_gsm8k_rlp_preparation.json) | Basic arithmetic preparation using official GSM8K train only; keep solutions private; no official test access | EXP-019 | `run_id` prefix |
-| [`midtrain/qwen_05b_highschool_rlp_preparation.json`](midtrain/qwen_05b_highschool_rlp_preparation.json) | – | EXP-019 | `run_id` prefix |
+| [`midtrain/qwen_05b_highschool_rlp_preparation.json`](midtrain/qwen_05b_highschool_rlp_preparation.json) | Mathematical-span RLP preparation from the EXP-020 common SFT checkpoint | EXP-019 | `run_id` prefix |
 | [`midtrain/qwen_05b_interleaved_training_v1.json`](midtrain/qwen_05b_interleaved_training_v1.json) | Exploratory alternating SFT/RLP and SFT/Lean-GRPO branches from a common SFT checkpoint; different training data, not an algorithm-only comparison | EXP-020 | declared `experiment_id` |
 | [`midtrain/qwen_05b_interleaved_training_v2.json`](midtrain/qwen_05b_interleaved_training_v2.json) | Exploratory alternating SFT/RLP and SFT/Lean-GRPO branches from a common SFT checkpoint; different training data, not an algorithm-only comparison | EXP-020 | declared `experiment_id` |
 | [`midtrain/qwen_05b_interleaved_training_v3.json`](midtrain/qwen_05b_interleaved_training_v3.json) | Exploratory alternating SFT/RLP and SFT/Lean-GRPO branches from a common SFT checkpoint; different training data, not an algorithm-only comparison | EXP-020 | declared `experiment_id` |
@@ -156,10 +155,10 @@ SFT, RLP and interleaved training runs.
 | [`midtrain/qwen_05b_monday_recovery.json`](midtrain/qwen_05b_monday_recovery.json) | Exploratory Monday recovery: train-only verified proof distillation, supervised control, then KL-regularized Lean GRPO. | EXP-021 | declared `experiment_id` |
 | [`midtrain/qwen_05b_nt_expanded_warmstart.json`](midtrain/qwen_05b_nt_expanded_warmstart.json) | Conditional supervised warmstart on accepted TRAIN continuations with exact STEP prompts and raw tactic-block targets. | EXP-023 | declared `experiment_id` |
 | [`midtrain/qwen_05b_nt_interleaved_sft_v1.json`](midtrain/qwen_05b_nt_interleaved_sft_v1.json) | Number-theory proof SFT with informal comments and tactic variants. | EXP-018 | catalogue and README |
-| [`midtrain/qwen_05b_number_theory_rlp_fp32.json`](midtrain/qwen_05b_number_theory_rlp_fp32.json) | – | EXP-008 | catalogue and README |
+| [`midtrain/qwen_05b_number_theory_rlp_fp32.json`](midtrain/qwen_05b_number_theory_rlp_fp32.json) | Matched RLP continuation with FP32 parameters and optimizer states | EXP-008 | catalogue and README |
 | [`midtrain/qwen_05b_prerequisite_interactive_sft_v1.json`](midtrain/qwen_05b_prerequisite_interactive_sft_v1.json) | Initial interactive number-theory SFT pilot on the checked prerequisite action release. | EXP-026 | declared `experiment_id` |
 | [`midtrain/qwen_05b_prerequisite_interactive_sft_v2.json`](midtrain/qwen_05b_prerequisite_interactive_sft_v2.json) | Initial interactive number-theory SFT pilot on the checked prerequisite action release. | EXP-026 | declared `experiment_id` |
-| [`midtrain/qwen_05b_primitive_rlp.json`](midtrain/qwen_05b_primitive_rlp.json) | – | EXP-009 | catalogue and README |
+| [`midtrain/qwen_05b_primitive_rlp.json`](midtrain/qwen_05b_primitive_rlp.json) | Primitive-first RLP with mathematical-span rewards and unassisted evaluation | EXP-009 | catalogue and README |
 | [`midtrain/qwen_05b_tactic_continued_sft_comparison.json`](midtrain/qwen_05b_tactic_continued_sft_comparison.json) | Exploratory continued-SFT candidate for EXP-019. | EXP-019 | declared `experiment_id` |
 | [`midtrain/qwen_05b_v21_warmstart.json`](midtrain/qwen_05b_v21_warmstart.json) | Format warmstart for environment version 2.1: teach the parent to answer the v2.1 observation with one ```lean fence of up to 4 tactics that ends at the closing fence. | EXP-023 | declared `experiment_id` |
 
@@ -174,24 +173,24 @@ RL runs and the candidate-action catalogue.
 
 | Config | Purpose | Experiment | Source |
 | --- | --- | --- | --- |
-| [`rl/lean_candidate_catalogue_v1.json`](rl/lean_candidate_catalogue_v1.json) | – | not recorded | not recorded |
+| [`rl/lean_candidate_catalogue_v1.json`](rl/lean_candidate_catalogue_v1.json) | Finite list of tactic candidates for action-selection policies | not recorded | not recorded |
 | [`rl/qwen_05b_candidate_frozen_lm_v1.json`](rl/qwen_05b_candidate_frozen_lm_v1.json) | Prospective no-update baseline for matched candidate-policy comparison. | EXP-026 | declared `experiment_id` |
 | [`rl/qwen_05b_candidate_ppo_v1.json`](rl/qwen_05b_candidate_ppo_v1.json) | Prospective matched candidate-policy pilot. | EXP-026 | declared `experiment_id` |
 | [`rl/qwen_05b_candidate_reinforce_v1.json`](rl/qwen_05b_candidate_reinforce_v1.json) | Prospective matched candidate-policy pilot. | EXP-026 | declared `experiment_id` |
 | [`rl/qwen_05b_candidate_uniform_v1.json`](rl/qwen_05b_candidate_uniform_v1.json) | Prospective no-update baseline for matched candidate-policy comparison. | EXP-026 | declared `experiment_id` |
-| [`rl/qwen_05b_completion_grpo.json`](rl/qwen_05b_completion_grpo.json) | – | EXP-006 | catalogue and README |
+| [`rl/qwen_05b_completion_grpo.json`](rl/qwen_05b_completion_grpo.json) | Proof-completion GRPO with random and curriculum orders | EXP-006 | catalogue and README |
 | [`rl/qwen_05b_lean_grpo_comparison.json`](rl/qwen_05b_lean_grpo_comparison.json) | EXP-022 prospective PPO versus GRPO pilot. | EXP-022 | README pattern and catalogue pattern |
 | [`rl/qwen_05b_lean_grpo_smoke.json`](rl/qwen_05b_lean_grpo_smoke.json) | CPU smoke test of scripts/train/run_lean_grpo.py: the pipeline runs and records costs; not a result | EXP-019 | catalogue |
 | [`rl/qwen_05b_lean_ppo_comparison.json`](rl/qwen_05b_lean_ppo_comparison.json) | EXP-022 prospective PPO versus GRPO pilot. | EXP-022 | README pattern and catalogue pattern |
-| [`rl/qwen_05b_local_operator_grpo.json`](rl/qwen_05b_local_operator_grpo.json) | – | EXP-011 | catalogue and README |
+| [`rl/qwen_05b_local_operator_grpo.json`](rl/qwen_05b_local_operator_grpo.json) | Local-operator GRPO from the primitive-RLP checkpoint | EXP-011 | catalogue and README |
 | [`rl/qwen_05b_nt_feedback_ordered.json`](rl/qwen_05b_nt_feedback_ordered.json) | Exploratory interactive reward-by-curriculum comparison. | EXP-023 | declared `experiment_id` |
 | [`rl/qwen_05b_nt_feedback_shuffled.json`](rl/qwen_05b_nt_feedback_shuffled.json) | Exploratory interactive reward-by-curriculum comparison. | EXP-023 | declared `experiment_id` |
 | [`rl/qwen_05b_nt_one_action_ppo.json`](rl/qwen_05b_nt_one_action_ppo.json) | Matched one-action PPO comparison with REINFORCE. | EXP-023 | declared `experiment_id` |
 | [`rl/qwen_05b_nt_one_action_reinforce.json`](rl/qwen_05b_nt_one_action_reinforce.json) | Matched one-action REINFORCE comparison with PPO. | EXP-023 | declared `experiment_id` |
 | [`rl/qwen_05b_nt_terminal_ordered.json`](rl/qwen_05b_nt_terminal_ordered.json) | Exploratory interactive reward-by-curriculum comparison. | EXP-023 | declared `experiment_id` |
 | [`rl/qwen_05b_nt_terminal_shuffled.json`](rl/qwen_05b_nt_terminal_shuffled.json) | Exploratory interactive reward-by-curriculum comparison. | EXP-023 | declared `experiment_id` |
-| [`rl/qwen_05b_prerequisite_grpo.json`](rl/qwen_05b_prerequisite_grpo.json) | – | EXP-005 | README pattern and catalogue pattern |
-| [`rl/qwen_05b_prerequisite_grpo_syntax.json`](rl/qwen_05b_prerequisite_grpo_syntax.json) | – | EXP-005 | README pattern and catalogue pattern |
+| [`rl/qwen_05b_prerequisite_grpo.json`](rl/qwen_05b_prerequisite_grpo.json) | Prerequisite GRPO with full, name-only and unassisted readiness probes | EXP-005 | README pattern and catalogue pattern |
+| [`rl/qwen_05b_prerequisite_grpo_syntax.json`](rl/qwen_05b_prerequisite_grpo_syntax.json) | Prerequisite GRPO with a fully assisted readiness probe | EXP-005 | README pattern and catalogue pattern |
 | [`rl/qwen_05b_tactic_curriculum_reverse.json`](rl/qwen_05b_tactic_curriculum_reverse.json) | Preparation candidate. | EXP-019 | `run_id` prefix |
 | [`rl/qwen_05b_tactic_curriculum_uniform.json`](rl/qwen_05b_tactic_curriculum_uniform.json) | Preparation candidate. | EXP-019 | `run_id` prefix |
 | [`rl/qwen_05b_tactic_fixed_short.json`](rl/qwen_05b_tactic_fixed_short.json) | Preparation candidate for fixed short-task learning, before curriculum comparisons. | EXP-019 | `run_id` prefix |
@@ -202,6 +201,6 @@ RL runs and the candidate-action catalogue.
 | [`rl/qwen_05b_tactic_rl_pilot.json`](rl/qwen_05b_tactic_rl_pilot.json) | Exploratory interactive tactic RL from EXP020 common SFT; GPU launch remains unapproved | EXP-019 | `run_id` prefix |
 | [`rl/qwen_05b_tactic_rl_terminal.json`](rl/qwen_05b_tactic_rl_terminal.json) | Terminal-only interactive RL from EXP020 common SFT; GPU launch remains unapproved | EXP-019 | `run_id` prefix |
 | [`rl/qwen_05b_tactic_rl_terminal_comparison.json`](rl/qwen_05b_tactic_rl_terminal_comparison.json) | Exploratory Lean-in-the-loop feedback versus terminal reward. | EXP-019 | `run_id` prefix |
-| [`rl/qwen_05b_whole_proof_grpo.json`](rl/qwen_05b_whole_proof_grpo.json) | – | EXP-004 | catalogue and README |
+| [`rl/qwen_05b_whole_proof_grpo.json`](rl/qwen_05b_whole_proof_grpo.json) | Whole-proof GRPO with random and curriculum orders | EXP-004 | catalogue and README |
 
 </details>

@@ -50,6 +50,18 @@ class OverlapKeyTest(unittest.TestCase):
         self.assertEqual(old[1], new[1])
         self.assertNotEqual(old[1], audit.keys("(b : ℕ → ℝ) : (∑ y ∈ Finset.range 8, b y) = 1")[1])
 
+    def test_preamble_turns_open_lines_into_one_prefix(self):
+        text = "import Mathlib\nopen Real\nopen Finset Nat\n\n/-- doc -/\ntheorem t (n : ℕ) : 0 ≤ n := by sorry"
+        self.assertEqual(audit.preamble(text), ("open Real Finset Nat in\n", False))
+        self.assertEqual(audit.preamble("import Mathlib\ntheorem t : 1 = 1 := by sorry"), ("", False))
+
+    def test_preamble_keeps_helper_definitions_and_marks_solo(self):
+        text = "import Mathlib\nopen Real\ndef f (n : ℕ) : ℕ := n + 1\ntheorem t : f 1 = 2 := by sorry"
+        prefix, solo = audit.preamble(text)
+        self.assertTrue(solo)
+        self.assertEqual(prefix, "open Real\ndef f (n : ℕ) : ℕ := n + 1\n")
+        self.assertEqual(audit.bare_statement(text), ": f 1 = 2")
+
     def test_own_line_moves_only_the_first_by(self):
         self.assertEqual(audit.own_line("theorem c : 0 ≤ 1 := by norm_num"), "theorem c : 0 ≤ 1 := by\n  norm_num")
         multi = "theorem c : 0 ≤ 1 := by\n  have h : 0 ≤ 1 := by norm_num\n  exact h"

@@ -6,6 +6,8 @@ Three subcommands, run in order:
   finalize  joins the results, applies the overlap checks and the dev split, and writes sft_corpus_v1.jsonl,
             reference_audit.jsonl and summary.json into --dest (default --out).
   export    writes self-contained train, dev and test-pool files with the accepted proof text from a finalize output.
+  extend    copies a prepare output, appends more reference statements (FormalMATH, ProverBench, PutnamBench) with their
+            items, and copies the existing results, so `check` runs only the new items before `finalize` runs again.
 
 Every check uses the pinned Lean and mathlib with `set_option autoImplicit false` added to the historical header.
 Corpus proofs use check_batch strict mode (forbidden constructs, one command, target-name guard, axiom allowlist).
@@ -27,6 +29,7 @@ from collections import Counter, defaultdict
 from pathlib import Path
 import random
 import re
+import shutil
 import sys
 
 TACTICS = ["rfl", "decide", "norm_num", "simp", "omega", "linarith", "aesop", "simp_all", "tauto", "exact?", "nlinarith"]
@@ -44,6 +47,9 @@ CORPUS = "exp024_corpus_v0/out/corpus_v0.jsonl"
 MINIF2F_V1 = "external/minif2f_aimo/train-00000-of-00001.parquet"
 MINIF2F_V2 = {"minif2f_v2s": "external/minif2f_v2_20261115/src/datasets/miniF2F_v2s.jsonl",
               "minif2f_v2c": "external/minif2f_v2_20261115/src/datasets/miniF2F_v2c.jsonl"}
+EXPANSION = "external/eval_expansion_20261115"  # FormalMATH-All, DeepSeek-ProverBench, PutnamBench; hashes in sources.sha256
+PREAMBLE_COMMANDS = re.compile(r"(?m)^\s*(?:noncomputable\s+)?(?:def|abbrev|instance|structure|inductive|axiom|variable|"
+                               r"namespace|section|local|scoped|notation|macro|lemma)\b")
 CONTROLS = [  # (id, job, text, expected status)
     ("ctrl_proof_good", "proof", "theorem c (n : ℕ) (h : 1 < n) : 0 < n := by omega", "accepted"),
     ("ctrl_proof_wrong", "proof", "theorem c (n : ℕ) : n < 0 := by omega", "rejected"),
@@ -58,6 +64,11 @@ CONTROLS = [  # (id, job, text, expected status)
     ("ctrl_vacuous_no", "vacuous", f"theorem c (n : ℕ) (h : 1 < n) : False := by {BATTERY}", "rejected"),
     ("ctrl_negation_yes", "negation", f"theorem c (n : ℕ) : ¬ (n + 1 = n) := by {BATTERY}", "accepted"),
     ("ctrl_negation_no", "negation", f"theorem c (n : ℕ) (h : 1 < n) : ¬ (0 < n) := by {BATTERY}", "rejected"),
+]
+EXTEND_CONTROLS = [  # the `open ... in` prefix and a solo item with a helper definition
+    ("ctrl_open_in", "stmt", "open Finset in\ntheorem c : (range 3).card = 3 := by sorry", "sorry_only"),
+    ("ctrl_open_scoped", "stmt", "theorem c : (range 3).card = 3 := by sorry", "rejected"),
+    ("ctrl_solo_def", "stmt", "def f (n : ℕ) : ℕ := n + 1\ntheorem c : f 1 = 2 := by sorry", "sorry_only"),
 ]
 
 
@@ -138,6 +149,80 @@ def keys(statement):
     return " ".join(toks), " ".join(renamed), grams
 
 
+def preamble(text):
+    """(prefix, solo) for a reference file. `open` lines become one `open ... in` prefix, so they cannot leak into the
+    next statement of a batch. Any other command before the theorem (a helper `def`, `abbrev`, `variable`, ...) is kept
+    verbatim, and the item is checked alone (solo) so its names cannot collide with another item's."""
+    text = strip_comments(text)
+    match = re.search(r"(?:^|\n)\s*(?:theorem|lemma)\s", text)
+    head = re.sub(r"(?m)^\s*import\s.*$", "", text[:match.start()] if match else text)
+    if PREAMBLE_COMMANDS.search(head):
+        return head.strip() + "\n", True
+    opened = [name for line in re.findall(r"(?m)^\s*open\s+([^\n]*?)\s*$", head) for name in line.split()
+              if name != "in"]
+    return (f"open {' '.join(opened)} in\n" if opened else ""), False
+
+
+def expansion_rows(root):
+    """(source, name, split, text, protect_only) of the added reference sets. PutnamBench problems whose answer is a
+    `..._solution := sorry` placeholder cannot be checked without the answer, so they only protect training data."""
+    base = root / EXPANSION
+    for r in json.load(open(base / "formalmath" / "FormalMATH_all.json")):
+        yield "formalmath", r["theorem_names"], "test", r["autoformalization"], False
+    for r in map(json.loads, open(base / "proverbench" / "proverbench.jsonl")):
+        yield "proverbench", r["name"], r["area"], r["formal_statement"], False
+    for path in sorted((base / "putnambench" / "lean4" / "src").glob("*.lean")):
+        text = path.read_text()
+        yield "putnambench", path.stem, "test", text, "_solution" in text
+
+
+def reference_items(rid, statement, prefix, solo):
+    items = [{"id": f"{rid}_stmt", "job": "stmt", "text": f"{prefix}theorem c {statement} := by sorry"}]
+    items += [{"id": f"{rid}_tac_{t}", "job": f"tac:{t}", "text": f"{prefix}theorem c {statement} := by {t}"}
+              for t in TACTICS]
+    try:
+        binders, goal = split_statement(statement)
+        items.append({"id": f"{rid}_vacuous", "job": "vacuous", "text": f"{prefix}theorem c {binders} : False := by {BATTERY}"})
+        items.append({"id": f"{rid}_negation", "job": "negation",
+                      "text": f"{prefix}theorem c {binders} : ¬ ({goal}) := by {BATTERY}"})
+    except ValueError:
+        pass
+    return [dict(i, solo=True) if solo else i for i in items]
+
+
+def extend(args):
+    src, out = args.src, args.out
+    out.mkdir(parents=True, exist_ok=False)
+    shutil.copy(src / "corpus.jsonl", out / "corpus.jsonl")
+    reference = [json.loads(l) for l in open(src / "reference.jsonl")]
+    items = [json.loads(l) for l in open(src / "items.jsonl")]  # old items keep their positions, so shards keep theirs
+    seen = {r["statement"]: r["rid"] for r in reference}
+    counts = Counter()
+    for source, name, split, text, protect in expansion_rows(args.root):
+        if not re.search(r"(?:^|\n)\s*(?:theorem|lemma)\s", strip_comments(text)):
+            counts[source + "_no_theorem"] += 1
+            continue
+        statement = bare_statement(text)
+        new = statement not in seen
+        rid = seen.setdefault(statement, f"r{len(seen)}")
+        reference.append({"rid": rid, "source": source, "name": name,
+                          "split": "protect_only" if protect else split, "statement": statement})
+        counts[source + "_rows"] += 1
+        if new and not protect:
+            prefix, solo = preamble(text)
+            items += reference_items(rid, statement, prefix, solo)
+            counts[source + "_checked"] += 1
+            counts["solo_statements"] += solo
+    items += [{"id": f"{i}_ext", "job": j, "expected": e, "text": own_line(t) if j == "proof" else t}
+              for i, j, t, e in CONTROLS + EXTEND_CONTROLS]
+    for name, data in (("reference", reference), ("items", items)):
+        with (out / f"{name}.jsonl").open("x") as f:
+            f.writelines(json.dumps(r, ensure_ascii=False) + "\n" for r in data)
+    for path in src.glob("results_*.jsonl"):
+        shutil.copy(path, out / path.name)
+    print(json.dumps({"reference_rows": len(reference), "reference_unique": len(seen), "items": len(items), **counts}))
+
+
 def prepare(args):
     root, out = args.root, args.out
     out.mkdir(parents=True, exist_ok=False)
@@ -205,10 +290,23 @@ def check(args):
     for item in items:
         if item["id"] not in done:
             groups[item["job"] == "proof"].append(item)
+    def batches(todo):
+        run = []
+        for item in todo:
+            if item.get("solo"):
+                yield [item]
+            else:
+                run.append(item)
+                if len(run) == args.batch:
+                    yield run
+                    run = []
+        if run:
+            yield run
+
     with path.open("a") as out:
         for strict, todo in groups.items():
-            for b in range(0, len(todo), args.batch):
-                batch = todo[b:b + args.batch]
+            b = 0
+            for batch in batches(todo):
                 results, seconds = vep.check_batch(lean, env, work, batch, args.timeout, strict=strict)
                 if any(r["status"] in ("batch_timeout", "crash") for r in results):  # retry each item alone
                     results = [vep.check_batch(lean, env, work, [item], args.timeout // 3, strict=strict)[0][0]
@@ -216,7 +314,8 @@ def check(args):
                 for item, result in zip(batch, results):
                     out.write(json.dumps({"id": item["id"], "job": item["job"], **result}, ensure_ascii=False) + "\n")
                 out.flush()
-                print(json.dumps({"shard": shard, "strict": strict, "done": b + len(batch), "of": len(todo),
+                b += len(batch)
+                print(json.dumps({"shard": shard, "strict": strict, "done": b, "of": len(todo),
                                   "seconds": round(seconds, 1)}), flush=True)
 
 
@@ -419,12 +518,16 @@ def main():
     f.add_argument("--out", type=Path, required=True)
     f.add_argument("--dest", type=Path, help="output directory (default --out)")
     f.add_argument("--ngram-scope", choices=("statement", "goal"), default="statement")
+    x = sub.add_parser("extend")
+    x.add_argument("--root", type=Path, required=True)
+    x.add_argument("--src", type=Path, required=True, help="prepare output with results")
+    x.add_argument("--out", type=Path, required=True)
     e = sub.add_parser("export")
     e.add_argument("--out", type=Path, required=True, help="prepare output, for the proof text")
     e.add_argument("--src", type=Path, required=True, help="finalize output")
     e.add_argument("--dest", type=Path, required=True)
     args = parser.parse_args()
-    {"prepare": prepare, "check": check, "finalize": finalize, "export": export}[args.command](args)
+    {"prepare": prepare, "check": check, "finalize": finalize, "export": export, "extend": extend}[args.command](args)
 
 
 if __name__ == "__main__":

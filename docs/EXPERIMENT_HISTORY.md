@@ -5850,6 +5850,18 @@ Fix, code SHA-256 in `data/finalize_goal13_v2.sha256`: `tokens` maps `in` to `âˆ
 - Export: [`data/exp031_splits_v2/`](../data/exp031_splits_v2/). Split v1 left the pull request before merge; it stays in the branch history and in `data/export_goal13_v1/` on cpu-angad.
 - Not changed: 8,787 train statements share a 13-token run of goal text with another train statement. A sample shows related but different problems, for example STP variants of one gcd question with different hypotheses. They stay in train. The planned SFT and RL split will report how many such pairs cross between its parts.
 
+### EXP-031 amendment: added reference sets, registered 15 November 2026 IST
+
+Manas asks for a larger evaluation pool. Registered before launch. Run `eval_expansion_20261115_v1`, output cpu-angad `formal_rl/sft_corpus_audit_20261115_v1/data_ext1/`, code `audit_sft_corpus.py extend` (SHA-256 in `data_ext1/launch.sha256`).
+
+- Inputs, pinned, SHA-256 in `external/eval_expansion_20261115/sources.sha256`: FormalMATH-All (Hugging Face `SphereLab/FormalMATH-All`, revision `8eea2550`, MIT, 5,560 statements); DeepSeek-ProverBench (`deepseek-ai/DeepSeek-ProverBench`, revision `3b9f0670`, no license tag, 325); PutnamBench (GitHub `trishullab/PutnamBench`, commit `a635813f`, Lean v4.33.1, 672). `purewhite42/formal_math500` (revision `62d5012c`) is downloaded but not used, because its rows ask for an answer, not a proof of a stated theorem.
+- Checks, as in the registration, for each new unique statement: statement with `sorry`, the 11 tactics, vacuity and negation, with `autoImplicit` off. `open` lines become one `open ... in` prefix. A statement with a helper `def`, `abbrev` or `variable` keeps it and runs alone. The 346 PutnamBench problems with a `..._solution := sorry` answer only join the overlap check. The 105,686 earlier results are reused unchanged.
+- Controls: the 13 original controls run again, plus 3 new ones for the prefix and the helper definition. The run is valid only if all 16 match.
+- Then `finalize --ngram-scope goal` and `export` write split v3. The new statements join the overlap check, so train can only lose statements.
+- Limits: 16 shards, each 12 GiB with systemd `OOMPolicy=continue`, 1 core, 12 h.
+- Known limits: the new sets target newer Lean, so some statements will not elaborate on v4.10.0-rc1; the outcome counts them per source. The overlap keys do not link one problem formalized differently in two sources, for example an AIME problem in FormalMATH and in miniF2F.
+- Correction to the registration: the AI-MO miniF2F file holds the 244 miniF2F-valid problems, not test. All 244 match miniF2F-v2s rows with split `valid`. `prepare` labeled them `test`, and split v2 `test_pool.jsonl` carries that label. The protection is unchanged, because every row is in the pool.
+
 ## Data handoff for Abhinav, 20 October 2026 IST
 
 #### Start here: one page for Abhinav

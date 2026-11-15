@@ -81,6 +81,6 @@ See the [glossary](scripts/README.md#terms) for model and metric definitions.
 
 ## Data and checkpoints
 
-Data, proof traces, weights and logs are external, except the EXP-031 SFT splits in [`data/exp031_splits_v1/`](data/exp031_splits_v1/): train, dev, the protected test pool, the excluded statements and a manifest. See [archive retrieval](docs/EXPERIMENT_HISTORY.md#6-step-by-step-fetch-and-verify-the-data).
+Data, proof traces, weights and logs are external, except the EXP-031 SFT splits in [`data/exp031_splits_v2/`](data/exp031_splits_v2/): train, dev, the protected test pool, the excluded statements and a manifest. No problem appears twice. See [archive retrieval](docs/EXPERIMENT_HISTORY.md#6-step-by-step-fetch-and-verify-the-data).
 Recorded archive copies expire on 11–19 November 2026 unless moved to permanent storage.
 [Published checkpoint releases](scripts/README.md#checkpoints) belong to earlier experiments, not the main study.

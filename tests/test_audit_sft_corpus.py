@@ -44,6 +44,12 @@ class OverlapKeyTest(unittest.TestCase):
         self.assertFalse(audit.keys(one)[2] & audit.keys(two)[2])
         self.assertEqual(audit.goal_text("(Nat.digits 10 5)[0]! = 5"), "(Nat.digits 10 5)[0]! = 5")
 
+    def test_old_and_new_sum_notation_match(self):
+        old = audit.keys("(a : ℕ → ℝ) : (∑ x in Finset.range 9, a x) = 1")
+        new = audit.keys("(b : ℕ → ℝ) : (∑ y ∈ Finset.range 9, b y) = 1")
+        self.assertEqual(old[1], new[1])
+        self.assertNotEqual(old[1], audit.keys("(b : ℕ → ℝ) : (∑ y ∈ Finset.range 8, b y) = 1")[1])
+
     def test_own_line_moves_only_the_first_by(self):
         self.assertEqual(audit.own_line("theorem c : 0 ≤ 1 := by norm_num"), "theorem c : 0 ≤ 1 := by\n  norm_num")
         multi = "theorem c : 0 ≤ 1 := by\n  have h : 0 ≤ 1 := by norm_num\n  exact h"

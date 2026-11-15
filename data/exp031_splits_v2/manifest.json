@@ -2,12 +2,18 @@
   "experiment": "EXP-031",
   "run": "sft_corpus_audit_20261115_v1",
   "counts": {
-    "train_proofs": 45154,
-    "train": 37227,
-    "excluded": 3005,
-    "dev_proofs": 599,
+    "train_statements": 37205,
+    "excluded": 3024,
+    "dev_statements": 503,
+    "train": 36998,
+    "train_proofs": 45119,
     "dev": 500,
-    "test_pool": 1112
+    "dev_proofs": 610,
+    "test_pool_problems": 797,
+    "test_pool_elaborates": 781,
+    "test_pool_trivial": 106,
+    "test_pool_flagged": 4,
+    "test_pool_versions": 1112
   },
   "summary": {
     "controls": {
@@ -80,21 +86,21 @@
     "controls_all_pass": true,
     "corpus_statements": 40732,
     "exclusion": {
-      "eligible": 37727,
+      "eligible": 37708,
       "statement_fails": 1834,
-      "overlap_ngram13": 830,
-      "overlap_exact": 302,
+      "overlap_ngram13": 847,
+      "overlap_exact": 304,
       "overlap_renamed": 5,
       "no_accepted_proof": 34
     },
     "splits": {
-      "train": 37227,
-      "excluded": 3005,
-      "dev": 500
+      "train": 37205,
+      "excluded": 3024,
+      "dev": 503
     },
     "split_proofs": {
-      "train": 45154,
-      "dev": 599
+      "train": 45119,
+      "dev": 610
     },
     "proof_status": {
       "accepted": 47464,
@@ -170,14 +176,14 @@
     "lean": "v4.10.0-rc1",
     "mathlib": "29dcec074de168ac2bf835a77ef68bbe069194c5",
     "code_sha256": {
-      "audit_sft_corpus.py": "08733c28d229918853920dd2e4b8200d694769d222d805228e1678ccef28c7d9",
+      "audit_sft_corpus.py": "20d2d8054c66da358b3ec066a5bd5ed48d3c92db5a7c2f5b0939af63c47345ab",
       "verify_external_proofs.py": "3eba3beae806aef742d586cc55574fc43c9d69e634c20b2a5bc5089fd4a074fd"
     }
   },
   "sha256": {
-    "dev.jsonl": "815acf9acb78545004181aa1277995bc6b1458bb4649e0090a254a896a206bdc",
-    "excluded.jsonl": "b1fddad43eefb740f45117e77a38493bc961e75f90223176f2a5cdf93b147425",
-    "test_pool.jsonl": "90572eea8955b2277220695e697678be2ed39d5cdd758422ee2ade926c0ba7e6",
-    "train.jsonl": "92703ea037f453f6fac2ab3deb9aeec8494d89d2cde8c206bd75e69a4a1d93e1"
+    "dev.jsonl": "64cc54361276378d438358b3b9db3a729cd4a2e311e940db0b1dbe3fe412930a",
+    "excluded.jsonl": "19de9cba195a187a596fc870cc45e0baa1b32431542bb7ed230429dd75caca87",
+    "test_pool.jsonl": "f71000710c3db8b21c2275529093e15f4808784832f225946f8f20424c347ef4",
+    "train.jsonl": "23b5badd4079fb3d904292fc324743f45edf7de5f542572ec0fb5cab53874176"
   }
 }

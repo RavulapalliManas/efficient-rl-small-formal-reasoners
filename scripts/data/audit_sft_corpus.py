@@ -99,7 +99,8 @@ def split_statement(statement):
 
 
 def tokens(statement):
-    return re.findall(r"[^\s()\[\]{}⟨⟩,:]+|[()\[\]{}⟨⟩,:]", statement)
+    """`∑ x in s` (older mathlib notation) and `∑ x ∈ s` are the same statement, so `in` becomes `∈`."""
+    return ["∈" if t == "in" else t for t in re.findall(r"[^\s()\[\]{}⟨⟩,:]+|[()\[\]{}⟨⟩,:]", statement)]
 
 
 def bound_names(statement):
@@ -110,7 +111,7 @@ def bound_names(statement):
         binders, goal = "", statement
     for group in re.findall(r"[(\[{⦃]([^()\[\]{}⦃⦄]*?):", binders):
         names.update(group.split())
-    for group in re.findall(r"(?:∀|∃!?|λ|fun)\s+([^,:=]+?)\s*(?:[:,]|=>)", goal):
+    for group in re.findall(r"(?:∀|∃!?|λ|fun|∑|∏)\s+([^,:=∈]+?)\s*(?:[:,∈]|=>|\bin\b)", goal):
         names.update(n.strip("()") for n in group.split())
     return {n for n in names if re.fullmatch(r"[^\W\d][\w'₀-₉]*", n)}
 
@@ -314,37 +315,86 @@ def finalize(args):
     print(json.dumps({k: summary[k] for k in ("controls_all_pass", "exclusion", "splits", "proof_status")}))
 
 
+MINIF2F_SOURCES = {"minif2f_v1_aimo", "minif2f_v2s", "minif2f_v2c"}
+
+
 def export(args):
-    """train.jsonl and dev.jsonl: one row per statement with its accepted proofs, in the text Lean checked.
-    test_pool.jsonl: every reference statement with its audit flags. excluded.jsonl: the excluded statements and why."""
+    """One row per problem, so no problem appears twice in a file.
+    train.jsonl and dev.jsonl: corpus statements with the same renamed key become one row with every distinct accepted
+    proof, in the text Lean checked. test_pool.jsonl: reference statements with the same renamed key or the same miniF2F
+    problem name become one problem; each version keeps its own statement and audit flags.
+    excluded.jsonl: the excluded corpus statements and why."""
     src, dest = args.src, args.dest
     dest.mkdir(parents=True, exist_ok=False)
     text = {i["id"]: i["text"] for i in map(json.loads, open(args.out / "items.jsonl")) if i["job"] == "proof"}
-    files = {name: (dest / f"{name}.jsonl").open("x") for name in ("train", "dev", "excluded", "test_pool")}
     counts = Counter()
-    for r in map(json.loads, open(src / "sft_corpus_v1.jsonl")):
-        if r["split"] == "excluded":
-            row = {"id": r["cid"], "statement": r["statement"], "exclusion": r["exclusion"], "overlap": r["overlap"]}
-        else:
+    merged = {"train": {}, "dev": {}}
+    with (dest / "excluded.jsonl").open("x") as f:
+        for r in map(json.loads, open(src / "sft_corpus_v1.jsonl")):
+            if r["split"] == "excluded":
+                f.write(json.dumps({"id": r["cid"], "statement": r["statement"], "exclusion": r["exclusion"],
+                                    "overlap": r["overlap"]}, ensure_ascii=False) + "\n")
+                counts["excluded"] += 1
+                continue
             proofs = [{"id": p["pid"], "source": p["source"], "proof": text[p["pid"]]}
                       for p in r["proofs"] if p["status"] == "accepted"]
             assert len(proofs) == r["accepted_proofs"] > 0
-            row = {"id": r["cid"], "statement": r["statement"], "sources": r["sources"], "group": r["renamed_key"],
-                   "proofs": proofs}
-            counts[r["split"] + "_proofs"] += len(proofs)
-        files[r["split"]].write(json.dumps(row, ensure_ascii=False) + "\n")
-        counts[r["split"]] += 1
-    for r in map(json.loads, open(src / "reference_audit.jsonl")):
-        files["test_pool"].write(json.dumps({"id": r["rid"], "statement": r["statement"], "members": r["members"],
-                                             "elaborates": r["statement_status"] == "sorry_only", "trivial": r["trivial"],
-                                             "tactics": r["tactics"], "vacuous": r["vacuous"],
-                                             "negation_proved": r["negation_proved"]}, ensure_ascii=False) + "\n")
-        counts["test_pool"] += 1
-    for f in files.values():
-        f.close()
+            counts[r["split"] + "_statements"] += 1
+            row = merged[r["split"]].setdefault(r["renamed_key"], {"id": r["cid"], "statement": r["statement"],
+                                                                   "sources": [], "group": r["renamed_key"],
+                                                                   "merged_ids": [], "proofs": []})
+            row["merged_ids"].append(r["cid"])
+            row["sources"] = sorted(set(row["sources"]) | set(r["sources"]))
+            seen = {p["proof"] for p in row["proofs"]}
+            for proof in proofs:
+                if proof["proof"] not in seen:
+                    seen.add(proof["proof"])
+                    row["proofs"].append(proof)
+    for split, rows in merged.items():
+        with (dest / f"{split}.jsonl").open("x") as f:
+            for row in rows.values():
+                f.write(json.dumps(row, ensure_ascii=False) + "\n")
+        counts[split] = len(rows)
+        counts[split + "_proofs"] = sum(len(r["proofs"]) for r in rows.values())
+
+    ref = [json.loads(l) for l in open(src / "reference_audit.jsonl")]
+    parent = list(range(len(ref)))
+
+    def root(i):
+        while parent[i] != i:
+            parent[i] = parent[parent[i]]
+            i = parent[i]
+        return i
+    first = {}
+    for i, r in enumerate(ref):
+        links = [("key", keys(r["statement"])[1])]
+        links += [("minif2f", m["name"]) for m in r["members"] if m["source"] in MINIF2F_SOURCES]
+        for link in links:
+            parent[root(i)] = root(first.setdefault(link, i))
+    problems = defaultdict(list)
+    for i, r in enumerate(ref):
+        problems[root(i)].append(r)
+    with (dest / "test_pool.jsonl").open("x") as f:
+        for versions in problems.values():
+            out = [{"rid": v["rid"], "statement": v["statement"], "members": v["members"],
+                    "elaborates": v["statement_status"] == "sorry_only", "trivial": v["trivial"], "tactics": v["tactics"],
+                    "vacuous": v["vacuous"], "negation_proved": v["negation_proved"]} for v in versions]
+            ok = [v for v in out if v["elaborates"]]
+            row = {"id": versions[0]["rid"], "names": sorted({m["name"] for v in versions for m in v["members"]}),
+                   "sources": sorted({m["source"] for v in versions for m in v["members"]}),
+                   "elaborates": bool(ok), "trivial": any(v["trivial"] for v in ok),
+                   "flagged": any(v["vacuous"] or v["negation_proved"] for v in ok), "versions": out}
+            f.write(json.dumps(row, ensure_ascii=False) + "\n")
+            counts["test_pool_problems"] += 1
+            counts["test_pool_elaborates"] += row["elaborates"]
+            counts["test_pool_trivial"] += row["trivial"]
+            counts["test_pool_flagged"] += row["flagged"]
+        counts["test_pool_versions"] = len(ref)
+
     summary = json.load(open(src / "summary.json"))
-    assert counts["train"] == summary["splits"]["train"] and counts["dev"] == summary["splits"]["dev"]
-    assert counts["train_proofs"] == summary["split_proofs"]["train"] and counts["dev_proofs"] == summary["split_proofs"]["dev"]
+    for split in ("train", "dev"):
+        assert counts[split + "_statements"] == summary["splits"][split]
+    assert counts["train_proofs"] <= summary["split_proofs"]["train"] and counts["dev_proofs"] <= summary["split_proofs"]["dev"]
     manifest = {"experiment": "EXP-031", "run": "sft_corpus_audit_20261115_v1", "counts": dict(counts),
                 "summary": summary,
                 "sha256": {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(dest.glob("*.jsonl"))}}

@@ -1,0 +1,183 @@
+{
+  "experiment": "EXP-031",
+  "run": "sft_corpus_audit_20261115_v1",
+  "counts": {
+    "train_proofs": 45154,
+    "train": 37227,
+    "excluded": 3005,
+    "dev_proofs": 599,
+    "dev": 500,
+    "test_pool": 1112
+  },
+  "summary": {
+    "controls": {
+      "ctrl_proof_good": {
+        "expected": "accepted",
+        "got": "accepted",
+        "pass": true
+      },
+      "ctrl_proof_wrong": {
+        "expected": "rejected",
+        "got": "rejected",
+        "pass": true
+      },
+      "ctrl_proof_unbound": {
+        "expected": "rejected",
+        "got": "rejected",
+        "pass": true
+      },
+      "ctrl_proof_sorry": {
+        "expected": "forbidden_construct",
+        "got": "forbidden_construct",
+        "pass": true
+      },
+      "ctrl_proof_native": {
+        "expected": "forbidden_construct",
+        "got": "forbidden_construct",
+        "pass": true
+      },
+      "ctrl_stmt_clean": {
+        "expected": "sorry_only",
+        "got": "sorry_only",
+        "pass": true
+      },
+      "ctrl_stmt_unbound": {
+        "expected": "rejected",
+        "got": "rejected",
+        "pass": true
+      },
+      "ctrl_tac_easy": {
+        "expected": "accepted",
+        "got": "accepted",
+        "pass": true
+      },
+      "ctrl_tac_hard": {
+        "expected": "rejected",
+        "got": "rejected",
+        "pass": true
+      },
+      "ctrl_vacuous_yes": {
+        "expected": "accepted",
+        "got": "accepted",
+        "pass": true
+      },
+      "ctrl_vacuous_no": {
+        "expected": "rejected",
+        "got": "rejected",
+        "pass": true
+      },
+      "ctrl_negation_yes": {
+        "expected": "accepted",
+        "got": "accepted",
+        "pass": true
+      },
+      "ctrl_negation_no": {
+        "expected": "rejected",
+        "got": "rejected",
+        "pass": true
+      }
+    },
+    "controls_all_pass": true,
+    "corpus_statements": 40732,
+    "exclusion": {
+      "eligible": 37727,
+      "statement_fails": 1834,
+      "overlap_ngram13": 830,
+      "overlap_exact": 302,
+      "overlap_renamed": 5,
+      "no_accepted_proof": 34
+    },
+    "splits": {
+      "train": 37227,
+      "excluded": 3005,
+      "dev": 500
+    },
+    "split_proofs": {
+      "train": 45154,
+      "dev": 599
+    },
+    "proof_status": {
+      "accepted": 47464,
+      "rejected": 1913
+    },
+    "statement_status": {
+      "sorry_only": 38898,
+      "rejected": 1834
+    },
+    "reference_unique": 1112,
+    "reference_by_source": {
+      "minif2f_v2c": {
+        "statements": 488,
+        "elaborates": 458,
+        "trivial": 76,
+        "vacuous": 1,
+        "negation_proved": 2
+      },
+      "minif2f_v2s": {
+        "statements": 488,
+        "elaborates": 478,
+        "trivial": 82,
+        "vacuous": 1,
+        "negation_proved": 2
+      },
+      "minif2f_v1_aimo": {
+        "statements": 244,
+        "elaborates": 243,
+        "trivial": 66,
+        "vacuous": 0,
+        "negation_proved": 0
+      },
+      "prepared_v1": {
+        "statements": 116,
+        "elaborates": 112,
+        "trivial": 0,
+        "vacuous": 0,
+        "negation_proved": 1
+      },
+      "release_v3": {
+        "statements": 29,
+        "elaborates": 29,
+        "trivial": 0,
+        "vacuous": 0,
+        "negation_proved": 0
+      },
+      "exp028_selection": {
+        "statements": 193,
+        "elaborates": 189,
+        "trivial": 0,
+        "vacuous": 0,
+        "negation_proved": 1
+      }
+    },
+    "trivial_by_tactic": {
+      "rfl": 60,
+      "tauto": 60,
+      "decide": 56,
+      "norm_num": 46,
+      "aesop": 69,
+      "exact?": 57,
+      "simp": 30,
+      "omega": 47,
+      "simp_all": 37,
+      "nlinarith": 37,
+      "linarith": 31
+    },
+    "seed": 20261115,
+    "dev_groups": 500,
+    "ngram": 13,
+    "ngram_scope": "goal",
+    "battery": "first | (decide; done) | (norm_num; done) | (simp_all; done) | (omega; done) | (linarith; done) | (nlinarith; done) | (aesop; done) | (tauto; done)",
+    "lean": "v4.10.0-rc1",
+    "mathlib": "29dcec074de168ac2bf835a77ef68bbe069194c5",
+    "code_sha256": {
+      "audit_sft_corpus.py": "08733c28d229918853920dd2e4b8200d694769d222d805228e1678ccef28c7d9",
+      "verify_external_proofs.py": "3eba3beae806aef742d586cc55574fc43c9d69e634c20b2a5bc5089fd4a074fd"
+    }
+  },
+  "sha256": {
+    "dev.jsonl": "815acf9acb78545004181aa1277995bc6b1458bb4649e0090a254a896a206bdc",
+    "excluded.jsonl": "b1fddad43eefb740f45117e77a38493bc961e75f90223176f2a5cdf93b147425",
+    "test_pool.jsonl": "90572eea8955b2277220695e697678be2ed39d5cdd758422ee2ade926c0ba7e6",
+    "train.jsonl": "92703ea037f453f6fac2ab3deb9aeec8494d89d2cde8c206bd75e69a4a1d93e1"
+  }
+}

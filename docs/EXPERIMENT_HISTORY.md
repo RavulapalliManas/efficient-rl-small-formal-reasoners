@@ -530,6 +530,10 @@ Implementation source: [TRL 0.24 PPO trainer](https://huggingface.co/docs/trl/v0
 
 ## Decision log
 
+- 2026-11-15 IST: EXP-031 data decision. The registered whole-statement 13-gram rule flags 13,298 of 40,732 corpus statements (32.6 percent), mostly through shared binder blocks; Manas chooses the goal-only 13-gram rule, which flags 830. The SFT splits for new work are train 37,227 statements and dev 500, from `data/finalize_goal13`. At Manas's request, the export is committed to Git in `data/exp031_splits_v1/`, an exception to "Not in Git", and it makes the reference pool public. [EXP-031 amendment](#exp-031-amendment-goal-only-13-gram-rule-and-the-exported-splits-15-november-2026-ist).
+
+- 2026-11-15 IST: Manas resets the final-project design. Base model: Qwen3-0.6B with thinking on, replacing Qwen2.5-0.5B-Instruct. Output: reasoning, then one complete Lean proof, trained with GRPO; the tactic environment and interactive REINFORCE are not used. No teacher distillation, value network or MCTS. Curriculum schedules: `shuffled`, `by-proof-length` and `human-curriculum`; the concept-count axis is dropped, and both ordered schedules use the same pacing rule. Several SFT checkpoints are kept, each with its RL readiness measured, so the curriculum study can start at different reward sparsity (Vastola, Huang, Singh, Gershman and Rajan, "Effectiveness of Curriculum Learning Depends on Reward Sparsity and Competing Optima", NeurIPS 2026 poster). Curriculum work waits for Abhinav and Anwesha; the next work is the SFT model and a new evaluation set. Open decisions: the human-curriculum source (proposed: Niven, Zuckerman and Montgomery, 5th edition, chapter order), two human reviewers for test statements, and the Lean version. Audit `statement_recheck_20261115_v1` on cpu-angad re-elaborates the 916 unique statements of four pools (`validated_v2` TRAIN, `prepared_v1`, `release_v3`, EXP-028 selection), each with `sorry`, once with the historical header and once with `set_option autoImplicit false`. All 916 elaborate with the historical header. 27 fail with `autoImplicit` off, each on an undeclared variable (`unknown identifier`): 12 of 506 TRAIN, 10 of 209 `prepared_v1`, 4 of 56 `release_v3` and 5 of 201 EXP-028 statements; 8 of these memberships are in validation or test splits. The clean control elaborates in both modes; the undeclared-variable control elaborates only with the historical header. These 27 statements do not enter the new dataset unchanged. No model, GPU or training run.
+
 - 2026-10-25 UTC: Formal terminology review requested by Manas. Revise maintained guide and report headings, replace abbreviated configuration terminology, and describe compared actions by advantage sign. Identify the EXP-026 and EXP-027 protocols by their stable study IDs. Preserve historical records, numerical results, equations, citations, commands, file names and existing heading anchors. Rebuild the report, adjust audit-diagram spacing and refresh PDF page links. Local links and scientific-content preservation checks pass; the report builds without reference or box warnings. No experiment runs.
 
 - 2026-10-25 UTC: Prose revision requested by Manas. Shorten the README and the report abstract, introduction, methods explanations and discussion. Replace repeated numerical descriptions with references to the unchanged figures and captions. Preserve all tables, figures, equations, citations, recorded numerical values and historical appendices. Refresh experiment-index PDF links after the rebuild. Checks: local links and setup commands are intact; the report builds without reference or box warnings. No code or research result changes.
@@ -5760,6 +5764,71 @@ Correction to "nothing is uploaded" above: the stopped lease6 staging copied som
 The `error_feedback_v1` support for environment v2 in `scripts/train/run_tactic_rl.py` and its unit tests stay uncommitted in the working tree. Its real-Lean test `test_real_v2_error_feedback_penalties` has not run.
 Correction to the reward table above: the code keeps the reward of an action's outcome when the next prompt exceeds the limit. A penalized action that ends the episode at the prompt limit therefore keeps its penalty; a valid step that ends it there gets 0 (`bound_state` after `v2_feedback` in `run_tactic_rl.py`).
 The question of EXP-030 stays open. No result about a dense reward exists.
+
+<a id="exp-031"></a>
+
+## EXP-031: Corpus audit, overlap removal and dev split for SFT
+
+### EXP-031 registration, 15 November 2026 IST
+
+Manas asks to re-verify every SFT proof on the pinned Lean, check every statement with `autoImplicit` off, remove training statements that overlap evaluation statements, hold out a dev split, and show that the evaluation statements are not trivial, before any curriculum experiment. Owner: Manas. Run `sft_corpus_audit_20261115_v1`, output cpu-angad `formal_rl/sft_corpus_audit_20261115_v1/`, code `scripts/data/audit_sft_corpus.py` (copied into `code/` with `verify_external_proofs.py` and its strict-mode imports; hashes in `summary.json`).
+
+- Inputs: the EXP-024 corpus v0 (40,732 statements, 49,377 proofs). Reference set: miniF2F-v2s and v2c (all 488 each, both splits; GitHub `roozbeh-yz/miniF2F_v2` commit `905eca84`), the AI-MO miniF2F test file (244), and the validation and test rows of `prepared_v1`, `release_v3` and the EXP-028 selection pool.
+- Checks, all on Lean v4.10.0-rc1 and mathlib `29dcec07` with `set_option autoImplicit false`: each corpus statement with `sorry`; each corpus proof in strict mode (forbidden constructs, one command, target-name guard, axioms only `propext`, `Classical.choice`, `Quot.sound`); each reference statement with `sorry`, with each of the 11 EXP-024 screen tactics alone, with `False` as the goal (vacuity) and with the negated goal, the last two under one `first` battery.
+- Overlap rule: a corpus statement is excluded when its normalized text, its text with bound names renamed in order, or any 13-token window equals one of a reference statement. Exclusion order: statement fails, no accepted proof, exact, renamed, 13-gram.
+- Dev rule: 500 groups of renamed keys drawn with seed 20261115 from eligible statements; every statement of a drawn group is dev; no key is in both train and dev (assertion). Test stays the reference set; this run selects no final test set.
+- Controls: 13 fixed items with expected statuses (accepted, wrong, undeclared-variable, `sorry` and `native_decide` proofs; clean and undeclared statements; one easy and one hard tactic case; vacuity and negation positives and negatives). The run is valid only if all 13 match.
+- Limits: 20 shards, each 6 GiB, 1 core, 12 h; one writer per results file. No model, GPU or training run. Planned follow-up, not this run: a human review of the final test statements, and a later decision on whether to drop 13-gram hits after inspection if they exceed 2 percent of the corpus.
+
+### EXP-031 outcome, 15 November 2026 IST
+
+The run finished. All 20 shards exit 0, and `results_*.jsonl` holds 105,686 results for 105,686 items, with no duplicate or missing id. All 13 controls match (`summary.json`, `controls_all_pass`). Both `finalize` assertions hold. Outputs: `data/sft_corpus_v1.jsonl`, `data/reference_audit.jsonl`, `data/summary.json`.
+
+#### Amendments to the registration
+
+- Smoke tests before the full launch found three bugs. Strict mode put a tactic on the `:= by` line outside the guarded block, so `own_line` moves it to its own line (42 corpus proofs). `first` committed to `simp_all` when it changed the goal without closing it, so every battery alternative ends in `; done`. AI-MO miniF2F rows kept their import header, so `bare_statement` cuts everything before the first `theorem` or `lemma`.
+- Memory: 6 shards (1, 5, 6, 7, 14, 15) were killed by the OOM killer at 6 GiB with batches of 25. They restarted with batches of 5 and a 12 GiB cap. Shards 7 and 15 were killed again at 12 GiB, and shards 6 and 14 too, while checking proofs. One cause is `simp_all` and `aesop` on a recurrence (`a 100 % 4 = 3` with `∀ n, a (n + 2) = a (n + 1) + a n`).
+- Fix for memory: `check` retries a batch item by item when a result is `crash`, and the four shards ran under systemd `OOMPolicy=continue`, so the kernel kills only Lean. A smoke test showed the recurrence `simp_all` check as `crash` and `ctrl_tac_easy` as `accepted`, with exit 0. Four tactic checks have status `crash` (`r75` and `r653`, `simp_all` and `aesop`). No proof has status `crash`.
+- The code changed during the run. The first launch hashes are in `data/launch.sha256`. The crash retry is in `data/launch_r2.sha256` (`422da13d`). `finalize` ran with `48321b82` (`data/finalize.sha256`, also in `summary.json`), which adds two fixes. The code hash list read a path that does not exist. `bound_names` failed on a statement with no top-level colon.
+- Defect in this run: `bare_statement` took the colon of `theorem amc12_2000_p1:` with the name, so the 12 checks of reference statement `r156` are invalid. The fixed pattern applies to a future `prepare` only. Reference statement `r378` (`mathd_numbertheory_198`) has no colon in the miniF2F-v2s and v2c source, and Lean rejects it.
+
+#### Corpus results
+
+- Statements: 38,898 of 40,732 elaborate with `autoImplicit` off; 1,834 fail. Most failures are unbound names, for example 552 with `unknown identifier 'n'`. 380 fail with `unexpected token 'example'`: their stored statement ends at `let x`, so the corpus extraction cut it at the `:=` of the `let`.
+- Proofs: 47,464 of 49,377 pass strict mode; 1,913 are rejected. 44 rejected proofs belong to a statement that elaborates. No corpus proof uses a forbidden construct.
+- Loss from the statement rule: 410 accepted proofs belong to a statement that fails, and leave the corpus with it.
+- Exclusions: statement fails 1,834; no accepted proof 34; exact overlap 302; renamed overlap 5; 13-gram overlap 13,298. 25,259 statements stay eligible.
+- Splits: train 24,757 statements with 29,798 accepted proofs; dev 502 statements in 500 groups with 613 accepted proofs; excluded 15,473.
+
+#### The 13-gram rule fails its registered 2 percent check
+
+13,298 of 40,732 corpus statements (32.6 percent) are 13-gram hits, against the 2 percent level set for inspection. The most common shared windows are binder blocks, for example `( p : ℕ ) ( hp : Nat.Prime p ) ( hp1 : p ≠ 2 )` in 876 statements. The tokenizer makes each bracket and colon one token, so 13 tokens hold less text than 13 words. In the median hit, shared windows cover 35 percent of the tokens; 2,204 hits reach 50 percent. Four random hits that I read are different problems from their reference match. With windows taken from the goal only, 830 statements (2.0 percent) are hits. A sample of those holds problems that share goal text with a reference statement, for example the same `Finset.filter (fun x => x % 8 = 5 ∧ x % 6 = 3)`. The current outputs apply the registered rule. Manas decides whether to keep it; a change re-runs `finalize` and draws a new dev split. No model has used either split.
+
+#### Reference results
+
+- 1,070 of 1,112 unique reference statements elaborate with `autoImplicit` off; 29 are rejected and 13 are incomplete.
+- Automation: 131 of the 1,070 (12.2 percent) close with at least one of the 11 tactics alone. By source: miniF2F-v2s 82 of 478, miniF2F-v2c 76 of 458, AI-MO miniF2F 66 of 243, and 0 of 330 in `prepared_v1`, `release_v3` and the EXP-028 selection. I did not check whether the earlier pool builds removed statements that these tactics close.
+- Tactic results on the 1,070: 530 accepted, 11,106 rejected, 125 incomplete, 5 timeouts, 4 crashes. The non-accepted results count as not closed.
+- Vacuity: 1 statement has hypotheses that prove `False`: `mathd_algebra_275` in miniF2F-v2s and v2c. A likely cause is `(1 / 4)` read as a natural number, so `11 ^ (1 / 4) = 1`. I did not check this cause in Lean.
+- Negation: the battery proves the negated goal for 4 statements. `mathd_algebra_437` (miniF2F-v2s and v2c) has a likely cause of the same kind, `45 ^ (1/3)` in ℤ. `ntb_6ed17bd569bf24c2c46f7c57` (EXP-028 selection) states that `a` and `b` have the same digits and `a * b = 92565`, so `a = b`, and no square equals 92565. Its answer `a = 165, b = 561` matches reversed digits, so the formal statement likely does not say what the problem meant. `ntb_ee0e013b74d5f43c8a8e241a` (`prepared_v1`) has the goal `False`, so its negation is `¬ False` and the result shows no defect.
+
+#### Open items
+
+- Manas decides the 13-gram rule, as described above.
+- The 380 statements cut at `let` need a new extraction from the proof text. The other failing statements that have an accepted proof need a check of how their stored statement differs from the theorem in the proof.
+- A human review of the final test statements is still needed. Its list includes `mathd_algebra_275`, `mathd_algebra_437`, `mathd_numbertheory_198` and `ntb_6ed17bd569bf24c2c46f7c57`.
+
+### EXP-031 amendment: goal-only 13-gram rule and the exported splits, 15 November 2026 IST
+
+Manas chooses the goal-only 13-gram rule. Exact and renamed matches still compare the whole statement. `finalize --ngram-scope goal --dest data/finalize_goal13` wrote the new outputs; the outputs of the registered rule in `data/` stay unchanged. Code `audit_sft_corpus.py` with SHA-256 in `data/finalize_goal13.sha256`. Regression check: `finalize --ngram-scope statement` with this code reproduces `sft_corpus_v1.jsonl` and `reference_audit.jsonl` byte for byte, and `summary.json` apart from the code hash.
+
+- Controls: all 13 match.
+- Exclusions: statement fails 1,834; no accepted proof 34; exact overlap 302; renamed overlap 5; 13-gram overlap 830. 37,727 statements stay eligible.
+- Splits: train 37,227 statements with 45,154 accepted proofs; dev 500 statements in 500 groups with 599 accepted proofs; excluded 3,005. The dev draw uses the same seed over the new eligible groups, so it differs from the registered-rule dev split. No model used either split.
+- Drawback: the goal-only rule does not flag a statement that copies a reference statement's hypotheses and changes only its goal, unless the renamed text matches. I did not measure how many such statements exist.
+- Export in Git, at Manas's request: [`data/exp031_splits_v1/`](../data/exp031_splits_v1/), written by `audit_sft_corpus.py export`. `train.jsonl.gz` and `dev.jsonl` hold one row per statement with its group key and its accepted proofs, in the text Lean checked. `test_pool.jsonl` holds the 1,112 reference statements with their audit flags; it is the protected pool, not a selected test set. `excluded.jsonl` holds the 3,005 excluded statements with the reason. `manifest.json` holds the counts, the finalize summary and the SHA-256 of each uncompressed file. Recount check: every hash matches, and no group and no statement text is in both train and dev.
+- Drawback: the repository is public, so `test_pool.jsonl` publishes 330 statements of our own `prepared_v1`, `release_v3` and EXP-028 pools. Public test statements can enter the training data of later models.
+- The proofs come from Goedel-Prover-V2 SFT data, STP and Lean Workbook through the EXP-024 corpus. I did not check their licenses for redistribution.
 
 ## Data handoff for Abhinav, 20 October 2026 IST
 

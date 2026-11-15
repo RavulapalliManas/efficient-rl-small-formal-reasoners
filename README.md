@@ -20,7 +20,7 @@ Experiments ended on 20 October 2026, without an established RL gain on unseen t
 - Prerequisite-ordered RL accepted **255/4,048 training attempts**, versus **164/4,048** for shuffled RL. Each arm had one run; training gains do not establish transfer.
 
 No variant met the promotion rule: at least a 5 percentage-point gain over its control, with a paired 95% interval excluding zero.
-The [report](docs/tex/project_report.pdf) gives methods and limitations. The [execution record](docs/EXPERIMENTS.md#execution-record) covers all 32 studies, including two follow-ups that did not run.
+The [report](docs/tex/project_report.pdf) gives methods and limitations. The [execution record](docs/EXPERIMENTS.md#execution-record) covers all 33 studies, including two follow-ups that did not run.
 
 <a id="setup"></a>
 
@@ -81,6 +81,6 @@ See the [glossary](scripts/README.md#terms) for model and metric definitions.
 
 ## Data and checkpoints
 
-Data, proof traces, weights and logs are external. See [archive retrieval](docs/EXPERIMENT_HISTORY.md#6-step-by-step-fetch-and-verify-the-data).
+Data, proof traces, weights and logs are external, except the EXP-031 SFT splits in [`data/exp031_splits_v1/`](data/exp031_splits_v1/): train, dev, the protected test pool, the excluded statements and a manifest. See [archive retrieval](docs/EXPERIMENT_HISTORY.md#6-step-by-step-fetch-and-verify-the-data).
 Recorded archive copies expire on 11–19 November 2026 unless moved to permanent storage.
 [Published checkpoint releases](scripts/README.md#checkpoints) belong to earlier experiments, not the main study.

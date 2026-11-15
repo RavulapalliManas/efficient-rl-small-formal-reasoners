@@ -39,13 +39,14 @@ This project tests when reinforcement learning (RL) helps a small language model
 | [`docs/REWARD_HACKING.md`](docs/REWARD_HACKING.md) | Ways the Lean reward paid without a proof |
 | [`docs/archive/`](docs/archive/) | A historical handoff snapshot. Not maintained |
 | [`patches/`](patches/) | A patch that makes the Lean REPL report the errors of aborted tactics |
+| [`data/exp031_splits_v1/`](data/exp031_splits_v1/) | EXP-031 SFT splits: train, dev, the protected test pool and the excluded statements, with `manifest.json`. [Record](docs/EXPERIMENTS.md#exp-031-amendment-goal-only-13-gram-rule-and-the-exported-splits-15-november-2026-ist) |
 | `artifacts/` | Ignored by Git. Local historical notes only; data and results live in remote storage |
 | [`AGENTS.md`](AGENTS.md) | Rules for agents. `CLAUDE.md` links to it |
 
 ## Not in Git
 
 - The archived copies expire between 11 and 19 November 2026 unless they are moved to permanent storage.
-- Datasets, run outputs and logs are in remote storage. The [data handoff](docs/EXPERIMENTS.md#data-handoff-for-abhinav-20-october-2026-ist) lists the archived copies of the number-theory study and the steps to fetch and verify them.
+- Datasets, run outputs and logs are in remote storage. One exception: the EXP-031 SFT splits are in [`data/exp031_splits_v1/`](data/exp031_splits_v1/). The [data handoff](docs/EXPERIMENTS.md#data-handoff-for-abhinav-20-october-2026-ist) lists the archived copies of the number-theory study and the steps to fetch and verify them.
 - Published checkpoints are GitHub release assets; see [Checkpoints](#checkpoints). [Section 4.9 of the data handoff](docs/EXPERIMENTS.md#49-model-weights) lists the archived weights of the 18 and 19 October runs.
 - The Lean checker module `checker.py`, the Lean REPL binary and the Lean environment are inputs that scripts take by path (`--checker`, `--repl`, `--environment`). [Section 4.10 of the data handoff](docs/EXPERIMENTS.md#410-the-lean-runtime-environment-repl-checker-and-identity) lists their archived copies.
 - The run configs of the 18 and 19 October leases, and the recount scripts of 19 and 20 October, are in private launch records under `.private/ops/`.

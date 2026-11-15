@@ -52,7 +52,9 @@ class OverlapKeyTest(unittest.TestCase):
 
     def test_preamble_turns_open_lines_into_one_prefix(self):
         text = "import Mathlib\nopen Real\nopen Finset Nat\n\n/-- doc -/\ntheorem t (n : ℕ) : 0 ≤ n := by sorry"
-        self.assertEqual(audit.preamble(text), ("open Real Finset Nat in\n", False))
+        self.assertEqual(audit.preamble(text), ("open Real in\nopen Finset Nat in\n", False))
+        scoped = "import Mathlib\nopen Real Set\nopen scoped BigOperators\ntheorem t : (1 : ℝ) ≤ 2 := by sorry"
+        self.assertEqual(audit.preamble(scoped), ("open Real Set in\nopen scoped BigOperators in\n", False))
         self.assertEqual(audit.preamble("import Mathlib\ntheorem t : 1 = 1 := by sorry"), ("", False))
 
     def test_preamble_keeps_helper_definitions_and_marks_solo(self):

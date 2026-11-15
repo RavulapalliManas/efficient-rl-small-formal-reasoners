@@ -68,6 +68,8 @@ CONTROLS = [  # (id, job, text, expected status)
 EXTEND_CONTROLS = [  # the `open ... in` prefix and a solo item with a helper definition
     ("ctrl_open_in", "stmt", "open Finset in\ntheorem c : (range 3).card = 3 := by sorry", "sorry_only"),
     ("ctrl_open_scoped", "stmt", "theorem c : (range 3).card = 3 := by sorry", "rejected"),
+    ("ctrl_open_chain", "stmt", "open Real Set in\nopen scoped BigOperators in\ntheorem c : (∑ i in Finset.range 3, i) = 3 := by sorry",
+     "sorry_only"),
     ("ctrl_solo_def", "stmt", "def f (n : ℕ) : ℕ := n + 1\ntheorem c : f 1 = 2 := by sorry", "sorry_only"),
 ]
 
@@ -150,7 +152,7 @@ def keys(statement):
 
 
 def preamble(text):
-    """(prefix, solo) for a reference file. `open` lines become one `open ... in` prefix, so they cannot leak into the
+    """(prefix, solo) for a reference file. `open` lines become `open ... in` prefixes, so they cannot leak into the
     next statement of a batch. Any other command before the theorem (a helper `def`, `abbrev`, `variable`, ...) is kept
     verbatim, and the item is checked alone (solo) so its names cannot collide with another item's."""
     text = strip_comments(text)
@@ -158,9 +160,9 @@ def preamble(text):
     head = re.sub(r"(?m)^\s*import\s.*$", "", text[:match.start()] if match else text)
     if PREAMBLE_COMMANDS.search(head):
         return head.strip() + "\n", True
-    opened = [name for line in re.findall(r"(?m)^\s*open\s+([^\n]*?)\s*$", head) for name in line.split()
-              if name != "in"]
-    return (f"open {' '.join(opened)} in\n" if opened else ""), False
+    # one `open ... in` per line: `open A` and `open scoped B` cannot merge into `open A scoped B`
+    lines = [re.sub(r"\s+in$", "", line) for line in re.findall(r"(?m)^\s*open\s+([^\n]*?)\s*$", head)]
+    return "".join(f"open {line} in\n" for line in lines), False
 
 
 def expansion_rows(root):
@@ -170,7 +172,7 @@ def expansion_rows(root):
     for r in json.load(open(base / "formalmath" / "FormalMATH_all.json")):
         yield "formalmath", r["theorem_names"], "test", r["autoformalization"], False
     for r in map(json.loads, open(base / "proverbench" / "proverbench.jsonl")):
-        yield "proverbench", r["name"], r["area"], r["formal_statement"], False
+        yield "proverbench", r["name"], r["area"], r["header"] + "\n" + r["formal_statement"], False
     for path in sorted((base / "putnambench" / "lean4" / "src").glob("*.lean")):
         text = path.read_text()
         yield "putnambench", path.stem, "test", text, "_solution" in text
@@ -275,6 +277,8 @@ def prepare(args):
 def check(args):
     sys.path.insert(0, str(args.code))
     import verify_external_proofs as vep
+    if args.header == "plain":  # the added sources compile with only their own `open` lines
+        vep.HEADER = re.sub(r"(?m)^open .*\n", "", vep.HEADER)
     vep.HEADER = vep.HEADER + "set_option autoImplicit false\n"
     shard, count = map(int, args.shard.split("/"))
     items = [json.loads(l) for k, l in enumerate(open(args.out / "items.jsonl")) if k % count == shard]
@@ -514,6 +518,8 @@ def main():
     c.add_argument("--shard", required=True, help="i/n")
     c.add_argument("--batch", type=int, default=25)
     c.add_argument("--timeout", type=int, default=1800)
+    c.add_argument("--header", choices=("historical", "plain"), default="historical",
+                   help="plain drops the historical `open` line; the extension items carry their own")
     f = sub.add_parser("finalize")
     f.add_argument("--out", type=Path, required=True)
     f.add_argument("--dest", type=Path, help="output directory (default --out)")

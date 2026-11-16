@@ -508,6 +508,114 @@ def export(args):
     (dest / "manifest.json").write_text(json.dumps(manifest, indent=2, ensure_ascii=False) + "\n")
     print(json.dumps(dict(counts)))
 
+NT_KEYWORDS = re.compile(r"Prime|∣|\[MOD|\[ZMOD|ZMod|gcd|lcm|digits|padicVal|multiplicity|totient|φ|divisors|primeFactors|"
+                         r"factorization|Coprime|%")
+NT_POOLS = {"prepared_v1", "release_v3", "exp028_selection"}  # number-theory pools by construction
+MINIF2F_NT, MINIF2F_OTHER = ("mathd_numbertheory_", "numbertheory_"), ("mathd_algebra_", "algebra_")
+
+
+def nt_label(member, domains, tags):
+    """True or False from the source's own topic label; None when the source gives no label for this problem."""
+    source, name, split = member["source"], member["name"], member["split"]
+    if source in NT_POOLS:
+        return True
+    if source == "formalmath":
+        return "Number Theory" in domains[name] if name in domains else None
+    if source == "putnambench":
+        return "number_theory" in tags[name] if name in tags else None
+    if source == "proverbench":
+        return None if split == "aime" else split == "number_theory"
+    if source in MINIF2F_SOURCES:
+        return True if name.startswith(MINIF2F_NT) else False if name.startswith(MINIF2F_OTHER) else None
+    return None
+
+
+FM_OLYMPIAD = {"olympid", "omni", "blue_prove", "hardmath"}  # FormalMATH-All origins at olympiad level
+
+
+def level(member, origins):
+    """Difficulty level of one version member from its source, registered in EXP-031; never from model results."""
+    source, name = member["source"], member["name"]
+    if source == "putnambench":
+        return "olympiad"
+    if source == "formalmath":
+        return "olympiad" if origins[name] in FM_OLYMPIAD else "standard"
+    if source in MINIF2F_SOURCES and name.startswith(("imo_", "imosl_")):
+        return "olympiad"
+    return "standard"
+
+
+def problem_level(levels):
+    """standard only if every member of every version is standard."""
+    return "standard" if set(levels) == {"standard"} else "olympiad"
+
+
+def hash_order(tag, ids):
+    return sorted(ids, key=lambda i: hashlib.sha256(f"{SEED}:{tag}:{i}".encode()).hexdigest())
+
+
+def testsets(args):
+    """Number-theory and general test sets from the export's test pool, by the rule registered in EXP-031."""
+    args.dest.mkdir(parents=True, exist_ok=False)
+    pool = [json.loads(l) for l in open(args.src / "test_pool.jsonl")]
+    usable = [p for p in pool if p["elaborates"] and not p["trivial"] and not p["flagged"]]
+    fm = json.load(open(args.root / EXPANSION / "formalmath/FormalMATH_all.json"))
+    domains = {r["theorem_names"]: r["domain"] for r in fm}
+    origins = {r["theorem_names"]: r["source"] for r in fm}
+    tags = {r["problem_name"]: r["tags"] for r in json.load(open(args.root / EXPANSION / "putnambench/informal/putnam.json"))}
+    rows = {}
+    for p in usable:
+        labels = {nt_label(m, domains, tags) for v in p["versions"] for m in v["members"]}
+        label = True if True in labels else False if False in labels else None
+        keyword = sorted({k for v in p["versions"] for k in NT_KEYWORDS.findall(v["statement"])})
+        levels = {level(m, origins) for v in p["versions"] for m in v["members"]}
+        rows[p["id"]] = {"id": p["id"], "names": p["names"], "sources": p["sources"], "label": label,
+                         "label_conflict": True in labels and False in labels, "keywords": keyword,
+                         "level": problem_level(levels), "level_conflict": len(levels) > 1}
+    labeled = [r for r in rows.values() if r["label"] is not None]
+    hits = [r for r in labeled if r["keywords"]]
+    precision = sum(r["label"] for r in hits) / len(hits)
+    recall = sum(bool(r["keywords"]) for r in labeled if r["label"]) / sum(r["label"] for r in labeled)
+    gate = precision >= 0.90
+    for r in rows.values():
+        r["number_theory"] = r["label"] is True or (r["label"] is None and gate and bool(r["keywords"]))
+        r["reason"] = ("label" if r["label"] is not None else "keyword" if r["number_theory"] else "unlabeled_no_keyword"
+                       if not r["keywords"] else "unlabeled_gate_failed")
+    nt = [rows[i] for i in hash_order("nt", rows) if rows[i]["number_theory"]]
+    general = [dict(rows[i]) for i in hash_order("general", rows)[:1000]]
+    human = hash_order("human", rows)
+    check = ([dict(rows[i], set="number_theory") for i in human if rows[i]["number_theory"]][:50] +
+             [dict(rows[i], set="other") for i in human if not rows[i]["number_theory"]][:50])
+    statements = {p["id"]: [v["statement"] for v in p["versions"]] for p in usable}
+    for r in check:
+        r["statements"] = statements[r["id"]]
+    for name, data in (("test_number_theory", nt), ("test_general", general), ("human_check", check)):
+        with (args.dest / f"{name}.jsonl").open("x") as f:
+            f.writelines(json.dumps(r, ensure_ascii=False) + "\n" for r in data)
+    by_source = defaultdict(Counter)
+    for r in rows.values():
+        for s in r["sources"]:
+            by_source[s]["usable"] += 1
+            by_source[s]["number_theory"] += r["number_theory"]
+            by_source[s][f"usable_{r['level']}"] += 1
+            by_source[s][f"number_theory_{r['level']}"] += r["number_theory"]
+    by_level = {name: dict(Counter(r["level"] for r in data)) for name, data in
+                (("usable", rows.values()), ("number_theory", nt), ("general", general),
+                 ("general_outside_number_theory", [r for r in general if not r["number_theory"]]),
+                 ("human_check", check))}
+    summary = {"usable": len(rows), "labeled": len(labeled), "labeled_number_theory": sum(r["label"] for r in labeled),
+               "label_conflicts": sum(r["label_conflict"] for r in rows.values()),
+               "unlabeled": len(rows) - len(labeled), "keyword_precision": round(precision, 4),
+               "keyword_recall": round(recall, 4), "keyword_matches_labeled": len(hits), "gate_passed": gate,
+               "number_theory": len(nt), "number_theory_by_reason": dict(Counter(r["reason"] for r in nt)),
+               "general": len(general), "general_number_theory": sum(r["number_theory"] for r in general),
+               "by_level": by_level, "level_conflicts": sum(r["level_conflict"] for r in rows.values()),
+               "by_source": {k: dict(sorted(v.items())) for k, v in sorted(by_source.items())},
+               "code_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+               "sha256": {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(args.dest.glob("*.jsonl"))}}
+    (args.dest / "summary.json").write_text(json.dumps(summary, indent=2, ensure_ascii=False) + "\n")
+    print(json.dumps({k: v for k, v in summary.items() if k not in ("by_source", "sha256")}))
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -537,8 +645,13 @@ def main():
     e.add_argument("--out", type=Path, required=True, help="prepare output, for the proof text")
     e.add_argument("--src", type=Path, required=True, help="finalize output")
     e.add_argument("--dest", type=Path, required=True)
+    t = sub.add_parser("testsets")
+    t.add_argument("--root", type=Path, required=True, help="directory holding the external sources")
+    t.add_argument("--src", type=Path, required=True, help="export output with test_pool.jsonl")
+    t.add_argument("--dest", type=Path, required=True)
     args = parser.parse_args()
-    {"prepare": prepare, "check": check, "finalize": finalize, "export": export, "extend": extend}[args.command](args)
+    {"prepare": prepare, "check": check, "finalize": finalize, "export": export, "extend": extend,
+     "testsets": testsets}[args.command](args)
 
 
 if __name__ == "__main__":

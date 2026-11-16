@@ -5917,6 +5917,75 @@ Run IDs: from this entry on, run IDs and output directories follow `exp<NNN>-<st
 
 `smoke3/`, `smoke_crash/` and `smoke_ext/` hold the smoke tests that ran before the two launches.
 
+### EXP-031 amendment: number-theory and general test sets, registered 16 November 2026 IST
+
+Manas asks for two test sets from the split v4 test pool: a general one and a number-theory one. This rule is registered before the selection runs and before any model is evaluated on either set. Run `exp031-testsets-s20261116-v1`, code `audit_sft_corpus.py testsets`.
+
+- Population: the 6,164 usable test-pool problems. A usable problem has a version that elaborates, no elaborating version that one tactic closes, and no vacuity or negation flag.
+- Label rule: a problem is number theory if any of its versions has a number-theory label from its source.
+  - FormalMATH-All: the `domain` field contains `Number Theory`.
+  - PutnamBench: the `tags` in `informal/putnam.json` contain `number_theory`.
+  - DeepSeek-ProverBench: the split is `number_theory`.
+  - miniF2F: the name starts with `mathd_numbertheory_` or `numbertheory_`.
+  - `prepared_v1`, `release_v3` and the EXP-028 selection: every problem, because these are number-theory pools by construction.
+- A problem is labeled not number theory if it has a label and no label is number theory: other FormalMATH domains, other PutnamBench tags, other ProverBench splits except `aime`, and miniF2F names that start with `mathd_algebra_` or `algebra_`. All other problems are unlabeled: miniF2F `amc`, `aime`, `imo` and `induction` names, and ProverBench `aime`.
+- Keyword rule, on the text of any version: `Prime`, `∣`, `[MOD`, `[ZMOD`, `ZMod`, `gcd`, `lcm`, `digits`, `padicVal`, `multiplicity`, `totient`, `φ`, `divisors`, `primeFactors`, `factorization`, `Coprime` or `%`. The code constant `NT_KEYWORDS` fixes the patterns.
+- Gate: on the labeled problems, the precision of the keyword rule must be at least 0.90. Precision is the fraction labeled number theory among the problems that the keyword rule matches. If the gate passes, unlabeled problems that match join the number-theory set. If it fails, no unlabeled problem joins. Recall is reported and not gated.
+- General set: the 1,000 usable problems with the smallest SHA-256 of `20261115:general:<problem id>`. With hash order, a problem keeps its place when the pool grows.
+- Evaluation: both sets use 32 samples per problem. Reports give the number-theory set, the general set, and the part of the general set outside the number-theory set. The two sets share problems, so their results are not independent.
+- Human check: 50 problems from the number-theory set and 50 usable problems outside it, in hash order of `20261115:human:<problem id>`, in `human_check.jsonl`. A teammate marks each one. A rule change after this check is an amendment, made before any model evaluation.
+- Known limits: the label methods differ between sources, and I did not check how each source made its labels. Precision on the labeled problems may not carry over to the unlabeled ones, which are competition problems.
+
+### EXP-031 outcome: number-theory and general test sets, 16 November 2026 IST
+
+Run `exp031-testsets-s20261116-v1` exits 0. Output: cpu-angad `data_ext1/exp031-testsets-s20261116-v1/`. The v1 files were never committed and stay only on cpu-angad. Run v2 adds the difficulty level with the same membership; Git holds [`data/exp031_testsets_v2/`](../data/exp031_testsets_v2/). Code SHA-256 `0e199133b612cc3718c3cc3c0626a469fb41634abbbe97770240af761d836774`.
+
+- Labels: 5,986 of the 6,164 usable problems have a source label, and 1,557 of these are number theory. 178 problems are unlabeled. 9 problems have a number-theory label on one version and another label on a second version; the rule counts them as number theory.
+- The keyword gate failed. Precision is 0.738 on the 1,455 labeled problems that the keyword rule matches, against a bar of 0.90. Recall is 0.690. As registered, no unlabeled problem joins the number-theory set.
+- Number-theory set: 1,557 problems, all by source label. By source: FormalMATH-All 1,091; EXP-028 selection 188; `prepared_v1` 111; miniF2F 70; DeepSeek-ProverBench 37; PutnamBench 60; `release_v3` 29. A problem with versions from several sources counts in each.
+- General set: 1,000 problems. 241 of them are in the number-theory set, and 759 are not.
+- The two sets together hold 2,316 distinct problems. At 32 samples per problem, one checkpoint needs 74,112 Lean checks.
+- Drawback: number-theory problems among the miniF2F AMC, AIME and IMO names have no label, so they are not in the number-theory set.
+- Drawback: FormalMATH-All supplies 1,091 of the 1,557 number-theory problems, so one source's labels decide most of the set.
+- Open: the human check of the 100 problems in `human_check.jsonl` is not done.
+
+### EXP-031 amendment: difficulty levels of the test sets, registered 16 November 2026 IST
+
+Manas approves a difficulty level, `standard` or `olympiad`, on each test-set problem. This rule is registered before run `exp031-testsets-s20261116-v2` and before any model is evaluated on either set. The level comes from the source of each version. It does not come from any model result.
+
+- A version is `olympiad` if its member is one of these:
+  - FormalMATH-All with origin `olympid`, `omni`, `blue_prove` or `hardmath`. The `source` field of `FormalMATH_all.json` gives the origin.
+  - PutnamBench.
+  - miniF2F with a name that starts with `imo_` or `imosl_`. The test pool holds 3 members with `imosl_` (IMO shortlist) names. The first draft of this rule named only `imo_`, and its standard list did not name `imosl_`.
+- Every other version is `standard`: miniF2F `mathd`, `algebra`, `numbertheory`, `induction`, `amc` and `aime` names; `prepared_v1`, `release_v3` and the EXP-028 selection; all DeepSeek-ProverBench splits; FormalMATH-All origins `aime`, `blue_quant`, `u-math` and `DEMIMATH`.
+- A problem is `standard` only if every member of every version is standard. Otherwise it is `olympiad`. The run counts the problems whose members disagree.
+- Reports give each test set at each level. The main result is the standard level of the number-theory set.
+- Reason: Manas judges that the 0.6B model cannot solve olympiad problems. 1,029 of the 1,557 number-theory problems come from FormalMATH-All origins `olympid`, `omni` or `blue_prove`.
+- No problem is removed because of the pass rate of any model. That removal is selection on the outcome.
+- The 178 unlabeled problems stay outside the number-theory set. Manas accepts this, because the model is not expected to solve competition problems at that level.
+- The selection rule, the keyword gate and the set membership do not change. The run adds the `level` field to each row of the three files and level counts to `summary.json`.
+- Known limit: the level is a proxy from the source. Some olympiad-source problems can be easy, and some standard-source problems can be hard.
+
+### EXP-031 outcome: difficulty levels, 16 November 2026 IST
+
+Run `exp031-testsets-s20261116-v2` exits 0. Output: cpu-angad `data_ext1/exp031-testsets-s20261116-v2/`, log `data_ext1/exp031-testsets-v2.log`, and [`data/exp031_testsets_v2/`](../data/exp031_testsets_v2/). Code SHA-256 `003156f038cb67ccf9d646e521ee83e4969e5f5a3ad1691edd052db0730d0554`. All numbers below come from the v2 `summary.json`.
+
+- Membership: the number-theory set, the general set and `human_check.jsonl` hold the same problem ids, in the same order, as v1. All fields except `level` and `level_conflict` are equal. The selection numbers, the failed keyword gate and the 9 label conflicts do not change.
+- Number-theory set, standard level: 496 of 1,557 problems. This is the main result set.
+- Number-theory set, olympiad level: 1,061 of 1,557 problems.
+- General set: 304 of 1,000 problems are standard and 696 are olympiad.
+- General set outside the number-theory set: 233 of 759 problems are standard and 526 are olympiad.
+- Human check: 39 of 100 problems are standard and 61 are olympiad.
+- All usable test-pool problems: 1,926 of 6,164 are standard and 4,238 are olympiad.
+- Level conflicts: 2 of the 6,164 usable problems have both standard and olympiad members, and the rule makes both olympiad. One is in the number-theory set (`r3667`) and one is in the general set (`r1406`). Both have only FormalMATH-All members.
+- Number-theory set by source: FormalMATH-All gives 1,001 olympiad and 90 standard problems. PutnamBench gives 60 olympiad problems. Every number-theory problem from the other sources is standard.
+- The one problem with an `imosl_` name (`r22`) is in neither test set.
+- The two sets together hold 729 distinct standard problems and 1,587 distinct olympiad problems. At 32 samples per problem, the standard level of one checkpoint needs 23,328 Lean checks.
+- Correction to the amendment: 1,029 is the number of FormalMATH-All members from `olympid`, `omni` or `blue_prove` in the number-theory set. 1,001 number-theory problems have such a member.
+- Drawback: the standard level of the number-theory set holds 496 problems, which is 32% of the set. Small effects between checkpoints are harder to detect on it.
+- Drawback: the level is not checked against any measured difficulty. The human check does not mark the level.
+- Open: the human check of the 100 problems in `human_check.jsonl` is not done.
+
 ## Data handoff for Abhinav, 20 October 2026 IST
 
 #### Start here: one page for Abhinav

@@ -71,5 +71,59 @@ class OverlapKeyTest(unittest.TestCase):
         self.assertEqual(audit.own_line("theorem c : 1 = 1 := by -- note\n  rfl"), "theorem c : 1 = 1 := by -- note\n  rfl")
 
 
+class TestSetRuleTest(unittest.TestCase):
+    def test_labels_come_from_each_source(self):
+        m = lambda source, name, split="test": {"source": source, "name": name, "split": split}
+        domains = {"a": "Mathematics -> Number Theory -> Primes;", "b": "Mathematics -> Algebra -> Equations;"}
+        tags = {"putnam_1": ["number_theory"], "putnam_2": ["analysis"]}
+        self.assertTrue(audit.nt_label(m("formalmath", "a"), domains, tags))
+        self.assertFalse(audit.nt_label(m("formalmath", "b"), domains, tags))
+        self.assertTrue(audit.nt_label(m("putnambench", "putnam_1"), domains, tags))
+        self.assertFalse(audit.nt_label(m("putnambench", "putnam_2"), domains, tags))
+        self.assertTrue(audit.nt_label(m("proverbench", "x", "number_theory"), domains, tags))
+        self.assertFalse(audit.nt_label(m("proverbench", "x", "calculus"), domains, tags))
+        self.assertIsNone(audit.nt_label(m("proverbench", "x", "aime"), domains, tags))
+        self.assertTrue(audit.nt_label(m("minif2f_v2s", "mathd_numbertheory_3"), domains, tags))
+        self.assertFalse(audit.nt_label(m("minif2f_v2s", "mathd_algebra_478"), domains, tags))
+        self.assertIsNone(audit.nt_label(m("minif2f_v2s", "aime_1983_p1"), domains, tags))
+        self.assertTrue(audit.nt_label(m("exp028_selection", "ntb_0"), domains, tags))
+
+    def test_level_comes_from_each_source(self):
+        def m(source, name, split=""):
+            return {"source": source, "name": name, "split": split}
+        origins = {f: o for f, o in zip("abcdefgh", ("olympid", "omni", "blue_prove", "hardmath",
+                                                      "aime", "blue_quant", "u-math", "DEMIMATH"))}
+        for name in "abcd":
+            self.assertEqual(audit.level(m("formalmath", name), origins), "olympiad")
+        for name in "efgh":
+            self.assertEqual(audit.level(m("formalmath", name), origins), "standard")
+        self.assertEqual(audit.level(m("putnambench", "putnam_1"), origins), "olympiad")
+        self.assertEqual(audit.level(m("minif2f_v2s", "imo_1959_p1"), origins), "olympiad")
+        self.assertEqual(audit.level(m("minif2f_v1_aimo", "imosl_2007_algebra_p6"), origins), "olympiad")
+        for name in ("mathd_numbertheory_3", "algebra_sqineq_at2malt1", "amc12a_2019_p21", "aime_1983_p1",
+                     "induction_12dvd4expnp1p20", "numbertheory_4x3m7y3neq2003"):
+            self.assertEqual(audit.level(m("minif2f_v2c", name), origins), "standard")
+        self.assertEqual(audit.level(m("proverbench", "x", "aime"), origins), "standard")
+        for pool in ("prepared_v1", "release_v3", "exp028_selection"):
+            self.assertEqual(audit.level(m(pool, "ntb_0"), origins), "standard")
+        with self.assertRaises(KeyError):
+            audit.level(m("formalmath", "missing"), origins)
+
+    def test_problem_is_standard_only_if_every_member_is(self):
+        self.assertEqual(audit.problem_level(["standard", "standard"]), "standard")
+        self.assertEqual(audit.problem_level(["standard", "olympiad"]), "olympiad")
+        self.assertEqual(audit.problem_level(["olympiad"]), "olympiad")
+
+    def test_keywords_match_number_theory_text_only(self):
+        self.assertTrue(audit.NT_KEYWORDS.search(audit.bare_statement(MATHD)))
+        self.assertTrue(audit.NT_KEYWORDS.search("(p : ℕ) (hp : Nat.Prime p) : p ∣ 2 ^ p - 2"))
+        self.assertIsNone(audit.NT_KEYWORDS.search("(x : ℝ) (h : 2 * x + 3 = 7) : x = 2"))
+
+    def test_hash_order_is_stable_when_the_pool_grows(self):
+        small = audit.hash_order("general", ["r1", "r2", "r3"])
+        large = audit.hash_order("general", ["r1", "r2", "r3", "r4", "r5"])
+        self.assertEqual([i for i in large if i in small], small)
+
+
 if __name__ == '__main__':
     unittest.main()

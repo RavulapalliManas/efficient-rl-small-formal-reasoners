@@ -1,0 +1,110 @@
+{
+  "usable": 6164,
+  "labeled": 5986,
+  "labeled_number_theory": 1557,
+  "label_conflicts": 9,
+  "unlabeled": 178,
+  "keyword_precision": 0.7381,
+  "keyword_recall": 0.6898,
+  "keyword_matches_labeled": 1455,
+  "gate_passed": false,
+  "number_theory": 1557,
+  "number_theory_by_reason": {
+    "label": 1557
+  },
+  "general": 1000,
+  "general_number_theory": 241,
+  "by_level": {
+    "usable": {
+      "standard": 1926,
+      "olympiad": 4238
+    },
+    "number_theory": {
+      "standard": 496,
+      "olympiad": 1061
+    },
+    "general": {
+      "olympiad": 696,
+      "standard": 304
+    },
+    "general_outside_number_theory": {
+      "olympiad": 526,
+      "standard": 233
+    },
+    "human_check": {
+      "standard": 39,
+      "olympiad": 61
+    }
+  },
+  "level_conflicts": 2,
+  "by_source": {
+    "exp028_selection": {
+      "number_theory": 188,
+      "number_theory_standard": 188,
+      "usable": 188,
+      "usable_standard": 188
+    },
+    "formalmath": {
+      "number_theory": 1091,
+      "number_theory_olympiad": 1001,
+      "number_theory_standard": 90,
+      "usable": 4897,
+      "usable_olympiad": 3882,
+      "usable_standard": 1015
+    },
+    "minif2f_v1_aimo": {
+      "number_theory": 33,
+      "number_theory_olympiad": 0,
+      "number_theory_standard": 33,
+      "usable": 177,
+      "usable_olympiad": 20,
+      "usable_standard": 157
+    },
+    "minif2f_v2c": {
+      "number_theory": 70,
+      "number_theory_olympiad": 0,
+      "number_theory_standard": 70,
+      "usable": 373,
+      "usable_olympiad": 38,
+      "usable_standard": 335
+    },
+    "minif2f_v2s": {
+      "number_theory": 70,
+      "number_theory_olympiad": 0,
+      "number_theory_standard": 70,
+      "usable": 373,
+      "usable_olympiad": 38,
+      "usable_standard": 335
+    },
+    "prepared_v1": {
+      "number_theory": 111,
+      "number_theory_standard": 111,
+      "usable": 111,
+      "usable_standard": 111
+    },
+    "proverbench": {
+      "number_theory": 37,
+      "number_theory_standard": 37,
+      "usable": 278,
+      "usable_standard": 278
+    },
+    "putnambench": {
+      "number_theory": 60,
+      "number_theory_olympiad": 60,
+      "usable": 318,
+      "usable_olympiad": 318
+    },
+    "release_v3": {
+      "number_theory": 29,
+      "number_theory_standard": 29,
+      "usable": 29,
+      "usable_standard": 29
+    }
+  },
+  "code_sha256": "003156f038cb67ccf9d646e521ee83e4969e5f5a3ad1691edd052db0730d0554",
+  "sha256": {
+    "human_check.jsonl": "a701f045565bf247e3a4000831321d90406969a17e22b21bd1cba6871f5cfbd1",
+    "test_general.jsonl": "8967d31fe06933e0877cb68d1655ac67f1c31d125f0dab274b9fd5dfa04e1423",
+    "test_number_theory.jsonl": "547d4d5a4ed5a6d0dee7f49b73e33e3aa98d6600138dce8715788c57f3f2a462"
+  }
+}

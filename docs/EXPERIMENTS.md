@@ -16,6 +16,7 @@ Study titles identify the intervention or comparison and its task. The register 
 These summaries describe the recorded protocols; they do not add hypotheses or change which studies ran.
 Use the same study title in summaries and record headings. Dates, owners and delivery deadlines belong in the record.
 Keep experiment IDs, config keys, run IDs, theorem IDs and artifact filenames stable.
+Name new run IDs and output directories `exp<NNN>-<step>-s<YYYYMMDD>-v<n>`, for example `exp031-split-s20261115-v4`. Older names stay; their records map them.
 Historical amendments retain their original wording; the titles above them use the current names.
 
 - Name a figure by its measured quantity and population. State an interpretation in the caption or discussion, with its uncertainty.
@@ -24,6 +25,7 @@ Historical amendments retain their original wording; the titles above them use t
 - Use **accepted attempts** for complete proofs accepted by Lean and **theorems proved** for distinct theorems with an accepted attempt.
 - Report the attempt budget with theorem counts. A valid tactic step is partial progress, not a proof.
 - Use **selection set** for EXP-028. It is exploratory and distinct from the reserved TEST set.
+- Use **test pool** for the protected evaluation statements of EXP-031. Its registration calls the added parts reference sets.
 - Use **RLVR** for reinforcement learning with verifiable rewards. It describes the reward setting, not the optimizer.
 - Use **GRPO** for group relative policy optimization and **PPO** for proximal policy optimization.
 - Name the interactive learner **REINFORCE with a leave-one-out baseline**. **RLOO** denotes the REINFORCE leave-one-out estimator; group sampling alone does not make it GRPO.
@@ -34,7 +36,7 @@ Algorithm names follow the [GRPO documentation](https://huggingface.co/docs/trl/
 
 ## Execution record
 
-Experiment execution stopped on 20 October 2026. EXP-031, a data build with no model training, ran on 15 November 2026. This table preserves the recorded outcomes, including stopped and unrun work.
+Experiment execution stopped on 20 October 2026. EXP-031, a data build with no model training, ran on 15 and 16 November 2026. This table preserves the recorded outcomes, including stopped and unrun work.
 The [README](../README.md#status) summarizes the current findings; the [register](#experiment-register) links protocols and evidence.
 
 <details>
@@ -42,7 +44,7 @@ The [README](../README.md#status) summarizes the current findings; the [register
 
 | ID | Study title | Config or entry point | Status |
 | --- | --- | --- | --- |
-| [EXP-031](EXPERIMENT_HISTORY.md#exp-031) | Corpus audit, overlap removal and dev split for SFT | `scripts/data/audit_sft_corpus.py` | Done. 47,464 of 49,377 proofs pass; split v2 has no repeated problem: train 36,998 problems, dev 500, test pool 797 problems, of which 106 close with one tactic; export in [`data/exp031_splits_v2/`](../data/exp031_splits_v2/) |
+| [EXP-031](EXPERIMENT_HISTORY.md#exp-031) | Corpus audit, overlap removal and dev split for SFT | `scripts/data/audit_sft_corpus.py` | Done. 47,464 of 49,377 proofs pass; split v4 has no repeated problem: train 36,298 problems, dev 493 (fixed from split v2), test pool 7,188 problems, of which 6,164 elaborate and are neither trivial nor flagged; FormalMATH-All holds 4,897 of those; export in [`data/exp031_splits_v4/`](../data/exp031_splits_v4/) |
 | [EXP-030](EXPERIMENT_HISTORY.md#exp-030) | Terminal proof reward versus per-action Lean-error penalties | `scripts/train/run_tactic_rl.py` | Not run. All experiments stopped on 20 October; the proposed reward comparison remains unmeasured |
 | [EXP-029](EXPERIMENT_HISTORY.md#exp-029) | Eight-attempt evaluation of SFT and RL checkpoints | `scripts/train/run_tactic_rl.py` | Not run. Neither planned stage launched before experiments stopped |
 | [EXP-028](EXPERIMENT_HISTORY.md#exp-028) | Exploratory evaluation of search, retrieval, SFT and filtered RL | `scripts/train/run_tactic_rl.py` options; `scripts/data/build_search_sft.py`, `add_premises_sft.py`, `build_premise_corpus.py` | No remedy arm is promoted at 2 attempts per theorem: S (E0) and search (E2) each prove 1 of 163 assessed theorems; lemma retrieval (E3), R (E7), the SFT seed control (E5) and filtered RL (E6) prove 1, 1, 0 and 2 of 164, respectively. E0 and E2 censor one theorem after an automation timeout. E4 did not run: the S_mined SFT stage failed on a data-builder defect, now fixed. RL_filtered raises acceptance on its 62 TRAIN theorems from 0.31 to 0.60 (p = 0.0001), without measurable transfer. A separate Kimina-Prover-Distill-0.6B probe proves 47 and 40 of 164 within 8 attempts in two draws (56 in either); its format and token budget differ from S |
@@ -117,7 +119,7 @@ Use the README for current execution status.
 | EXP-028 | Exploratory screen | Screen interventions for complete-proof gains on the separate selection set. | [Protocol](EXPERIMENT_HISTORY.md#exp-028) | [E0](EXPERIMENT_HISTORY.md#e0-result-18-october-2026-ist); [E2](EXPERIMENT_HISTORY.md#e2-result-and-lemma-data-18-october-2026-ist); [E5 and E3](EXPERIMENT_HISTORY.md#e5-result-and-the-e3-comparison-19-october-2026-ist); [E6](EXPERIMENT_HISTORY.md#e6-result-filtered-rl-on-the-selection-set-19-october-2026-ist); [RL_filtered](EXPERIMENT_HISTORY.md#rl_filtered-result-learning-on-the-62-filtered-train-tasks-19-october-2026-ist); [Kimina probe](EXPERIMENT_HISTORY.md#kimina-capability-probe-result-19-october-2026-ist); [why-analysis](EXPERIMENT_HISTORY.md#analysis-why-rl-raises-train-acceptance-without-a-held-out-gain-20-october-2026-ist) | [§4](tex/project_report.pdf#page=8); [§4.6](tex/project_report.pdf#page=15) |
 | EXP-029 | Unrun experiment | Test whether a larger attempt budget changes the SFT–RL comparison; this study did not run. | [Protocol](EXPERIMENT_HISTORY.md#exp-029) | Not run; [stop](EXPERIMENT_HISTORY.md#exp-029-stop) | [Appendix G](tex/project_report.pdf#page=55) |
 | EXP-030 | Unrun exploratory pilot | Compare complete-proof acceptance under terminal-only and error-penalized rewards; this study did not run. | [Protocol](EXPERIMENT_HISTORY.md#exp-030) | Not run; [stop](EXPERIMENT_HISTORY.md#exp-030-stop) | [Appendix G](tex/project_report.pdf#page=55) |
-| EXP-031 | Data build | Which corpus statements and proofs survive the pinned Lean with `autoImplicit` off and strict checks, overlap no evaluation statement, and form a grouped dev split; and how many evaluation statements fall to automation, vacuous hypotheses or a provable negation? | [Registration](EXPERIMENT_HISTORY.md#exp-031) | [Outcome](EXPERIMENT_HISTORY.md#exp-031-outcome-15-november-2026-ist); [goal-only 13-gram amendment](EXPERIMENT_HISTORY.md#exp-031-amendment-goal-only-13-gram-rule-and-the-exported-splits-15-november-2026-ist); [split v2 without repeats](EXPERIMENT_HISTORY.md#exp-031-correction-repeated-problems-and-split-v2-15-november-2026-ist) | Not in the report |
+| EXP-031 | Data build | Which corpus statements and proofs survive the pinned Lean with `autoImplicit` off and strict checks, overlap no evaluation statement, and form a grouped dev split; and how many evaluation statements fall to automation, vacuous hypotheses or a provable negation? | [Registration](EXPERIMENT_HISTORY.md#exp-031) | [Outcome](EXPERIMENT_HISTORY.md#exp-031-outcome-15-november-2026-ist); [goal-only 13-gram amendment](EXPERIMENT_HISTORY.md#exp-031-amendment-goal-only-13-gram-rule-and-the-exported-splits-15-november-2026-ist); [split v2 without repeats](EXPERIMENT_HISTORY.md#exp-031-correction-repeated-problems-and-split-v2-15-november-2026-ist); [added reference sets and split v4](EXPERIMENT_HISTORY.md#exp-031-outcome-added-reference-sets-and-split-v4-16-november-2026-ist) | Not in the report |
 
 The Results column links outcome entries. The Report column links sections and pages in the current PDF.
 

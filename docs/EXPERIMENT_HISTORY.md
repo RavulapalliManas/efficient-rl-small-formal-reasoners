@@ -530,6 +530,8 @@ Implementation source: [TRL 0.24 PPO trainer](https://huggingface.co/docs/trl/v0
 
 ## Decision log
 
+- 2026-11-16 IST: Manas approves two rules. Dev stays fixed: EXP-031 split v4 reuses split v2 dev, and later builds pass `finalize --dev-from` ([outcome](#exp-031-outcome-added-reference-sets-and-split-v4-16-november-2026-ist)). Run IDs and output directories follow `exp<NNN>-<step>-s<YYYYMMDD>-v<n>`; older outputs keep their names, and the EXP-031 outcome maps them.
+
 - 2026-11-15 IST: Manas sets two data rules. No problem may appear twice in a split or across splits; EXP-031 split v2 applies this ([correction](#exp-031-correction-repeated-problems-and-split-v2-15-november-2026-ist)). Dev is internal: it decides checkpoints, task mixes and gates, and never appears in a figure or a reported result. Its files may be public. Reported numbers come from the test set only.
 
 - 2026-11-15 IST: EXP-031 data decision. The registered whole-statement 13-gram rule flags 13,298 of 40,732 corpus statements (32.6 percent), mostly through shared binder blocks; Manas chooses the goal-only 13-gram rule, which flags 830. The SFT splits for new work are train 37,227 statements and dev 500, from `data/finalize_goal13`. At Manas's request, the export is committed to Git in `data/exp031_splits_v1/`, an exception to "Not in Git", and it makes the reference pool public. [EXP-031 amendment](#exp-031-amendment-goal-only-13-gram-rule-and-the-exported-splits-15-november-2026-ist).
@@ -5847,7 +5849,7 @@ Fix, code SHA-256 in `data/finalize_goal13_v2.sha256`: `tokens` maps `in` to `�
 - Test pool: 797 problems (488 miniF2F, 309 from our pools) from 1,112 versions. 781 problems have a version that elaborates. 106 problems, all miniF2F, have an elaborating version that one tactic closes. 4 problems are flagged by the vacuity or negation check, the same 4 statements named in the outcome entry.
 - Check: a separate script recomputed every key from the exported files. No renamed key repeats inside train, dev or the test pool; no problem name is in two test-pool problems; no renamed or exact key is shared between any two of train, dev and the test pool; no proof text repeats.
 - The counts of split v1 above (test pool 1,112 statements, 1,070 that elaborate, 131 trivial; train 37,227; dev 500 statements) count versions and repeated rows. Split v2 supersedes them; they stay as history.
-- Export: [`data/exp031_splits_v2/`](../data/exp031_splits_v2/). Split v1 left the pull request before merge; it stays in the branch history and in `data/export_goal13_v1/` on cpu-angad.
+- Export: [`data/exp031_splits_v2/`](https://github.com/RavulapalliManas/efficient-rl-small-formal-reasoners/tree/33f1326/data/exp031_splits_v2), replaced in Git by split v4. Split v1 left the pull request before merge; it stays in the branch history and in `data/export_goal13_v1/` on cpu-angad.
 - Not changed: 8,787 train statements share a 13-token run of goal text with another train statement. A sample shows related but different problems, for example STP variants of one gcd question with different hypotheses. They stay in train. The planned SFT and RL split will report how many such pairs cross between its parts.
 
 ### EXP-031 amendment: added reference sets, registered 15 November 2026 IST
@@ -5862,6 +5864,58 @@ Manas asks for a larger evaluation pool. Registered before launch. Run `eval_exp
 - Known limits: the new sets target newer Lean, so some statements will not elaborate on v4.10.0-rc1; the outcome counts them per source. The overlap keys do not link one problem formalized differently in two sources, for example an AIME problem in FormalMATH and in miniF2F.
 - Launch amendments, before any result: smoke tests on the controls and 80 sampled statements found three defects in the new code, fixed before launch. (1) Merging all `open` lines into one command produced invalid syntax such as `open Real Set scoped BigOperators in`; each line now becomes its own `open ... in` prefix. (2) The historical header opens `Nat` and `Real`, which made statements written without them ambiguous, for example `Prime` against `Nat.Prime`; the new items run with `check --header plain`, which drops that `open` line, so each statement uses only its own. (3) ProverBench keeps its `open` lines in a separate `header` field, which is now read. After the fixes, all 17 controls match (one control for chained prefixes was added) and 77 of the 80 sampled statements elaborate; the 3 others use an undeclared `C`. The run uses 20 shards, not 16, because the reused results are stored per shard of 20. Launched 15 November 2026, code SHA-256 in `data_ext1/launch.sha256`.
 - Correction to the registration: the AI-MO miniF2F file holds the 244 miniF2F-valid problems, not test. All 244 match miniF2F-v2s rows with split `valid`. `prepare` labeled them `test`, and split v2 `test_pool.jsonl` carries that label. The protection is unchanged, because every row is in the pool.
+
+### EXP-031 outcome: added reference sets and split v4, 16 November 2026 IST
+
+The Lean check of the added reference sets finished on 16 November 2026. Run directory: cpu-angad `formal_rl/sft_corpus_audit_20261115_v1/`.
+
+- Lean check: all 20 shards exit 0. The 191,089 results cover the 191,089 items, and no item ID repeats.
+- Results: accepted 49,062; rejected 95,821; `sorry_only` 45,829; `incomplete` 281; crash 69; batch timeout 23; forbidden construct 4. A crash, a batch timeout or `incomplete` gives no usable verdict. These items stay in the denominator.
+- Controls: all 30 match. 13 come from the first run, and 17 ran in this extension.
+- AI-MO label: `finalize` now labels the 244 AI-MO miniF2F rows `valid`, and `prepare` does the same for new runs.
+- Run v3 failed review and is not published. Its dev draw kept 7 of the 500 split v2 dev groups. Cause: `random.Random(SEED).sample(groups, 500)` gives a different sample when the list of eligible groups changes. Its outputs stay on cpu-angad.
+- Fix: `finalize --dev-from` reuses the groups of an earlier `dev.jsonl`. Run v4 reuses split v2 dev. 493 of its 500 groups stay eligible. The other 7 now overlap the added sets and leave dev. No group replaces them, so dev stays fixed from now on. Code SHA-256 `3141198fd1e1ec2ba90494f4f9ff37b8d1383285d91c8f31b52520b4af290c75`, in `code_v4/` and in `summary.json`.
+- Exclusions: statement fails 1,834; no accepted proof 34; exact overlap 304; renamed overlap 6; 13-gram overlap 1,558. 36,996 statements stay eligible.
+- Train: 36,298 problems from 36,500 statements, with 44,322 accepted proofs. Split v2 had 36,998 problems, so overlap with the added sets removes 700.
+- Dev: 493 problems from 496 statements, with 602 accepted proofs. Excluded: 3,736 statements.
+- Test pool: 7,188 problems from 7,557 versions. 6,577 problems have a version that elaborates, 390 have an elaborating version that one tactic closes, and 29 are flagged by the vacuity or negation check. 6,164 problems are usable, that is, they elaborate and are neither trivial nor flagged. Split v2 had 672 usable problems.
+
+| Source | Problems | Elaborate | Trivial | Flagged | Usable |
+| --- | --- | --- | --- | --- | --- |
+| FormalMATH-All | 5,395 | 5,171 | 254 | 25 | 4,897 |
+| miniF2F-v2s | 488 | 480 | 106 | 2 | 373 |
+| miniF2F-v2c | 488 | 480 | 106 | 2 | 373 |
+| AI-MO miniF2F (valid) | 244 | 244 | 67 | 1 | 177 |
+| PutnamBench | 672 | 318 | 0 | 0 | 318 |
+| DeepSeek-ProverBench | 325 | 308 | 30 | 0 | 278 |
+| EXP-028 selection | 193 | 189 | 0 | 1 | 188 |
+| `prepared_v1` | 116 | 112 | 0 | 1 | 111 |
+| `release_v3` | 29 | 29 | 0 | 0 | 29 |
+
+A problem with versions from several sources counts once in each source row, so the rows add up to more than 7,188. For PutnamBench, 318 of the 326 proof problems elaborate. Its 346 problems with a `_solution` answer join only the overlap check, so they have no elaboration result.
+
+- Check: a separate script, `data_ext1/exp031-split-v3-verify.py`, uses its own text normalization. Its output for v4 is `data_ext1/exp031-split-v4-verify.json`. No statement repeats inside train, dev or the test pool. No problem name is in two test-pool problems. No proof repeats inside a row. No exact statement and no group key is shared between any two splits. All 493 dev groups come from split v2.
+- Drawback: FormalMATH-All holds 4,897 of the 6,164 usable problems, and it covers all areas of mathematics. A number-theory test set needs a selection rule, registered before any evaluation.
+- Drawback: the 13-gram result depends on how text is split into tokens. The registered rule keeps identifiers whole and leaves no overlap. The check script splits identifiers at dots, and finds 802 train rows and 15 dev rows that share a 13-token run of goal text with the test pool; for split v2 it finds 613 train rows. In the inspected sample, most shared runs are common Lean phrases, for example `Finset.card (Finset.filter (fun x => x`. Some are partial overlaps: one train goal contains `(p : ℤ) ∣ n ↔ n ^ 2 % p = 0`, which is the first conjunct of a test-pool goal. The rule does not change after the data. The check for one problem written in two forms stays open.
+- Export: [`data/exp031_splits_v4/`](../data/exp031_splits_v4/), with the manifest SHA-256 of each uncompressed file. The directory carries the run number. Split v2 leaves the pull request before merge; it stays in the branch history and in `data/export_goal13_v2/` on cpu-angad.
+
+Run IDs: from this entry on, run IDs and output directories follow `exp<NNN>-<step>-s<YYYYMMDD>-v<n>`. Earlier outputs keep their names. This table maps them, under the run directory above.
+
+| Run ID | Output | Note |
+| --- | --- | --- |
+| `exp031-lean-check-s20261115-v1` | `data/` (`results_*.jsonl`) | First Lean check |
+| `exp031-decontam-ngram13stmt-s20261115-v1` | `data/` (`summary.json`, `sft_corpus_v1.jsonl`) | Registered whole-statement 13-gram rule |
+| `exp031-decontam-ngram13goal-s20261115-v1` | `data/finalize_goal13/` | Goal-only rule |
+| `exp031-decontam-ngram13goal-s20261115-v2` | `data/finalize_goal13_v2/` | Repeat fix |
+| `exp031-split-s20261115-v1` | `data/export_goal13_v1/` | Split v1 |
+| `exp031-split-s20261115-v2` | `data/export_goal13_v2/` | Split v2 |
+| `exp031-lean-check-s20261115-v2` | `data_ext1/` | Added reference sets; registered as `eval_expansion_20261115_v1`, services `eval-expansion-20261115-v1-s0` to `-s19` |
+| `exp031-decontam-ngram13goal-s20261115-v3` | `data_ext1/exp031-decontam-ngram13goal-s20261115-v3/` | Random dev, not published |
+| `exp031-split-s20261115-v3` | `data_ext1/exp031-split-s20261115-v3/` | Random dev, not published |
+| `exp031-decontam-ngram13goal-s20261115-v4` | `data_ext1/exp031-decontam-ngram13goal-s20261115-v4/` | Dev from split v2 |
+| `exp031-split-s20261115-v4` | `data_ext1/exp031-split-s20261115-v4/` | Split v4, in Git |
+
+`smoke3/`, `smoke_crash/` and `smoke_ext/` hold the smoke tests that ran before the two launches.
 
 ## Data handoff for Abhinav, 20 October 2026 IST
 

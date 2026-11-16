@@ -242,7 +242,7 @@ def prepare(args):
     for name, rel in MINIF2F_V2.items():
         rows += [(name, r["name"], r["split"], r["formal_statement"]) for r in map(json.loads, open(root / rel))]
     import pyarrow.parquet as pq
-    rows += [("minif2f_v1_aimo", r["name"], "test", r["formal_statement"])
+    rows += [("minif2f_v1_aimo", r["name"], "valid", r["formal_statement"])  # the AI-MO file holds miniF2F-valid
              for r in pq.read_table(root / MINIF2F_V1).to_pylist()]
     for name, rel in REFERENCE_POOLS.items():
         rows += [(name, r["name"], r["split"], r["formal_statement"])
@@ -345,7 +345,8 @@ def finalize(args):
     ref_rows = {}
     for r in reference:
         ref_rows.setdefault(r["rid"], {"rid": r["rid"], "statement": r["statement"], "members": []})["members"].append(
-            {k: r[k] for k in ("source", "name", "split")})
+            {"source": r["source"], "name": r["name"],  # reference.jsonl from earlier runs labels AI-MO "test"
+             "split": "valid" if r["source"] == "minif2f_v1_aimo" else r["split"]})
     for rid, r in ref_rows.items():
         exact, renamed, _ = keys(r["statement"])
         grams = keys(gram_text(r["statement"]))[2]
@@ -373,7 +374,10 @@ def finalize(args):
                          renamed_key=hashlib.sha256(renamed.encode()).hexdigest()[:16], exclusion=reason))
 
     groups = sorted({r["renamed_key"] for r in rows if r["exclusion"] is None})
-    dev_keys = set(random.Random(SEED).sample(groups, DEV_GROUPS))
+    if args.dev_from:  # keep an earlier dev split fixed; its groups that are no longer eligible drop out
+        dev_keys = {json.loads(l)["group"] for l in open(args.dev_from)} & set(groups)
+    else:
+        dev_keys = set(random.Random(SEED).sample(groups, DEV_GROUPS))
     for r in rows:
         r["split"] = "excluded" if r["exclusion"] else ("dev" if r["renamed_key"] in dev_keys else "train")
     train_keys = {r["renamed_key"] for r in rows if r["split"] == "train"}
@@ -409,7 +413,7 @@ def finalize(args):
         "reference_unique": len(ref_out), "reference_by_source": {k: dict(v) for k, v in by_source.items()},
         "trivial_by_tactic": dict(Counter(t for r in ref_out if r["statement_status"] == "sorry_only"
                                           for t, s in r["tactics"].items() if s == "accepted")),
-        "seed": SEED, "dev_groups": DEV_GROUPS, "ngram": NGRAM, "ngram_scope": args.ngram_scope, "battery": BATTERY,
+        "seed": SEED, "dev_groups": len(dev_keys), "dev_from": str(args.dev_from) if args.dev_from else None, "ngram": NGRAM, "ngram_scope": args.ngram_scope, "battery": BATTERY,
         "lean": "v4.10.0-rc1", "mathlib": "29dcec074de168ac2bf835a77ef68bbe069194c5",
         "code_sha256": {n: hashlib.sha256((Path(__file__).resolve().parent / n).read_bytes()).hexdigest()
                         for n in ("audit_sft_corpus.py", "verify_external_proofs.py")},
@@ -524,6 +528,7 @@ def main():
     f.add_argument("--out", type=Path, required=True)
     f.add_argument("--dest", type=Path, help="output directory (default --out)")
     f.add_argument("--ngram-scope", choices=("statement", "goal"), default="statement")
+    f.add_argument("--dev-from", type=Path, help="dev.jsonl of an earlier export; reuse its groups as dev")
     x = sub.add_parser("extend")
     x.add_argument("--root", type=Path, required=True)
     x.add_argument("--src", type=Path, required=True, help="prepare output with results")

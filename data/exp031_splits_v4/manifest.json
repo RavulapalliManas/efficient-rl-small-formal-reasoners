@@ -1,0 +1,296 @@
+{
+  "experiment": "EXP-031",
+  "run": "sft_corpus_audit_20261115_v1",
+  "counts": {
+    "train_statements": 36500,
+    "excluded": 3736,
+    "dev_statements": 496,
+    "train": 36298,
+    "train_proofs": 44322,
+    "dev": 493,
+    "dev_proofs": 602,
+    "test_pool_problems": 7188,
+    "test_pool_elaborates": 6577,
+    "test_pool_trivial": 390,
+    "test_pool_flagged": 29,
+    "test_pool_versions": 7557
+  },
+  "summary": {
+    "controls": {
+      "ctrl_proof_good": {
+        "expected": "accepted",
+        "got": "accepted",
+        "pass": true
+      },
+      "ctrl_proof_wrong": {
+        "expected": "rejected",
+        "got": "rejected",
+        "pass": true
+      },
+      "ctrl_proof_unbound": {
+        "expected": "rejected",
+        "got": "rejected",
+        "pass": true
+      },
+      "ctrl_proof_sorry": {
+        "expected": "forbidden_construct",
+        "got": "forbidden_construct",
+        "pass": true
+      },
+      "ctrl_proof_native": {
+        "expected": "forbidden_construct",
+        "got": "forbidden_construct",
+        "pass": true
+      },
+      "ctrl_stmt_clean": {
+        "expected": "sorry_only",
+        "got": "sorry_only",
+        "pass": true
+      },
+      "ctrl_stmt_unbound": {
+        "expected": "rejected",
+        "got": "rejected",
+        "pass": true
+      },
+      "ctrl_tac_easy": {
+        "expected": "accepted",
+        "got": "accepted",
+        "pass": true
+      },
+      "ctrl_tac_hard": {
+        "expected": "rejected",
+        "got": "rejected",
+        "pass": true
+      },
+      "ctrl_vacuous_yes": {
+        "expected": "accepted",
+        "got": "accepted",
+        "pass": true
+      },
+      "ctrl_vacuous_no": {
+        "expected": "rejected",
+        "got": "rejected",
+        "pass": true
+      },
+      "ctrl_negation_yes": {
+        "expected": "accepted",
+        "got": "accepted",
+        "pass": true
+      },
+      "ctrl_negation_no": {
+        "expected": "rejected",
+        "got": "rejected",
+        "pass": true
+      },
+      "ctrl_proof_good_ext": {
+        "expected": "accepted",
+        "got": "accepted",
+        "pass": true
+      },
+      "ctrl_proof_wrong_ext": {
+        "expected": "rejected",
+        "got": "rejected",
+        "pass": true
+      },
+      "ctrl_proof_unbound_ext": {
+        "expected": "rejected",
+        "got": "rejected",
+        "pass": true
+      },
+      "ctrl_proof_sorry_ext": {
+        "expected": "forbidden_construct",
+        "got": "forbidden_construct",
+        "pass": true
+      },
+      "ctrl_proof_native_ext": {
+        "expected": "forbidden_construct",
+        "got": "forbidden_construct",
+        "pass": true
+      },
+      "ctrl_stmt_clean_ext": {
+        "expected": "sorry_only",
+        "got": "sorry_only",
+        "pass": true
+      },
+      "ctrl_stmt_unbound_ext": {
+        "expected": "rejected",
+        "got": "rejected",
+        "pass": true
+      },
+      "ctrl_tac_easy_ext": {
+        "expected": "accepted",
+        "got": "accepted",
+        "pass": true
+      },
+      "ctrl_tac_hard_ext": {
+        "expected": "rejected",
+        "got": "rejected",
+        "pass": true
+      },
+      "ctrl_vacuous_yes_ext": {
+        "expected": "accepted",
+        "got": "accepted",
+        "pass": true
+      },
+      "ctrl_vacuous_no_ext": {
+        "expected": "rejected",
+        "got": "rejected",
+        "pass": true
+      },
+      "ctrl_negation_yes_ext": {
+        "expected": "accepted",
+        "got": "accepted",
+        "pass": true
+      },
+      "ctrl_negation_no_ext": {
+        "expected": "rejected",
+        "got": "rejected",
+        "pass": true
+      },
+      "ctrl_open_in_ext": {
+        "expected": "sorry_only",
+        "got": "sorry_only",
+        "pass": true
+      },
+      "ctrl_open_scoped_ext": {
+        "expected": "rejected",
+        "got": "rejected",
+        "pass": true
+      },
+      "ctrl_open_chain_ext": {
+        "expected": "sorry_only",
+        "got": "sorry_only",
+        "pass": true
+      },
+      "ctrl_solo_def_ext": {
+        "expected": "sorry_only",
+        "got": "sorry_only",
+        "pass": true
+      }
+    },
+    "controls_all_pass": true,
+    "corpus_statements": 40732,
+    "exclusion": {
+      "eligible": 36996,
+      "statement_fails": 1834,
+      "overlap_ngram13": 1558,
+      "overlap_exact": 304,
+      "overlap_renamed": 6,
+      "no_accepted_proof": 34
+    },
+    "splits": {
+      "train": 36500,
+      "excluded": 3736,
+      "dev": 496
+    },
+    "split_proofs": {
+      "train": 44322,
+      "dev": 602
+    },
+    "proof_status": {
+      "accepted": 47464,
+      "rejected": 1913
+    },
+    "statement_status": {
+      "sorry_only": 38898,
+      "rejected": 1834
+    },
+    "reference_unique": 7557,
+    "reference_by_source": {
+      "minif2f_v2s": {
+        "statements": 488,
+        "elaborates": 478,
+        "trivial": 82,
+        "vacuous": 1,
+        "negation_proved": 2
+      },
+      "minif2f_v2c": {
+        "statements": 488,
+        "elaborates": 458,
+        "trivial": 76,
+        "vacuous": 1,
+        "negation_proved": 2
+      },
+      "minif2f_v1_aimo": {
+        "statements": 244,
+        "elaborates": 243,
+        "trivial": 66,
+        "vacuous": 0,
+        "negation_proved": 0
+      },
+      "prepared_v1": {
+        "statements": 116,
+        "elaborates": 112,
+        "trivial": 0,
+        "vacuous": 0,
+        "negation_proved": 1
+      },
+      "release_v3": {
+        "statements": 29,
+        "elaborates": 29,
+        "trivial": 0,
+        "vacuous": 0,
+        "negation_proved": 0
+      },
+      "exp028_selection": {
+        "statements": 193,
+        "elaborates": 189,
+        "trivial": 0,
+        "vacuous": 0,
+        "negation_proved": 1
+      },
+      "formalmath": {
+        "statements": 5448,
+        "elaborates": 5224,
+        "trivial": 257,
+        "vacuous": 5,
+        "negation_proved": 26
+      },
+      "proverbench": {
+        "statements": 325,
+        "elaborates": 308,
+        "trivial": 30,
+        "vacuous": 0,
+        "negation_proved": 0
+      },
+      "putnambench": {
+        "statements": 672,
+        "elaborates": 318,
+        "trivial": 0,
+        "vacuous": 0,
+        "negation_proved": 0
+      }
+    },
+    "trivial_by_tactic": {
+      "rfl": 158,
+      "tauto": 179,
+      "decide": 131,
+      "norm_num": 116,
+      "aesop": 197,
+      "exact?": 167,
+      "simp": 82,
+      "omega": 116,
+      "simp_all": 117,
+      "nlinarith": 153,
+      "linarith": 131
+    },
+    "seed": 20261115,
+    "dev_groups": 493,
+    "dev_from": "data/export_goal13_v2/dev.jsonl",
+    "ngram": 13,
+    "ngram_scope": "goal",
+    "battery": "first | (decide; done) | (norm_num; done) | (simp_all; done) | (omega; done) | (linarith; done) | (nlinarith; done) | (aesop; done) | (tauto; done)",
+    "lean": "v4.10.0-rc1",
+    "mathlib": "29dcec074de168ac2bf835a77ef68bbe069194c5",
+    "code_sha256": {
+      "audit_sft_corpus.py": "3141198fd1e1ec2ba90494f4f9ff37b8d1383285d91c8f31b52520b4af290c75",
+      "verify_external_proofs.py": "3eba3beae806aef742d586cc55574fc43c9d69e634c20b2a5bc5089fd4a074fd"
+    }
+  },
+  "sha256": {
+    "dev.jsonl": "44a67e71a698dcc57a5490eda351e31453e478c1b439b7ed3d76241bb4e40c17",
+    "excluded.jsonl": "78c92366975ae185c5a5be7417ef0a9b11d5935e1e71eb538fad7b47603c9901",
+    "test_pool.jsonl": "e1988901d1f9ae50214e6dda6e9ecf5eddff46684864f895f8644b243dbdfddd",
+    "train.jsonl": "f9c3360213bc4d68ca6d939b54dcd97766d64e13a81cce1e5cd76424734619b0"
+  }
+}

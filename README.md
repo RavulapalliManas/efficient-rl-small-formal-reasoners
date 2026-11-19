@@ -13,7 +13,8 @@ The model proposes proof steps; Lean 4 checks the complete proof.
 
 ## Study status
 
-Experiments ended on 20 October 2026, without an established RL gain on unseen theorems.
+The October training experiments ended on 20 October 2026, without an established RL gain on unseen theorems.
+The November dataset build is complete. The curriculum comparison is pending.
 
 - The unchanged, SFT, shuffled-RL and prerequisite-ordered-RL models each proved **0/8 development theorems**. This set cannot resolve modest differences.
 - On the exploratory selection set, SFT proved **1/163** theorems, shuffled RL **1/164**, and filtered RL **2/164**. An automation timeout left one SFT theorem unassessed.
@@ -52,6 +53,22 @@ The helper checks files and prepares commands without running training or reprod
 
 The [dataset workflow](scripts/README.md#dataset-recreation) verifies candidates from pinned sources and exports an exploratory release.
 It cannot reconstruct the original 506-theorem release or its action examples.
+
+## Curriculum dataset handoff
+
+Abhinav and Anwesha can use the [problem catalogue](data/exp031_problem_catalogue_v1/) to browse the frozen EXP-031 release.
+Use the `id` column to find the original Lean statement in the corresponding [split file](data/exp031_splits_v4/).
+
+| File | Use |
+| --- | --- |
+| [Training catalogue](data/exp031_problem_catalogue_v1/train.csv) | Browse 36,298 titles and source names, filter by topic, or sort by reference proof length |
+| [Dev catalogue](data/exp031_problem_catalogue_v1/dev.csv) | Browse the 493 problems reserved for internal model and checkpoint decisions |
+| [Test-pool catalogue](data/exp031_problem_catalogue_v1/test_pool.csv) | Browse 7,188 protected problems and filter by test membership and benchmark level |
+
+For curriculum design, work from the training catalogue. Topic tags with a `statement_keywords` basis are suggestions for human review.
+The shortest accepted reference proof gives a reproducible length proxy. Its token count uses the corpus audit's whitespace and punctuation tokenizer, and the line count refers to the same proof.
+For test, `benchmark_level` comes from source provenance. Within the number-theory test, the 496 `standard` items are the primary evaluation.
+Blank fields mean the release lacks that label or measurement. See the [catalogue record](docs/EXPERIMENT_HISTORY.md#exp-031-problem-catalogue-19-november-2026-ist) for details.
 
 <a id="repository-layout"></a>
 <a id="layout"></a>

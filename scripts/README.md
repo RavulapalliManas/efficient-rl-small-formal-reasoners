@@ -450,6 +450,7 @@ Build datasets, splits, SFT examples and RL tasks.
 | [`data/add_premises_sft.py`](data/add_premises_sft.py) | Add the retrieved-lemma section to existing v2 SFT examples. | EXP-028 |
 | [`data/audit_sft_corpus.py`](data/audit_sft_corpus.py) | Audit the EXP-024 corpus for SFT, protect a reference set of evaluation statements, and export the train, dev and test-pool files. | EXP-031 |
 | [`data/build_answer_tasks.py`](data/build_answer_tasks.py) | Build Lean-checked number-theory answer tasks (formal Q&A) and check every reference answer in Lean. | EXP-024 |
+| [`data/build_exp031_problem_catalogue.py`](data/build_exp031_problem_catalogue.py) | Export titles, topic tags and reference proof lengths keyed by the frozen EXP-031 problem IDs. | EXP-031 |
 | [`data/build_dev_set.py`](data/build_dev_set.py) | Build a development set of LeanDojo Benchmark 4 random/val (+ test) theorems for comparing Lean 4 proof models. | – |
 | [`data/build_nt_archive.py`](data/build_nt_archive.py) | Number-theory theorems of the mathlib Archive at the pin, from files compiled at the pin. | – |
 | [`data/build_nt_benchmark.py`](data/build_nt_benchmark.py) | Build a versioned, exploratory number-theory benchmark from the existing corpus. | EXP-025 |

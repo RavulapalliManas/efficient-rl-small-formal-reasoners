@@ -530,6 +530,8 @@ Implementation source: [TRL 0.24 PPO trainer](https://huggingface.co/docs/trl/v0
 
 ## Decision log
 
+- 2026-11-19 IST: Manas asks to merge the EXP-031 release and add titles, topic labels and difficulty information for curriculum review. The [problem catalogue](#exp-031-problem-catalogue-19-november-2026-ist) attaches metadata by frozen problem ID.
+
 - 2026-11-16 IST: Manas approves two rules. Dev stays fixed: EXP-031 split v4 reuses split v2 dev, and later builds pass `finalize --dev-from` ([outcome](#exp-031-outcome-added-reference-sets-and-split-v4-16-november-2026-ist)). Run IDs and output directories follow `exp<NNN>-<step>-s<YYYYMMDD>-v<n>`; older outputs keep their names, and the EXP-031 outcome maps them.
 
 - 2026-11-15 IST: Manas sets two data rules. No problem may appear twice in a split or across splits; EXP-031 split v2 applies this ([correction](#exp-031-correction-repeated-problems-and-split-v2-15-november-2026-ist)). Dev is internal: it decides checkpoints, task mixes and gates, and never appears in a figure or a reported result. Its files may be public. Reported numbers come from the test set only.
@@ -5985,6 +5987,24 @@ Run `exp031-testsets-s20261116-v2` exits 0. Output: cpu-angad `data_ext1/exp031-
 - Drawback: the standard level of the number-theory set holds 496 problems, which is 32% of the set. Small effects between checkpoints are harder to detect on it.
 - Drawback: the level is not checked against any measured difficulty. The human check does not mark the level.
 - Open: the human check of the 100 problems in `human_check.jsonl` is not done.
+
+### EXP-031 problem catalogue, 19 November 2026 IST
+
+The [curriculum handoff](../README.md#curriculum-dataset-handoff) links the CSVs for training, dev and the test pool.
+Each CSV has one row per problem in its corresponding frozen split v4 file. Test memberships and benchmark levels come from testsets v2.
+
+- Display titles use existing benchmark names or Lean declaration names when available, augmented by a topic cue when the statement has one. The stable ID disambiguates titles and joins back to the statement. There is no separate natural-language formalization.
+- Broad topic cues use known source labels and name prefixes. The narrower number-theory tags come from recognizable Lean symbols and identifiers in the statement. They can miss a topic or mark one that appears in passing. The frozen test membership already rejected a keyword classifier and is unaffected by these cues.
+- The training and dev difficulty proxy is the shortest accepted proof by comment-stripped body tokens under the existing audit tokenizer. The paired line count and proof ID identify the same proof. Counts describe the stored proof and can vary with tactics and formatting.
+- Test difficulty is the registered `standard` or `olympiad` source-based level. It is present on every selected test problem. Test pool rows outside both sets have no assigned benchmark level.
+- Keep dev for internal selection and the protected test pool for evaluation.
+
+Rebuild from the repository root with `uv run python scripts/data/build_exp031_problem_catalogue.py`.
+The generator uses only committed public artifacts and does not run Lean or a model.
+Verification on 19 November reproduced all three CSVs byte for byte and checked the ID sequence against the original exports.
+All titles are unique, all train and dev rows have a reference proof length, and the two test sets retain their exact membership and level assignments.
+Explicit positive and negative topic examples and a proof with a statement-local assignment exercised the metadata rules.
+
 
 ## Data handoff for Abhinav, 20 October 2026 IST
 
